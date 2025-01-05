@@ -5,5 +5,5 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ScoreDto(
     val id: String,
-    val score: Double
+    val score: Double,
 )

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -30,13 +31,16 @@ fun ReviewsScreen(
 ) {
     LazyVerticalGrid(
         columns = GridCells.FixedSize(size = 192.dp),
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
     ) {
         items(items = reviews, key = { it.id }) {
             MovieCard(
                 title = it.title,
                 posterImageUrl = it.imageUrl,
-            ) { }
+            ) {
+                Text(text = it.createdDate)
+            }
         }
     }
 }
