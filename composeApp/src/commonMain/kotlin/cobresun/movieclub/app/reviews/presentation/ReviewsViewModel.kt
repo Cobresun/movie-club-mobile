@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.reviews.presentation
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cobresun.movieclub.app.core.domain.onError
@@ -14,10 +15,13 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class ReviewsScreenViewModel(
-    private val reviewsRepository: ReviewsRepository
+class ReviewsViewModel(
+    private val reviewsRepository: ReviewsRepository,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
-    private val _state = MutableStateFlow<List<Review>>(emptyList())
+    private val clubId = savedStateHandle.get<String>("clubId")
+
+    private val _state = MutableStateFlow(ReviewsState())
     val state = _state.asStateFlow()
         .onStart {
             getReviews()
@@ -29,16 +33,16 @@ class ReviewsScreenViewModel(
         )
 
     private fun getReviews() = viewModelScope.launch {
-        reviewsRepository.getReviews(COBRESUN_CLUB_ID)
+        reviewsRepository.getReviews(clubId!!)
             .onSuccess { reviews ->
-                _state.update { reviews }
+                _state.update { it.copy(reviews = reviews) }
             }
             .onError { error ->
                 println(error.toString())
             }
     }
-
-    companion object {
-        private const val COBRESUN_CLUB_ID = "946516463182315521"
-    }
 }
+
+data class ReviewsState(
+    val reviews: List<Review> = emptyList(),
+)
