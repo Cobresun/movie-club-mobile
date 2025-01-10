@@ -1,12 +1,12 @@
-package cobresun.movieclub.app.reviews.presentation
+package cobresun.movieclub.app.watchlist.presentation
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
-import cobresun.movieclub.app.reviews.domain.Review
-import cobresun.movieclub.app.reviews.domain.ReviewsRepository
+import cobresun.movieclub.app.watchlist.domain.WatchListItem
+import cobresun.movieclub.app.watchlist.domain.WatchListRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,16 +15,16 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class ReviewsViewModel(
-    private val reviewsRepository: ReviewsRepository,
+class WatchListViewModel(
+    private val watchListRepository: WatchListRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val clubId = requireNotNull(savedStateHandle.get<String>("clubId"))
 
-    private val _state = MutableStateFlow<ReviewsState>(ReviewsState.Loading)
+    private val _state = MutableStateFlow<WatchListState>(WatchListState.Loading)
     val state = _state.asStateFlow()
         .onStart {
-            getReviews()
+            getWatchList()
         }
         .stateIn(
             viewModelScope,
@@ -32,21 +32,21 @@ class ReviewsViewModel(
             _state.value
         )
 
-    private fun getReviews() = viewModelScope.launch {
-        reviewsRepository.getReviews(clubId)
-            .onSuccess { reviews ->
-                _state.update { ReviewsState.Loaded(reviews = reviews) }
+    private fun getWatchList() = viewModelScope.launch {
+        watchListRepository.getWatchList(clubId)
+            .onSuccess { watchList ->
+                _state.update { WatchListState.Loaded(watchList = watchList) }
             }
             .onError { error ->
                 _state.update {
-                    ReviewsState.Error(errorMessage = error.toString())
+                    WatchListState.Error(errorMessage = error.toString())
                 }
             }
     }
 }
 
-sealed class ReviewsState {
-    data object Loading : ReviewsState()
-    data class Loaded(val reviews: List<Review>) : ReviewsState()
-    data class Error(val errorMessage: String) : ReviewsState()
+sealed class WatchListState {
+    data object Loading : WatchListState()
+    data class Loaded(val watchList: List<WatchListItem>) : WatchListState()
+    data class Error(val errorMessage: String) : WatchListState()
 }
