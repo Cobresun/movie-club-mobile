@@ -3,6 +3,7 @@ package cobresun.movieclub.app.reviews.presentation
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.reviews.domain.Review
@@ -21,7 +22,7 @@ class ReviewsViewModel(
 ) : ViewModel() {
     private val clubId = requireNotNull(savedStateHandle.get<String>("clubId"))
 
-    private val _state = MutableStateFlow<ReviewsState>(ReviewsState.Loading)
+    private val _state = MutableStateFlow(ReviewsState())
     val state = _state.asStateFlow()
         .onStart {
             getReviews()
@@ -35,18 +36,14 @@ class ReviewsViewModel(
     private fun getReviews() = viewModelScope.launch {
         reviewsRepository.getReviews(clubId)
             .onSuccess { reviews ->
-                _state.update { ReviewsState.Loaded(reviews = reviews) }
+                _state.update { it.copy(reviews = AsyncResult.Success(reviews)) }
             }
             .onError { error ->
-                _state.update {
-                    ReviewsState.Error(errorMessage = error.toString())
-                }
+                _state.update { it.copy(reviews = AsyncResult.Error()) }
             }
     }
 }
 
-sealed class ReviewsState {
-    data object Loading : ReviewsState()
-    data class Loaded(val reviews: List<Review>) : ReviewsState()
-    data class Error(val errorMessage: String) : ReviewsState()
-}
+data class ReviewsState(
+    val reviews: AsyncResult<List<Review>> = AsyncResult.Loading
+)

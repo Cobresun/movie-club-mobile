@@ -17,4 +17,11 @@ class WatchListRepositoryImpl(
                 watchListDtos.map { it.toWatchListItem() }
             }
     }
+
+    override suspend fun getBacklog(clubId: String): Result<List<WatchListItem>, DataError.Remote> {
+        return watchListDataSource.getBacklog(clubId)
+            .map { watchListDtos ->
+                watchListDtos.map { it.toWatchListItem() }
+            }
+    }
 }

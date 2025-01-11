@@ -1,17 +1,13 @@
 package cobresun.movieclub.app.reviews.presentation
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,8 +18,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import cobresun.movieclub.app.core.domain.AsyncResult
+import cobresun.movieclub.app.core.domain.AsyncResultHandler
 import cobresun.movieclub.app.core.domain.User
 import cobresun.movieclub.app.core.presentation.components.MovieCard
+import cobresun.movieclub.app.core.presentation.components.MovieGrid
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.domain.Score
 import cobresun.movieclub.app.reviews.presentation.components.ScoreChip
@@ -35,14 +34,12 @@ fun ReviewsScreenRoot(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    ReviewsScreen(
-        state = state,
-    )
+    ReviewsScreen(reviews = state.reviews)
 }
 
 @Composable
 fun ReviewsScreen(
-    state: ReviewsState,
+    reviews: AsyncResult<List<Review>>,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -58,41 +55,29 @@ fun ReviewsScreen(
         )
 
         AnimatedContent(
-            targetState = state,
+            targetState = reviews,
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) { targetState ->
-            when (targetState) {
-                is ReviewsState.Error -> {
-                    Text(
-                        text = targetState.errorMessage,
-                        color = Color.Red
+            AsyncResultHandler(
+                asyncResult = targetState,
+                onSuccess = {
+                    ReviewGrid(
+                        reviews = it,
+                        modifier = modifier,
                     )
                 }
-
-                is ReviewsState.Loaded -> {
-                    ReviewGrid(modifier, targetState.reviews)
-                }
-
-                is ReviewsState.Loading -> {
-                    CircularProgressIndicator()
-                }
-            }
+            )
         }
     }
 }
 
 @Composable
 fun ReviewGrid(
+    reviews: List<Review>,
     modifier: Modifier,
-    reviews: List<Review>
 ) {
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(180.dp),
-        modifier = modifier
-            .fillMaxSize(),
-        horizontalArrangement = Arrangement.Center
-    ) {
+    MovieGrid(modifier = modifier) {
         items(items = reviews, key = { it.id }) {
             MovieCard(
                 title = it.title,

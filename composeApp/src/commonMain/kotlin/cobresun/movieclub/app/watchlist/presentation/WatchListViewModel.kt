@@ -3,6 +3,7 @@ package cobresun.movieclub.app.watchlist.presentation
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.watchlist.domain.WatchListItem
@@ -21,7 +22,7 @@ class WatchListViewModel(
 ) : ViewModel() {
     private val clubId = requireNotNull(savedStateHandle.get<String>("clubId"))
 
-    private val _state = MutableStateFlow<WatchListState>(WatchListState.Loading)
+    private val _state = MutableStateFlow(WatchListState())
     val state = _state.asStateFlow()
         .onStart {
             getWatchList()
@@ -35,18 +36,14 @@ class WatchListViewModel(
     private fun getWatchList() = viewModelScope.launch {
         watchListRepository.getWatchList(clubId)
             .onSuccess { watchList ->
-                _state.update { WatchListState.Loaded(watchList = watchList) }
+                _state.update { it.copy(watchList = AsyncResult.Success(watchList)) }
             }
             .onError { error ->
-                _state.update {
-                    WatchListState.Error(errorMessage = error.toString())
-                }
+                _state.update { it.copy(watchList = AsyncResult.Error()) }
             }
     }
 }
 
-sealed class WatchListState {
-    data object Loading : WatchListState()
-    data class Loaded(val watchList: List<WatchListItem>) : WatchListState()
-    data class Error(val errorMessage: String) : WatchListState()
-}
+data class WatchListState(
+    val watchList: AsyncResult<List<WatchListItem>> = AsyncResult.Loading
+)

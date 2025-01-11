@@ -14,7 +14,15 @@ class KtorWatchListDataSource(
     override suspend fun getWatchList(clubId: String): Result<List<WatchListItemDto>, DataError.Remote> {
         return safeCall<List<WatchListItemDto>> {
             httpClient.get(
-                urlString = "$BASE_URL/club/$clubId/list/watchlist" // TODO: Double check this link
+                urlString = "$BASE_URL/club/$clubId/list/watchlist"
+            )
+        }
+    }
+
+    override suspend fun getBacklog(clubId: String): Result<List<WatchListItemDto>, DataError.Remote> {
+        return safeCall<List<WatchListItemDto>> {
+            httpClient.get(
+                urlString = "$BASE_URL/club/$clubId/list/backlog"
             )
         }
     }
