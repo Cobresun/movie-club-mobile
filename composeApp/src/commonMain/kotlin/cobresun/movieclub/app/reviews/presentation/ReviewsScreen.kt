@@ -69,7 +69,9 @@ fun ReviewsScreen(
             SearchBar(
                 searchQuery = searchQuery,
                 onValueChange = ({ searchQuery = it }),
-                modifier = Modifier.padding(16.dp).weight(1f)
+                modifier = Modifier
+                    .padding(16.dp)
+                    .weight(1f)
             )
         }
 

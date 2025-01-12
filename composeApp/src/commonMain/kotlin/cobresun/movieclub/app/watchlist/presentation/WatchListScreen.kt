@@ -3,6 +3,7 @@ package cobresun.movieclub.app.watchlist.presentation
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.items
@@ -22,6 +23,7 @@ import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.AsyncResultHandler
 import cobresun.movieclub.app.core.presentation.components.MovieCard
 import cobresun.movieclub.app.core.presentation.components.MovieGrid
+import cobresun.movieclub.app.core.presentation.components.SearchBar
 import cobresun.movieclub.app.watchlist.domain.WatchListItem
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -45,19 +47,33 @@ fun WatchListScreen(
 ) {
     var isShowingWatchList by remember { mutableStateOf(true) }
 
+    var searchQuery by remember { mutableStateOf("") }
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp)
     ) {
-        Text(
-            text = if (isShowingWatchList) "Watch List" else "Backlog",
-            modifier = Modifier
-                .padding(vertical = 16.dp)
-                .clickable { isShowingWatchList = !isShowingWatchList },
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = if (isShowingWatchList) "Watch List" else "Backlog",
+                modifier = Modifier
+                    .padding(vertical = 16.dp)
+                    .clickable { isShowingWatchList = !isShowingWatchList },
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            SearchBar(
+                searchQuery = searchQuery,
+                onValueChange = ({ searchQuery = it }),
+                modifier = Modifier
+                    .padding(16.dp)
+                    .weight(1f)
+            )
+        }
 
         AnimatedContent(
             targetState = if (isShowingWatchList) watchList else backlog,
@@ -66,9 +82,13 @@ fun WatchListScreen(
         ) { targetState ->
             AsyncResultHandler(
                 asyncResult = targetState,
-                onSuccess = {
+                onSuccess = { watchList ->
+                    val filteredWatchList = watchList.filter { review ->
+                        review.title.contains(searchQuery.trim(), ignoreCase = true)
+                    }
+
                     WatchListGrid(
-                        watchList = it,
+                        watchList = filteredWatchList,
                         modifier = modifier
                     )
                 }
