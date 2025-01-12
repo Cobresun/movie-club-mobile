@@ -1,5 +1,7 @@
 package cobresun.movieclub.app.app
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -7,6 +9,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
 import androidx.compose.material.Text
+import androidx.compose.material.primarySurface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -74,30 +77,36 @@ fun ClubScreen(clubId: String) {
             }
         }
 
-        TabRow(
-            selectedTabIndex = selectedTab,
-            modifier = Modifier.navigationBarsPadding(),
-            tabs = {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    text = {
-                        Text(
-                            text = "Reviews",
-                        )
-                    }
-                )
+        Box(
+            modifier = Modifier.background(color = MaterialTheme.colors.primarySurface)
+        ) {
+            TabRow(
+                selectedTabIndex = selectedTab,
+                modifier = Modifier.navigationBarsPadding(),
+                indicator = {},
+                divider = {},
+                tabs = {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        text = {
+                            Text(
+                                text = "Reviews",
+                            )
+                        }
+                    )
 
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    text = {
-                        Text(
-                            text = "Watch List",
-                        )
-                    }
-                )
-            }
-        )
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        text = {
+                            Text(
+                                text = "Watch List",
+                            )
+                        }
+                    )
+                }
+            )
+        }
     }
 }
