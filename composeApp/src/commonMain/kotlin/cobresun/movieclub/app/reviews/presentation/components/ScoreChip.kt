@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -110,7 +111,7 @@ fun ScoreText(score: Double) {
         text = score.toRoundedString(),
         modifier = Modifier.padding(horizontal = 8.dp),
         color = Color.White,
-        fontSize = 12.sp,
+        style = TextStyle.Default.copy(fontSize = 12.sp),
         textAlign = TextAlign.Center,
         maxLines = 1,
     )
