@@ -1,9 +1,10 @@
 package cobresun.movieclub.app.reviews.presentation
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -25,6 +26,7 @@ import cobresun.movieclub.app.core.presentation.components.MovieCard
 import cobresun.movieclub.app.core.presentation.components.MovieGrid
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.domain.Score
+import cobresun.movieclub.app.reviews.presentation.components.AverageIconVector
 import cobresun.movieclub.app.reviews.presentation.components.ScoreChip
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -93,50 +95,41 @@ fun ReviewGrid(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ScoreGrid(scores: Map<User, Score>) {
-    NonLazyGrid(
-        columns = 2,
-        itemCount = scores.size,
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        ScoreChip(
-            user = scores.keys.elementAt(it),
-            score = scores.values.elementAt(it).value,
-            modifier = Modifier.padding(4.dp)
-        )
-    }
-}
+        scores.forEach {
+            val imageUrl = it.key.imageUrl
 
-@Composable
-fun NonLazyGrid(
-    columns: Int,
-    itemCount: Int,
-    modifier: Modifier = Modifier,
-    content: @Composable (Int) -> Unit
-) {
-    Column(modifier = modifier) {
-        var rows = (itemCount / columns)
-        if (itemCount.mod(columns) > 0) {
-            rows += 1
-        }
+            if (imageUrl != null) {
+                ScoreChip(
+                    imageUrl = imageUrl,
+                    contentDescription = it.key.name,
+                    score = it.value.value,
+                )
+            } else {
+                val initials = it.key.name.split(" ")
 
-        for (rowId in 0 until rows) {
-            val firstIndex = rowId * columns
+                if (initials.isEmpty()) return@forEach
 
-            Row {
-                for (columnId in 0 until columns) {
-                    val index = firstIndex + columnId
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                    ) {
-                        if (index < itemCount) {
-                            content(index)
-                        }
-                    }
-                }
+                ScoreChip(
+                    firstName = initials.first(),
+                    lastName = if (initials.size > 1) initials.last() else null,
+                    contentDescription = it.key.name,
+                    score = it.value.value,
+                )
             }
         }
+
+        ScoreChip(
+            image = AverageIconVector,
+            contentDescription = "Average",
+            score = scores.values.map { it.value }.average(),
+        )
     }
 }

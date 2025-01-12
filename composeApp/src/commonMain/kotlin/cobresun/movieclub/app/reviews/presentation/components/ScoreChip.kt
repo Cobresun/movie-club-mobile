@@ -1,8 +1,10 @@
 package cobresun.movieclub.app.reviews.presentation.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,17 +14,79 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cobresun.movieclub.app.core.domain.User
 import coil3.compose.AsyncImage
+import kotlin.math.roundToLong
 
 @Composable
 fun ScoreChip(
-    user: User,
+    imageUrl: String,
+    contentDescription: String,
     score: Double,
     modifier: Modifier = Modifier
+) {
+    ScoreChipPill(
+        modifier = modifier,
+        imageContent = {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = contentDescription,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .size(32.dp)
+            )
+        },
+        scoreContent = { ScoreText(score) }
+    )
+}
+
+@Composable
+fun ScoreChip(
+    image: ImageVector,
+    contentDescription: String,
+    score: Double,
+    modifier: Modifier = Modifier
+) {
+    ScoreChipPill(
+        modifier = modifier,
+        imageContent = {
+            Image(
+                imageVector = image,
+                contentDescription = contentDescription,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .size(32.dp)
+            )
+        },
+        scoreContent = { ScoreText(score) }
+    )
+}
+
+@Composable
+fun ScoreChip(
+    firstName: String?,
+    lastName: String?,
+    contentDescription: String,
+    score: Double,
+    modifier: Modifier = Modifier
+) {
+    ScoreChipPill(
+        modifier = modifier,
+        imageContent = {
+            TODO("Add placeholder image using user's initials")
+        },
+        scoreContent = { ScoreText(score) }
+    )
+}
+
+@Composable
+fun ScoreChipPill(
+    modifier: Modifier = Modifier,
+    imageContent: @Composable () -> Unit,
+    scoreContent: @Composable () -> Unit,
 ) {
     Box(
         modifier = modifier
@@ -32,28 +96,29 @@ fun ScoreChip(
             )
     ) {
         Row(
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (user.imageUrl != null) {
-                AsyncImage(
-                    model = user.imageUrl,
-                    contentDescription = user.name,
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .size(32.dp)
-                )
-            } else {
-                TODO("Add placeholder")
-            }
-
-            Text(
-                text = score.toString(),
-                modifier = Modifier.weight(1f),
-                color = Color.White,
-                fontSize = 14.sp,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-            )
+            imageContent()
+            scoreContent()
         }
     }
+}
+
+@Composable
+fun ScoreText(score: Double) {
+    Text(
+        text = score.toRoundedString(),
+        modifier = Modifier.padding(horizontal = 8.dp),
+        color = Color.White,
+        fontSize = 12.sp,
+        textAlign = TextAlign.Center,
+        maxLines = 1,
+    )
+}
+
+/**
+ * Rounds the double to two decimal places.
+ */
+fun Double.toRoundedString(): String {
+    return ((this * 100.0).roundToLong() / 100.0).toString()
 }
