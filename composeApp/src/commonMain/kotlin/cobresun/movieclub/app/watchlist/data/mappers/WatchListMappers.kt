@@ -5,7 +5,7 @@ import cobresun.movieclub.app.watchlist.domain.WatchListItem
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 
-fun WatchListItemDto.toWatchListItem(): WatchListItem {
+fun WatchListItemDto.toWatchListItem(isNextMovie: Boolean = false): WatchListItem {
     return WatchListItem(
         id = id,
         title = title,
@@ -14,6 +14,7 @@ fun WatchListItemDto.toWatchListItem(): WatchListItem {
             .date
             .toString(),
         imageUrl = imageUrl,
-        externalId = externalId
+        externalId = externalId,
+        isNextMovie = isNextMovie
     )
 }

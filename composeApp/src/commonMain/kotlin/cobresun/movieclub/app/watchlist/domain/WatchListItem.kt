@@ -6,4 +6,5 @@ data class WatchListItem(
     val createdDate: String,
     val imageUrl: String,
     val externalId: String,
+    val isNextMovie: Boolean
 )

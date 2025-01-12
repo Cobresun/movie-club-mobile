@@ -26,6 +26,7 @@ class WatchListViewModel(
     val state = _state.asStateFlow()
         .onStart {
             getWatchList()
+            getBacklog()
         }
         .stateIn(
             viewModelScope,
@@ -42,8 +43,19 @@ class WatchListViewModel(
                 _state.update { it.copy(watchList = AsyncResult.Error()) }
             }
     }
+
+    private fun getBacklog() = viewModelScope.launch {
+        watchListRepository.getBacklog(clubId)
+            .onSuccess { backlog ->
+                _state.update { it.copy(backlog = AsyncResult.Success(backlog)) }
+            }
+            .onError { error ->
+                _state.update { it.copy(backlog = AsyncResult.Error()) }
+            }
+    }
 }
 
 data class WatchListState(
-    val watchList: AsyncResult<List<WatchListItem>> = AsyncResult.Loading
+    val watchList: AsyncResult<List<WatchListItem>> = AsyncResult.Loading,
+    val backlog: AsyncResult<List<WatchListItem>> = AsyncResult.Loading
 )

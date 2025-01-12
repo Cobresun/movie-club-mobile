@@ -4,6 +4,7 @@ import cobresun.movieclub.app.core.data.safeCall
 import cobresun.movieclub.app.core.domain.Constants.BASE_URL
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
+import cobresun.movieclub.app.watchlist.data.dto.NextWorkDto
 import cobresun.movieclub.app.watchlist.data.dto.WatchListItemDto
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
@@ -15,6 +16,14 @@ class KtorWatchListDataSource(
         return safeCall<List<WatchListItemDto>> {
             httpClient.get(
                 urlString = "$BASE_URL/club/$clubId/list/watchlist"
+            )
+        }
+    }
+
+    override suspend fun getNextWork(clubId: String): Result<NextWorkDto, DataError.Remote> {
+        return safeCall<NextWorkDto> {
+            httpClient.get(
+                urlString = "$BASE_URL/club/$clubId/nextWork"
             )
         }
     }

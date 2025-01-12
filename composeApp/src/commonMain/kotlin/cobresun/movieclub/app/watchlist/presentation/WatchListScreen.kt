@@ -76,7 +76,8 @@ fun WatchListGrid(
         items(items = watchList, key = { it.id }) {
             MovieCard(
                 title = it.title,
-                posterImageUrl = it.imageUrl
+                posterImageUrl = it.imageUrl,
+                highlight = it.isNextMovie
             ) {
                 // TODO: Action buttons
             }

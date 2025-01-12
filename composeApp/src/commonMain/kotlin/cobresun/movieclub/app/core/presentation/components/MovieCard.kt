@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.core.presentation.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -21,12 +22,14 @@ import coil3.compose.AsyncImage
 fun MovieCard(
     title: String,
     posterImageUrl: String?,
+    highlight: Boolean = false,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card(
         modifier = modifier.padding(8.dp),
-        elevation = 4.dp
+        elevation = 4.dp,
+        border = if (highlight) BorderStroke(2.dp, Color(0xFFFFD700)) else null
     ) {
         Column {
             if (posterImageUrl != null) {
