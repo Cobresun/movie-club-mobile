@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -12,6 +13,9 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,6 +28,7 @@ import cobresun.movieclub.app.core.domain.AsyncResultHandler
 import cobresun.movieclub.app.core.domain.User
 import cobresun.movieclub.app.core.presentation.components.MovieCard
 import cobresun.movieclub.app.core.presentation.components.MovieGrid
+import cobresun.movieclub.app.core.presentation.components.SearchBar
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.domain.Score
 import cobresun.movieclub.app.reviews.presentation.components.AverageIconVector
@@ -44,17 +49,29 @@ fun ReviewsScreen(
     reviews: AsyncResult<List<Review>>,
     modifier: Modifier = Modifier
 ) {
+    var searchQuery by remember { mutableStateOf("") }
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
     ) {
-        Text(
-            text = "Reviews",
-            modifier = Modifier.padding(vertical = 16.dp),
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Reviews",
+                modifier = Modifier.padding(vertical = 16.dp),
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            SearchBar(
+                searchQuery = searchQuery,
+                onValueChange = ({ searchQuery = it }),
+                modifier = Modifier.padding(16.dp).weight(1f)
+            )
+        }
 
         AnimatedContent(
             targetState = reviews,
@@ -63,9 +80,13 @@ fun ReviewsScreen(
         ) { targetState ->
             AsyncResultHandler(
                 asyncResult = targetState,
-                onSuccess = {
+                onSuccess = { reviews ->
+                    val filteredReviews = reviews.filter { review ->
+                        review.title.contains(searchQuery.trim(), ignoreCase = true)
+                    }
+
                     ReviewGrid(
-                        reviews = it,
+                        reviews = filteredReviews,
                         modifier = modifier,
                     )
                 }
@@ -84,6 +105,7 @@ fun ReviewGrid(
             MovieCard(
                 title = it.title,
                 posterImageUrl = it.imageUrl,
+                modifier = Modifier.animateItem()
             ) {
                 Text(
                     text = it.createdDate,
