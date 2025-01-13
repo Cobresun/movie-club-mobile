@@ -1,4 +1,4 @@
-package cobresun.movieclub.app.clubs.data.dto
+package cobresun.movieclub.app.club.data.dto
 
 import kotlinx.serialization.Serializable
 

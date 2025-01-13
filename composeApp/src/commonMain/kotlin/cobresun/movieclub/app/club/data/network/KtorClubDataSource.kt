@@ -1,6 +1,6 @@
-package cobresun.movieclub.app.clubs.data.network
+package cobresun.movieclub.app.club.data.network
 
-import cobresun.movieclub.app.clubs.data.dto.MemberDto
+import cobresun.movieclub.app.club.data.dto.MemberDto
 import cobresun.movieclub.app.core.data.safeCall
 import cobresun.movieclub.app.core.domain.Constants.BASE_URL
 import cobresun.movieclub.app.core.domain.DataError

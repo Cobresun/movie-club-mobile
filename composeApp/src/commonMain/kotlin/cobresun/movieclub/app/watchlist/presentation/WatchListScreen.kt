@@ -18,26 +18,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.AsyncResultHandler
 import cobresun.movieclub.app.core.presentation.components.MovieCard
 import cobresun.movieclub.app.core.presentation.components.MovieGrid
 import cobresun.movieclub.app.core.presentation.components.SearchBar
 import cobresun.movieclub.app.watchlist.domain.WatchListItem
-import org.koin.compose.viewmodel.koinViewModel
-
-@Composable
-fun WatchListScreenRoot(
-    viewModel: WatchListViewModel = koinViewModel(),
-) {
-    val state by viewModel.state.collectAsStateWithLifecycle()
-
-    WatchListScreen(
-        watchList = state.watchList,
-        backlog = state.backlog
-    )
-}
 
 @Composable
 fun WatchListScreen(

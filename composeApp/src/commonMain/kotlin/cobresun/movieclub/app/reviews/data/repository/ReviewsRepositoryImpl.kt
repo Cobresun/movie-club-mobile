@@ -1,6 +1,6 @@
 package cobresun.movieclub.app.reviews.data.repository
 
-import cobresun.movieclub.app.clubs.data.network.ClubDataSource
+import cobresun.movieclub.app.club.data.network.ClubDataSource
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.map
