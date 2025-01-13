@@ -2,6 +2,7 @@ package cobresun.movieclub.app.watchlist.presentation
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,13 +42,13 @@ fun WatchListScreen(
             .padding(horizontal = 16.dp)
     ) {
         Row(
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
                 text = if (isShowingWatchList) "Watch List" else "Backlog",
-                modifier = Modifier
-                    .padding(vertical = 16.dp)
-                    .clickable { isShowingWatchList = !isShowingWatchList },
+                modifier = Modifier.clickable { isShowingWatchList = !isShowingWatchList },
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -55,9 +56,7 @@ fun WatchListScreen(
             SearchBar(
                 searchQuery = searchQuery,
                 onValueChange = ({ searchQuery = it }),
-                modifier = Modifier
-                    .padding(16.dp)
-                    .weight(1f)
+                modifier = Modifier.weight(1f)
             )
         }
 

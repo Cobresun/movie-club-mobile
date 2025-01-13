@@ -18,6 +18,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 
+const val MOVIE_CARD_HIGHLIGHT_BORDER_COLOR = 0xFFFFD700
+
 @Composable
 fun MovieCard(
     title: String,
@@ -29,7 +31,10 @@ fun MovieCard(
     Card(
         modifier = modifier.padding(8.dp),
         elevation = 4.dp,
-        border = if (highlight) BorderStroke(2.dp, Color(0xFFFFD700)) else null
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (highlight) Color(MOVIE_CARD_HIGHLIGHT_BORDER_COLOR) else Color.White
+        )
     ) {
         Column {
             if (posterImageUrl != null) {
@@ -50,7 +55,6 @@ fun MovieCard(
             ) {
                 Text(
                     text = title,
-                    color = Color.White,
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Bold,
                 )

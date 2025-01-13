@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import kotlin.math.roundToLong
 
+const val SCORE_CHIP_BACKGROUND_COLOR = 0xFF393E46
+
 @Composable
 fun ScoreChip(
     imageUrl: String,
@@ -92,7 +94,7 @@ fun ScoreChipPill(
     Box(
         modifier = modifier
             .background(
-                color = Color(0xFF393E46),
+                color = Color(SCORE_CHIP_BACKGROUND_COLOR),
                 shape = RoundedCornerShape(100)
             )
     ) {
@@ -110,7 +112,6 @@ fun ScoreText(score: Double) {
     Text(
         text = score.toRoundedString(),
         modifier = Modifier.padding(horizontal = 8.dp),
-        color = Color.White,
         style = TextStyle.Default.copy(fontSize = 12.sp),
         textAlign = TextAlign.Center,
         maxLines = 1,

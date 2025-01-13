@@ -18,7 +18,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,11 +45,12 @@ fun ReviewsScreen(
             .padding(horizontal = 16.dp),
     ) {
         Row(
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
                 text = "Reviews",
-                modifier = Modifier.padding(vertical = 16.dp),
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -58,9 +58,7 @@ fun ReviewsScreen(
             SearchBar(
                 searchQuery = searchQuery,
                 onValueChange = ({ searchQuery = it }),
-                modifier = Modifier
-                    .padding(16.dp)
-                    .weight(1f)
+                modifier = Modifier.weight(1f)
             )
         }
 
@@ -100,7 +98,6 @@ fun ReviewGrid(
             ) {
                 Text(
                     text = it.createdDate,
-                    color = Color.White,
                 )
                 ScoreGrid(scores = it.scores)
             }
