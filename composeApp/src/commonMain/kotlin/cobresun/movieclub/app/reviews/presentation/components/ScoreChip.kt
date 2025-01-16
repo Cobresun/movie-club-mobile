@@ -19,10 +19,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import cobresun.movieclub.app.core.presentation.LIGHT_GRAY
 import coil3.compose.AsyncImage
 import kotlin.math.roundToLong
-
-const val SCORE_CHIP_BACKGROUND_COLOR = 0xFF393E46
 
 @Composable
 fun ScoreChip(
@@ -94,7 +93,7 @@ fun ScoreChipPill(
     Box(
         modifier = modifier
             .background(
-                color = Color(SCORE_CHIP_BACKGROUND_COLOR),
+                color = Color(LIGHT_GRAY),
                 shape = RoundedCornerShape(100)
             )
     ) {

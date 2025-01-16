@@ -8,6 +8,10 @@ import cobresun.movieclub.app.reviews.data.network.KtorReviewsDataSource
 import cobresun.movieclub.app.reviews.data.network.ReviewsDataSource
 import cobresun.movieclub.app.reviews.data.repository.ReviewsRepositoryImpl
 import cobresun.movieclub.app.reviews.domain.ReviewsRepository
+import cobresun.movieclub.app.tmdb.data.network.KtorTmdbDataSource
+import cobresun.movieclub.app.tmdb.data.network.TmdbDataSource
+import cobresun.movieclub.app.tmdb.data.repository.TmdbRepositoryImpl
+import cobresun.movieclub.app.tmdb.domain.TmdbRepository
 import cobresun.movieclub.app.watchlist.data.network.KtorWatchListDataSource
 import cobresun.movieclub.app.watchlist.data.network.WatchListDataSource
 import cobresun.movieclub.app.watchlist.data.repository.WatchListRepositoryImpl
@@ -22,12 +26,19 @@ expect val platformModule: Module
 val sharedModule = module {
     single { HttpClientFactory.create(get()) }
 
+    // Club
     single { KtorClubDataSource(get()) }.bind<ClubDataSource>()
-    single { KtorReviewsDataSource(get()) }.bind<ReviewsDataSource>()
-    single { KtorWatchListDataSource(get()) }.bind<WatchListDataSource>()
+    viewModel { ClubViewModel(get(), get(), get(), get()) }
 
+    // Reviews
+    single { KtorReviewsDataSource(get()) }.bind<ReviewsDataSource>()
     single { ReviewsRepositoryImpl(get(), get()) }.bind<ReviewsRepository>()
+
+    // Watchlist
+    single { KtorWatchListDataSource(get()) }.bind<WatchListDataSource>()
     single { WatchListRepositoryImpl(get()) }.bind<WatchListRepository>()
 
-    viewModel { ClubViewModel(get(), get(), get()) }
+    // TMDB
+    single { KtorTmdbDataSource(get()) }.bind<TmdbDataSource>()
+    single { TmdbRepositoryImpl(get()) }.bind<TmdbRepository>()
 }

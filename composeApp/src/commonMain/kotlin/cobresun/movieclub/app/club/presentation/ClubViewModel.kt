@@ -8,6 +8,8 @@ import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.domain.ReviewsRepository
+import cobresun.movieclub.app.tmdb.domain.TmdbRepository
+import cobresun.movieclub.app.tmdb.domain.TmdbMovie
 import cobresun.movieclub.app.watchlist.domain.WatchListItem
 import cobresun.movieclub.app.watchlist.domain.WatchListRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +24,7 @@ class ClubViewModel(
     savedStateHandle: SavedStateHandle,
     private val reviewsRepository: ReviewsRepository,
     private val watchListRepository: WatchListRepository,
+    private val tmdbRepository: TmdbRepository
 ) : ViewModel() {
     private val clubId = requireNotNull(savedStateHandle.get<String>("clubId"))
 
@@ -31,6 +34,7 @@ class ClubViewModel(
             getReviews()
             getWatchList()
             getBacklog()
+            getTrendingMovies()
         }
         .stateIn(
             viewModelScope,
@@ -67,10 +71,21 @@ class ClubViewModel(
                 _state.update { it.copy(backlog = AsyncResult.Error()) }
             }
     }
+
+    private fun getTrendingMovies() = viewModelScope.launch {
+        tmdbRepository.getTrendingMovies()
+            .onSuccess { trendingMovies ->
+                _state.update { it.copy(trendingMovies = AsyncResult.Success(trendingMovies)) }
+            }
+            .onError {
+                _state.update { it.copy(trendingMovies = AsyncResult.Error()) }
+            }
+    }
 }
 
 data class ClubState(
     val reviews: AsyncResult<List<Review>> = AsyncResult.Loading,
     val watchList: AsyncResult<List<WatchListItem>> = AsyncResult.Loading,
-    val backlog: AsyncResult<List<WatchListItem>> = AsyncResult.Loading
+    val backlog: AsyncResult<List<WatchListItem>> = AsyncResult.Loading,
+    val trendingMovies: AsyncResult<List<TmdbMovie>> = AsyncResult.Loading
 )

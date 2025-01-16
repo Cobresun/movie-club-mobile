@@ -1,3 +1,6 @@
+
+import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
+import com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -9,6 +12,8 @@ plugins {
 
     alias(libs.plugins.jetbrains.kotlin.serialization)
     alias(libs.plugins.ksp)
+
+    id("com.codingfeline.buildkonfig") version "+"
 }
 
 kotlin {
@@ -18,7 +23,7 @@ kotlin {
             jvmTarget.set(JvmTarget.JVM_11)
         }
     }
-    
+
     listOf(
         iosX64(),
         iosArm64(),
@@ -29,7 +34,7 @@ kotlin {
             isStatic = true
         }
     }
-    
+
     sourceSets {
         androidMain.dependencies {
             implementation(compose.preview)
@@ -100,3 +105,16 @@ dependencies {
     debugImplementation(compose.uiTooling)
 }
 
+buildkonfig {
+    packageName = "cobresun.movieclub.app"
+
+    defaultConfigs {
+        val tmdbApiKey = gradleLocalProperties(rootDir, providers).getProperty("TMDB_API_KEY")
+
+        require(tmdbApiKey != null && tmdbApiKey.isNotEmpty()) {
+            "Place the TMDB Api Key in local.properties as `TMDB_API_KEY`"
+        }
+
+        buildConfigField(STRING, "TMDB_API_KEY", tmdbApiKey)
+    }
+}

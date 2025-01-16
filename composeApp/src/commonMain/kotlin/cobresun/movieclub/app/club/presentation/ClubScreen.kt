@@ -23,6 +23,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.presentation.ReviewsScreen
+import cobresun.movieclub.app.tmdb.domain.TmdbMovie
 import cobresun.movieclub.app.watchlist.domain.WatchListItem
 import cobresun.movieclub.app.watchlist.presentation.WatchListScreen
 import org.koin.compose.viewmodel.koinViewModel
@@ -37,6 +38,7 @@ fun ClubScreenRoot(
         reviews = state.reviews,
         watchList = state.watchList,
         backlog = state.backlog,
+        trendingMovies = state.trendingMovies
     )
 }
 
@@ -45,6 +47,7 @@ fun ClubScreen(
     reviews: AsyncResult<List<Review>>,
     watchList: AsyncResult<List<WatchListItem>>,
     backlog: AsyncResult<List<WatchListItem>>,
+    trendingMovies: AsyncResult<List<TmdbMovie>>,
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember { mutableStateOf(0) }
@@ -70,7 +73,11 @@ fun ClubScreen(
             if (index == 0) {
                 ReviewsScreen(reviews = reviews)
             } else {
-                WatchListScreen(watchList = watchList, backlog = backlog)
+                WatchListScreen(
+                    watchList = watchList,
+                    backlog = backlog,
+                    trendingMovies = trendingMovies
+                )
             }
         }
 
