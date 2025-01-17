@@ -4,6 +4,11 @@ import cobresun.movieclub.app.club.data.network.ClubDataSource
 import cobresun.movieclub.app.club.data.network.KtorClubDataSource
 import cobresun.movieclub.app.club.presentation.ClubViewModel
 import cobresun.movieclub.app.core.data.HttpClientFactory
+import cobresun.movieclub.app.member.data.network.MemberDataSource
+import cobresun.movieclub.app.member.data.network.MockMemberDataSource
+import cobresun.movieclub.app.member.data.repository.MemberRepositoryImpl
+import cobresun.movieclub.app.member.domain.MemberRepository
+import cobresun.movieclub.app.member.presentation.MemberViewModel
 import cobresun.movieclub.app.reviews.data.network.KtorReviewsDataSource
 import cobresun.movieclub.app.reviews.data.network.ReviewsDataSource
 import cobresun.movieclub.app.reviews.data.repository.ReviewsRepositoryImpl
@@ -25,6 +30,11 @@ expect val platformModule: Module
 
 val sharedModule = module {
     single { HttpClientFactory.create(get()) }
+
+    // Member
+    single { MockMemberDataSource() }.bind<MemberDataSource>()
+    single { MemberRepositoryImpl(get()) }.bind<MemberRepository>()
+    viewModel { MemberViewModel(get()) }
 
     // Club
     single { KtorClubDataSource(get()) }.bind<ClubDataSource>()

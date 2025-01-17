@@ -24,7 +24,7 @@ fun ReviewDto.toReview(memberDtos: List<MemberDto>): Review {
 
 fun Map<String, ScoreDto>.toScores(memberDtos: List<MemberDto>): Map<User, Score> {
     return this
-        .filter { (memberId, _) -> memberId != "average" }
+        .filter { (memberId, _) -> memberId != "average" && memberDtos.any { it.id == memberId } }
         .map { (memberId, scoreDto) ->
             val memberDto = requireNotNull(memberDtos.find { it.id == memberId })
 

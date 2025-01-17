@@ -7,5 +7,5 @@ data class MemberDto(
     val id: String,
     val email: String,
     val name: String,
-    val image: String?,
+    val image: String? = null,
 )

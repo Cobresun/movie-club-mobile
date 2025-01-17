@@ -136,10 +136,12 @@ fun ScoreGrid(scores: Map<User, Score>) {
             }
         }
 
-        ScoreChip(
-            image = AverageIconVector,
-            contentDescription = "Average",
-            score = scores.values.map { it.value }.average(),
-        )
+        if (scores.isNotEmpty()) {
+            ScoreChip(
+                image = AverageIconVector,
+                contentDescription = "Average",
+                score = scores.values.map { it.value }.average(),
+            )
+        }
     }
 }

@@ -78,7 +78,7 @@ fun ScoreChip(
     ScoreChipPill(
         modifier = modifier,
         imageContent = {
-            TODO("Add placeholder image using user's initials")
+            // TODO("Add placeholder image using user's initials")
         },
         scoreContent = { ScoreText(score) }
     )

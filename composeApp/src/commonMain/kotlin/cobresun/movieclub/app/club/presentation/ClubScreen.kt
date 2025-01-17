@@ -69,6 +69,7 @@ fun ClubScreen(
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.weight(1f),
+            userScrollEnabled = false // Must be turned off so allow the user to swipe to open ModalDrawer
         ) { index ->
             if (index == 0) {
                 ReviewsScreen(reviews = reviews)
