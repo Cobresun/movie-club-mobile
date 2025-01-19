@@ -18,6 +18,5 @@ data class TmdbMovieDto(
     val popularity: Double,
     @SerialName("release_date") val releaseDate: String,
     val video: Boolean,
-    @SerialName("vote_average") val voteAverage: Double,
     @SerialName("vote_count") val voteCount: Int
 )

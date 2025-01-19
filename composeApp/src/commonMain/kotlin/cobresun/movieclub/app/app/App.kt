@@ -13,6 +13,7 @@ import androidx.compose.material.Text
 import androidx.compose.material.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -25,6 +26,7 @@ import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.AsyncResultHandler
 import cobresun.movieclub.app.core.domain.Club
 import cobresun.movieclub.app.member.presentation.MemberViewModel
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -45,8 +47,8 @@ fun App() {
             color = MaterialTheme.colors.background
         ) {
             val navController = rememberNavController()
-
             val drawerState = rememberDrawerState(DrawerValue.Closed)
+            val coroutineScope = rememberCoroutineScope()
 
             val memberViewModel = koinViewModel<MemberViewModel>()
             val state by memberViewModel.state.collectAsStateWithLifecycle()
@@ -57,6 +59,7 @@ fun App() {
                         clubs = state.clubs,
                         onClubClick = {
                             navController.navigate(Route.ClubGraph(it))
+                            coroutineScope.launch { drawerState.close() }
                         }
                     )
                 },
