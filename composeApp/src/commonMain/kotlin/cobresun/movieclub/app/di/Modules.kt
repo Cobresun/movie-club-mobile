@@ -1,11 +1,16 @@
 package cobresun.movieclub.app.di
 
+import cobresun.movieclub.app.auth.data.network.IdentityDataSource
+import cobresun.movieclub.app.auth.data.network.KtorIdentityDataSource
+import cobresun.movieclub.app.auth.data.repository.AuthRepositoryImpl
+import cobresun.movieclub.app.auth.domain.AuthRepository
+import cobresun.movieclub.app.auth.presentation.AuthViewModel
 import cobresun.movieclub.app.club.data.network.ClubDataSource
 import cobresun.movieclub.app.club.data.network.KtorClubDataSource
 import cobresun.movieclub.app.club.presentation.ClubViewModel
 import cobresun.movieclub.app.core.data.HttpClientFactory
+import cobresun.movieclub.app.member.data.network.KtorMemberDataSource
 import cobresun.movieclub.app.member.data.network.MemberDataSource
-import cobresun.movieclub.app.member.data.network.MockMemberDataSource
 import cobresun.movieclub.app.member.data.repository.MemberRepositoryImpl
 import cobresun.movieclub.app.member.domain.MemberRepository
 import cobresun.movieclub.app.member.presentation.MemberViewModel
@@ -31,10 +36,15 @@ expect val platformModule: Module
 val sharedModule = module {
     single { HttpClientFactory.create(get()) }
 
+    // Auth
+    single { KtorIdentityDataSource(get()) }.bind<IdentityDataSource>()
+    single { AuthRepositoryImpl(get()) }.bind<AuthRepository>()
+    viewModel { AuthViewModel(get()) }
+
     // Member
-    single { MockMemberDataSource() }.bind<MemberDataSource>()
+    single { KtorMemberDataSource(get()) }.bind<MemberDataSource>()
     single { MemberRepositoryImpl(get()) }.bind<MemberRepository>()
-    viewModel { MemberViewModel(get()) }
+    viewModel { MemberViewModel(get(), get()) }
 
     // Club
     single { KtorClubDataSource(get()) }.bind<ClubDataSource>()

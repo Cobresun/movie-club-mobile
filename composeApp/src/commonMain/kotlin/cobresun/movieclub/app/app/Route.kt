@@ -4,9 +4,19 @@ import kotlinx.serialization.Serializable
 
 sealed interface Route {
     @Serializable
-    data class ClubGraph(
-        val clubId: String = COBRESUN_CLUB_ID,
-    ) : Route
-}
+    data object LandingPage : Route
 
-const val COBRESUN_CLUB_ID = "946516463182315521"
+    @Serializable
+    data object AuthGraph : Route
+
+    @Serializable
+    data object ClubGraph: Route
+
+    @Serializable
+    data class Club(
+        val clubId: String
+    ) : Route
+
+    @Serializable
+    data object EmptyClubs : Route
+}

@@ -14,7 +14,7 @@ class KtorClubDataSource(
     override suspend fun getMembers(clubId: String): Result<List<MemberDto>, DataError.Remote> {
         return safeCall<List<MemberDto>> {
             httpClient.get(
-                urlString = "$BASE_URL/club/$clubId/members"
+                urlString = "$BASE_URL/api/club/$clubId/members"
             )
         }
     }

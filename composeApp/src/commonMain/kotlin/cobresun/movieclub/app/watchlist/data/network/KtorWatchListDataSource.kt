@@ -15,7 +15,7 @@ class KtorWatchListDataSource(
     override suspend fun getWatchList(clubId: String): Result<List<WatchListItemDto>, DataError.Remote> {
         return safeCall<List<WatchListItemDto>> {
             httpClient.get(
-                urlString = "$BASE_URL/club/$clubId/list/watchlist"
+                urlString = "$BASE_URL/api/club/$clubId/list/watchlist"
             )
         }
     }
@@ -23,7 +23,7 @@ class KtorWatchListDataSource(
     override suspend fun getNextWork(clubId: String): Result<NextWorkDto, DataError.Remote> {
         return safeCall<NextWorkDto> {
             httpClient.get(
-                urlString = "$BASE_URL/club/$clubId/nextWork"
+                urlString = "$BASE_URL/api/club/$clubId/nextWork"
             )
         }
     }
@@ -31,7 +31,7 @@ class KtorWatchListDataSource(
     override suspend fun getBacklog(clubId: String): Result<List<WatchListItemDto>, DataError.Remote> {
         return safeCall<List<WatchListItemDto>> {
             httpClient.get(
-                urlString = "$BASE_URL/club/$clubId/list/backlog"
+                urlString = "$BASE_URL/api/club/$clubId/list/backlog"
             )
         }
     }

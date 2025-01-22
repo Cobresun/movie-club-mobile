@@ -7,11 +7,10 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Tab
-import androidx.compose.material.TabRow
-import androidx.compose.material.Text
-import androidx.compose.material.primarySurface
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -83,7 +82,7 @@ fun ClubScreen(
         }
 
         Box(
-            modifier = Modifier.background(color = MaterialTheme.colors.primarySurface)
+            modifier = Modifier.background(color = MaterialTheme.colorScheme.surface)
         ) {
             TabRow(
                 selectedTabIndex = selectedTab,

@@ -2,6 +2,7 @@ package cobresun.movieclub.app.member.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import cobresun.movieclub.app.auth.domain.AuthRepository
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.Club
 import cobresun.movieclub.app.core.domain.onError
@@ -15,7 +16,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class MemberViewModel(
-    private val memberRepository: MemberRepository
+    private val memberRepository: MemberRepository,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
     private val _state = MutableStateFlow(MemberState())
     val state = _state.asStateFlow()
@@ -29,7 +31,7 @@ class MemberViewModel(
         )
 
     private fun getClubs() = viewModelScope.launch {
-        memberRepository.getClubs()
+        memberRepository.getClubs(authRepository.accessToken!!)
             .onSuccess { clubs ->
                 _state.value = _state.value.copy(clubs = AsyncResult.Success(clubs))
             }

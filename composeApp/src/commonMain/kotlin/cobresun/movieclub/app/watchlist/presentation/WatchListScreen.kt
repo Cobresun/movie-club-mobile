@@ -14,19 +14,21 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.FloatingActionButton
-import androidx.compose.material.Icon
-import androidx.compose.material.ModalBottomSheetValue
-import androidx.compose.material.Scaffold
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.rememberModalBottomSheetState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,13 +44,13 @@ import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.AsyncResultHandler
 import cobresun.movieclub.app.core.presentation.LIGHT_GRAY
 import cobresun.movieclub.app.core.presentation.components.MovieCard
-import cobresun.movieclub.app.core.presentation.components.MovieClubModalBottomSheetLayout
 import cobresun.movieclub.app.core.presentation.components.MovieGrid
 import cobresun.movieclub.app.core.presentation.components.SearchBar
 import cobresun.movieclub.app.tmdb.domain.TmdbMovie
 import cobresun.movieclub.app.watchlist.domain.WatchListItem
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WatchListScreen(
     watchList: AsyncResult<List<WatchListItem>>,
@@ -56,30 +58,35 @@ fun WatchListScreen(
     trendingMovies: AsyncResult<List<TmdbMovie>>,
     modifier: Modifier = Modifier,
 ) {
-    val sheetState = rememberModalBottomSheetState(initialValue = ModalBottomSheetValue.Hidden)
+    var openBottomSheet by rememberSaveable { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
 
-    MovieClubModalBottomSheetLayout(
-        sheetContent = { AddMovieBottomSheetContent(trendingMovies = trendingMovies) },
-        sheetState = sheetState,
-    ) {
-        Scaffold(
-            modifier = modifier,
-            floatingActionButton = {
-                FloatingActionButton(
-                    onClick = {
-                        scope.launch { sheetState.show() }
-                    }
-                ) {
-                    Icon(Icons.Filled.Add, contentDescription = "")
+    Scaffold(
+        modifier = modifier,
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                    scope.launch { openBottomSheet = true }
                 }
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = "")
             }
-        ) { contentPadding ->
-            ScreenContent(
-                watchList = watchList,
-                backlog = backlog,
-                modifier = modifier.padding(contentPadding)
-            )
+        }
+    ) { contentPadding ->
+        ScreenContent(
+            watchList = watchList,
+            backlog = backlog,
+            modifier = modifier.padding(contentPadding)
+        )
+    }
+
+    if (openBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { openBottomSheet = false },
+            sheetState = sheetState,
+        ) {
+            AddMovieBottomSheetContent(trendingMovies = trendingMovies)
         }
     }
 }
