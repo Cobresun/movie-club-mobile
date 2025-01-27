@@ -31,13 +31,15 @@ class MemberViewModel(
         )
 
     private fun getClubs() = viewModelScope.launch {
-        memberRepository.getClubs(authRepository.accessToken!!)
-            .onSuccess { clubs ->
-                _state.value = _state.value.copy(clubs = AsyncResult.Success(clubs))
-            }
-            .onError { error ->
-                _state.value = _state.value.copy(clubs = AsyncResult.Error())
-            }
+        authRepository.userAccessToken.collect { accessToken ->
+            memberRepository.getClubs(accessToken!!)
+                .onSuccess { clubs ->
+                    _state.value = _state.value.copy(clubs = AsyncResult.Success(clubs))
+                }
+                .onError { error ->
+                    _state.value = _state.value.copy(clubs = AsyncResult.Error())
+                }
+        }
     }
 }
 

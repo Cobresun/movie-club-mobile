@@ -10,17 +10,23 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import cobresun.movieclub.app.auth.presentation.AuthScreenRoot
+import cobresun.movieclub.app.auth.presentation.AuthViewModel
 import cobresun.movieclub.app.club.presentation.ClubsScreenRoot
+import cobresun.movieclub.app.core.domain.AsyncResult
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 @Preview
@@ -39,6 +45,15 @@ fun App() {
             color = MaterialTheme.colorScheme.background
         ) {
             val navController = rememberNavController()
+
+            // TODO: I don't like that this flashes the landing page first, this whole approach seems ugly?
+            val authViewModel = koinViewModel<AuthViewModel>()
+            val state by authViewModel.state.collectAsStateWithLifecycle()
+            LaunchedEffect(state.userAccessToken) {
+                if (state.userAccessToken is AsyncResult.Success && (state.userAccessToken as AsyncResult.Success).data != null) {
+                    navController.navigate(Route.ClubGraph)
+                }
+            }
 
             NavHost(
                 navController = navController,

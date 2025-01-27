@@ -1,5 +1,9 @@
 package cobresun.movieclub.app.auth.data.repository
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import cobresun.movieclub.app.auth.data.mappers.toUser
 import cobresun.movieclub.app.auth.data.network.IdentityDataSource
 import cobresun.movieclub.app.auth.domain.AuthRepository
@@ -8,30 +12,23 @@ import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.flatMap
 import cobresun.movieclub.app.core.domain.map
+import kotlinx.coroutines.flow.map
 
 class AuthRepositoryImpl(
-    private val identityDataSource: IdentityDataSource
+    private val identityDataSource: IdentityDataSource,
+    private val prefs: DataStore<Preferences>,
 ) : AuthRepository {
-    // TODO: Store user and token info in DataStore
-    private var inMemoryUser: User? = null
-    override val user: User?
-        get() = inMemoryUser
-
-    private var inMemoryAccessToken: String? = null
-    override val accessToken: String?
-        get() = inMemoryAccessToken
+    override val userAccessToken = prefs.data.map { it[stringPreferencesKey("access_token")] }
 
     override suspend fun login(email: String, password: String): Result<User, DataError.Remote> {
         return identityDataSource.login(email, password)
-            .map { tokenDto ->
-                inMemoryAccessToken = tokenDto.accessToken
-                tokenDto.accessToken
-            }
-            .flatMap { accessToken ->
-                identityDataSource.getUser(accessToken)
+            .flatMap { tokenDto ->
+                identityDataSource.getUser(tokenDto.accessToken)
                     .map { userDto ->
-                        val user = userDto.toUser()
-                        inMemoryUser = user
+                        val user = userDto.toUser(tokenDto)
+                        prefs.edit {
+                            it[stringPreferencesKey("access_token")] = user.token.accessToken
+                        }
                         user
                     }
             }
@@ -39,15 +36,13 @@ class AuthRepositoryImpl(
 
     override suspend fun refreshAccessToken(refreshToken: String): Result<User, DataError.Remote> {
         return identityDataSource.refreshAccessToken(refreshToken)
-            .map { tokenDto ->
-                inMemoryAccessToken = tokenDto.accessToken
-                tokenDto.accessToken
-            }
-            .flatMap { accessToken ->
-                identityDataSource.getUser(accessToken)
+            .flatMap { tokenDto ->
+                identityDataSource.getUser(tokenDto.accessToken)
                     .map { userDto ->
-                        val user = userDto.toUser()
-                        inMemoryUser = user
+                        val user = userDto.toUser(tokenDto)
+                        prefs.edit {
+                            it[stringPreferencesKey("access_token")] = user.token.accessToken
+                        }
                         user
                     }
             }

@@ -1,4 +1,3 @@
-
 import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
 import com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
@@ -67,6 +66,9 @@ kotlin {
 
             implementation(libs.bundles.ktor)
             implementation(libs.bundles.coil)
+
+            api(libs.datastore)
+            api(libs.datastore.preferences)
         }
 
         nativeMain.dependencies {
