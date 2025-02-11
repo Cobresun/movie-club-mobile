@@ -7,7 +7,6 @@ import cobresun.movieclub.app.core.domain.Result
 
 interface IdentityDataSource {
     suspend fun login(email: String, password: String): Result<TokenDto, DataError.Remote>
-    suspend fun refreshAccessToken(refreshToken: String): Result<TokenDto, DataError.Remote>
 
-    suspend fun getUser(token: String): Result<UserDto, DataError.Remote>
+    suspend fun getUser(): Result<UserDto, DataError.Remote>
 }

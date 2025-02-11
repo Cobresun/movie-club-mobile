@@ -43,8 +43,8 @@ fun AuthScreenRoot(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    LaunchedEffect(state.userAccessToken) {
-        if (state.userAccessToken is AsyncResult.Success && (state.userAccessToken as AsyncResult.Success).data != null) {
+    LaunchedEffect(state.user) {
+        if (state.user is AsyncResult.Success) {
             onAuthorized()
         }
     }

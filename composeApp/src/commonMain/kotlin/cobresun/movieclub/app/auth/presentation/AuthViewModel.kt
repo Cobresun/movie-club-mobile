@@ -9,7 +9,6 @@ import cobresun.movieclub.app.core.domain.onSuccess
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -21,7 +20,7 @@ class AuthViewModel(
     private val _state = MutableStateFlow(AuthState())
     val state = _state.asStateFlow()
         .onStart {
-            observeUserAccessToken()
+            getUser()
         }
         .stateIn(
             viewModelScope,
@@ -33,27 +32,29 @@ class AuthViewModel(
         is AuthAction.LogIn -> login(action.email, action.password)
     }
 
-    // TODO: Need to observe full Token object, and not just the access token.
-    //  Implement refreshing of access token if its expired.
-    private fun observeUserAccessToken() = viewModelScope.launch {
-        authRepository.userAccessToken.collectLatest { token ->
-            _state.update { it.copy(userAccessToken = AsyncResult.Success(token)) }
-        }
+    private fun getUser() = viewModelScope.launch {
+        authRepository.getUser()
+            .onSuccess {
+                _state.update { it.copy(user = AsyncResult.Success(Unit)) }
+            }
+            .onError { error ->
+                _state.update { it.copy(user = AsyncResult.Loading) }
+            }
     }
 
     private fun login(email: String, password: String) = viewModelScope.launch {
-        _state.update { it.copy(userAccessToken = AsyncResult.Loading) }
+        _state.update { it.copy(user = AsyncResult.Loading) }
 
         authRepository.login(email, password)
             .onSuccess { user ->
-                _state.update { it.copy(userAccessToken = AsyncResult.Success(user.token.accessToken)) }
+                _state.update { it.copy(user = AsyncResult.Success(Unit)) }
             }
             .onError { error ->
-                _state.update { it.copy(userAccessToken = AsyncResult.Error()) }
+                _state.update { it.copy(user = AsyncResult.Error()) }
             }
     }
 }
 
 data class AuthState(
-    val userAccessToken: AsyncResult<String?> = AsyncResult.Loading
+    val user: AsyncResult<Unit> = AsyncResult.Loading
 )

@@ -49,8 +49,8 @@ fun App() {
             // TODO: I don't like that this flashes the landing page first, this whole approach seems ugly?
             val authViewModel = koinViewModel<AuthViewModel>()
             val state by authViewModel.state.collectAsStateWithLifecycle()
-            LaunchedEffect(state.userAccessToken) {
-                if (state.userAccessToken is AsyncResult.Success && (state.userAccessToken as AsyncResult.Success).data != null) {
+            LaunchedEffect(state.user) {
+                if (state.user is AsyncResult.Success) {
                     navController.navigate(Route.ClubGraph)
                 }
             }

@@ -14,18 +14,13 @@ class MemberRepositoryImpl(
     private val memberDataSource: MemberDataSource
 ) : MemberRepository {
     override suspend fun getMember(
-        accessToken: String
     ): Result<Member, DataError.Remote> {
-        return memberDataSource.getMember(accessToken)
-            .map { it.toMember() }
+        return memberDataSource.getMember().map { it.toMember() }
     }
 
     override suspend fun getClubs(
-        accessToken: String
     ): Result<List<Club>, DataError.Remote> {
-        return memberDataSource.getClubs(accessToken)
-            .map { clubDtos ->
-                clubDtos.map { it.toClub() }
-            }
+        return memberDataSource.getClubs()
+            .map { clubDtos -> clubDtos.map { it.toClub() } }
     }
 }
