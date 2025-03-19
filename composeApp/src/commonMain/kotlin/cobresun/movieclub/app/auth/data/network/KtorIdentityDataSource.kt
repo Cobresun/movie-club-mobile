@@ -2,6 +2,7 @@ package cobresun.movieclub.app.auth.data.network
 
 import cobresun.movieclub.app.auth.data.dto.TokenDto
 import cobresun.movieclub.app.auth.data.dto.UserDto
+import cobresun.movieclub.app.core.data.invalidateBearerTokens
 import cobresun.movieclub.app.core.data.safeCall
 import cobresun.movieclub.app.core.domain.Constants.BASE_URL
 import cobresun.movieclub.app.core.domain.Constants.TOKEN_EXCHANGE_URL
@@ -19,6 +20,8 @@ class KtorIdentityDataSource(
         email: String,
         password: String
     ): Result<TokenDto, DataError.Remote> {
+        httpClient.invalidateBearerTokens()
+
         return safeCall<TokenDto> {
             httpClient.post(TOKEN_EXCHANGE_URL) {
                 url {

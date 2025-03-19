@@ -8,8 +8,8 @@ import cobresun.movieclub.app.auth.presentation.AuthViewModel
 import cobresun.movieclub.app.club.data.network.ClubDataSource
 import cobresun.movieclub.app.club.data.network.KtorClubDataSource
 import cobresun.movieclub.app.club.presentation.ClubViewModel
+import cobresun.movieclub.app.core.data.BearerTokenStorage
 import cobresun.movieclub.app.core.data.HttpClientFactory
-import cobresun.movieclub.app.core.data.TokenStorage
 import cobresun.movieclub.app.member.data.network.KtorMemberDataSource
 import cobresun.movieclub.app.member.data.network.MemberDataSource
 import cobresun.movieclub.app.member.data.repository.MemberRepositoryImpl
@@ -35,7 +35,7 @@ import org.koin.dsl.module
 expect val platformModule: Module
 
 val sharedModule = module {
-    single { TokenStorage(get()) }
+    single { BearerTokenStorage(get()) }
     single { HttpClientFactory.create(get(), get()) }
 
     // Auth

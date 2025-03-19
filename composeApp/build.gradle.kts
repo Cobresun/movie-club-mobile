@@ -12,6 +12,8 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.serialization)
     alias(libs.plugins.ksp)
 
+    alias(libs.plugins.wire)
+
     id("com.codingfeline.buildkonfig") version "+"
 }
 
@@ -119,5 +121,12 @@ buildkonfig {
         }
 
         buildConfigField(STRING, "TMDB_API_KEY", tmdbApiKey)
+    }
+}
+
+wire {
+    kotlin {}
+    sourcePath {
+        srcDir("src/commonMain/proto")
     }
 }

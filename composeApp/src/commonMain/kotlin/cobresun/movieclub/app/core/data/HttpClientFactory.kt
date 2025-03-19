@@ -7,6 +7,8 @@ import io.ktor.client.call.body
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.auth.Auth
+import io.ktor.client.plugins.auth.authProvider
+import io.ktor.client.plugins.auth.providers.BearerAuthProvider
 import io.ktor.client.plugins.auth.providers.BearerTokens
 import io.ktor.client.plugins.auth.providers.bearer
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -22,7 +24,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
 object HttpClientFactory {
-    fun create(engine: HttpClientEngine, tokenStorage: TokenStorage): HttpClient {
+    fun create(engine: HttpClientEngine, bearerTokenStorage: BearerTokenStorage): HttpClient {
         return HttpClient(engine) {
             install(ContentNegotiation) {
                 json(
@@ -49,7 +51,7 @@ object HttpClientFactory {
             install(Auth) {
                 bearer {
                     loadTokens {
-                        tokenStorage.getTokens().last()
+                        bearerTokenStorage.getToken()
                     }
 
                     refreshTokens {
@@ -61,16 +63,17 @@ object HttpClientFactory {
                             }
                         ) { markAsRefreshTokenRequest() }.body()
 
-                        tokenStorage.addTokens(
+                        bearerTokenStorage.updateToken(
                             BearerTokens(
                                 refreshTokenInfo.accessToken,
-                                oldTokens?.refreshToken!!
+                                refreshTokenInfo.refreshToken
                             )
                         )
 
-                        tokenStorage.getTokens().last()
+                        bearerTokenStorage.getToken()
                     }
 
+                    // TODO: Add TMDB to this
                     sendWithoutRequest { request ->
                         request.url.host == "www.googleapis.com"
                     }
@@ -82,4 +85,11 @@ object HttpClientFactory {
             }
         }
     }
+}
+
+/**
+ * Workaround for token caching [not working](https://youtrack.jetbrains.com/issue/KTOR-4759/Auth-BearerAuthProvider-caches-result-of-loadToken-until-process-death) when logging in
+ */
+fun HttpClient.invalidateBearerTokens() {
+    authProvider<BearerAuthProvider>()?.clearToken()
 }
