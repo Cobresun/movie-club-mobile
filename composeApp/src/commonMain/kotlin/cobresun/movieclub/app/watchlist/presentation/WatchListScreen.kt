@@ -50,15 +50,23 @@ import cobresun.movieclub.app.tmdb.domain.TmdbMovie
 import cobresun.movieclub.app.watchlist.domain.WatchListItem
 import kotlinx.coroutines.launch
 
+sealed class WatchListBottomSheetType {
+    data object AddMovie : WatchListBottomSheetType()
+    data object WatchListItem : WatchListBottomSheetType()
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WatchListScreen(
     watchList: AsyncResult<List<WatchListItem>>,
+    addMovieToWatchList: (TmdbMovie) -> Unit,
     backlog: AsyncResult<List<WatchListItem>>,
+    addMovieToBacklog: (TmdbMovie) -> Unit,
     trendingMovies: AsyncResult<List<TmdbMovie>>,
     modifier: Modifier = Modifier,
 ) {
-    var openBottomSheet by rememberSaveable { mutableStateOf(false) }
+    var isShowingWatchList by remember { mutableStateOf(true) }
+    var openBottomSheet by rememberSaveable { mutableStateOf<WatchListBottomSheetType?>(null) }
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
 
@@ -67,7 +75,7 @@ fun WatchListScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    scope.launch { openBottomSheet = true }
+                    scope.launch { openBottomSheet = WatchListBottomSheetType.AddMovie }
                 }
             ) {
                 Icon(Icons.Filled.Add, contentDescription = "")
@@ -75,18 +83,34 @@ fun WatchListScreen(
         }
     ) { contentPadding ->
         ScreenContent(
+            isShowingWatchList = isShowingWatchList,
+            toggleIsShowingWatchList = { isShowingWatchList = !isShowingWatchList },
             watchList = watchList,
             backlog = backlog,
             modifier = modifier.padding(contentPadding)
         )
     }
 
-    if (openBottomSheet) {
+    openBottomSheet?.let { bottomSheetType ->
         ModalBottomSheet(
-            onDismissRequest = { openBottomSheet = false },
+            onDismissRequest = { openBottomSheet = null },
             sheetState = sheetState,
         ) {
-            AddMovieBottomSheetContent(trendingMovies = trendingMovies)
+            when (bottomSheetType) {
+                WatchListBottomSheetType.AddMovie -> AddMovieBottomSheetContent(
+                    trendingMovies = trendingMovies,
+                    onSelectMovie = { movie ->
+                        if (isShowingWatchList) {
+                            addMovieToWatchList(movie)
+                        } else {
+                            addMovieToBacklog(movie)
+                        }
+
+                        openBottomSheet = null
+                    }
+                )
+                WatchListBottomSheetType.WatchListItem -> TODO()
+            }
         }
     }
 }
@@ -94,6 +118,7 @@ fun WatchListScreen(
 @Composable
 fun AddMovieBottomSheetContent(
     trendingMovies: AsyncResult<List<TmdbMovie>>,
+    onSelectMovie: (TmdbMovie) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     AsyncResultHandler(
@@ -118,6 +143,7 @@ fun AddMovieBottomSheetContent(
                                 color = Color(LIGHT_GRAY),
                                 shape = RoundedCornerShape(4.dp)
                             )
+                            .clickable { onSelectMovie(movie) }
                     ) {
                         Text(
                             text = buildAnnotatedString {
@@ -138,11 +164,12 @@ fun AddMovieBottomSheetContent(
 
 @Composable
 private fun ScreenContent(
+    isShowingWatchList: Boolean,
+    toggleIsShowingWatchList: () -> Unit,
     watchList: AsyncResult<List<WatchListItem>>,
     backlog: AsyncResult<List<WatchListItem>>,
     modifier: Modifier = Modifier
 ) {
-    var isShowingWatchList by remember { mutableStateOf(true) }
     var searchQuery by remember { mutableStateOf("") }
 
     Column(
@@ -153,7 +180,7 @@ private fun ScreenContent(
         Header(
             isShowingWatchList = isShowingWatchList,
             searchQuery = searchQuery,
-            toggleIsShowingWatchList = { isShowingWatchList = !isShowingWatchList },
+            toggleIsShowingWatchList = toggleIsShowingWatchList,
             onSearchQueryChange = { searchQuery = it }
         )
 

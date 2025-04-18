@@ -37,7 +37,8 @@ fun ClubScreenRoot(
         reviews = state.reviews,
         watchList = state.watchList,
         backlog = state.backlog,
-        trendingMovies = state.trendingMovies
+        trendingMovies = state.trendingMovies,
+        onAction = viewModel::onAction
     )
 }
 
@@ -47,6 +48,7 @@ fun ClubScreen(
     watchList: AsyncResult<List<WatchListItem>>,
     backlog: AsyncResult<List<WatchListItem>>,
     trendingMovies: AsyncResult<List<TmdbMovie>>,
+    onAction: (ClubAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember { mutableStateOf(0) }
@@ -75,7 +77,9 @@ fun ClubScreen(
             } else {
                 WatchListScreen(
                     watchList = watchList,
+                    addMovieToWatchList = { movie -> onAction(ClubAction.OnAddMovieToWatchList(movie)) },
                     backlog = backlog,
+                    addMovieToBacklog = { movie -> onAction(ClubAction.OnAddMovieToBacklog(movie)) },
                     trendingMovies = trendingMovies
                 )
             }

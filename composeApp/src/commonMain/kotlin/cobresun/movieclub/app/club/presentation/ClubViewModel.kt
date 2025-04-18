@@ -8,8 +8,8 @@ import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.domain.ReviewsRepository
-import cobresun.movieclub.app.tmdb.domain.TmdbRepository
 import cobresun.movieclub.app.tmdb.domain.TmdbMovie
+import cobresun.movieclub.app.tmdb.domain.TmdbRepository
 import cobresun.movieclub.app.watchlist.domain.WatchListItem
 import cobresun.movieclub.app.watchlist.domain.WatchListRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +41,34 @@ class ClubViewModel(
             SharingStarted.WhileSubscribed(5000L),
             _state.value
         )
+
+    fun onAction(action: ClubAction) {
+        when (action) {
+            is ClubAction.OnAddMovieToWatchList -> {
+                viewModelScope.launch {
+                    watchListRepository.postWatchList(clubId, action.movie)
+                        .onSuccess {
+                            getWatchList()
+                        }
+                        .onError {
+                            println("Error adding movie to watchlist: $it")
+                        }
+                }
+            }
+
+            is ClubAction.OnAddMovieToBacklog -> {
+                viewModelScope.launch {
+                    watchListRepository.postBacklog(clubId, action.movie)
+                        .onSuccess {
+                            getBacklog()
+                        }
+                        .onError {
+                            println("Error adding movie to backlog: $it")
+                        }
+                }
+            }
+        }
+    }
 
     private fun getReviews() = viewModelScope.launch {
         reviewsRepository.getReviews(clubId)
@@ -81,6 +109,11 @@ class ClubViewModel(
                 _state.update { it.copy(trendingMovies = AsyncResult.Error()) }
             }
     }
+}
+
+sealed interface ClubAction {
+    data class OnAddMovieToWatchList(val movie: TmdbMovie) : ClubAction
+    data class OnAddMovieToBacklog(val movie: TmdbMovie) : ClubAction
 }
 
 data class ClubState(

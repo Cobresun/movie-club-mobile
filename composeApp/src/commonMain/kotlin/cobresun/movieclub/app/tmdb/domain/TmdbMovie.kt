@@ -5,4 +5,5 @@ data class TmdbMovie(
     val title: String,
     val releaseYear: String,
     val popularity: Double,
+    val imageUrl: String?
 )

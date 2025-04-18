@@ -21,6 +21,7 @@ suspend inline fun <reified T> safeCall(
         return Result.Error(DataError.Remote.NO_INTERNET)
     } catch (e: Exception) {
         coroutineContext.ensureActive()
+        println("Error: $e")
         return Result.Error(DataError.Remote.UNKNOWN)
     }
 
