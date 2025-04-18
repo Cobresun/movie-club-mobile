@@ -11,7 +11,9 @@ interface WatchListDataSource {
 
     suspend fun getWatchList(clubId: String): Result<List<WatchListItemDto>, DataError.Remote>
     suspend fun postWatchList(clubId: String): Result<Unit, DataError.Remote>
+    suspend fun deleteWatchList(clubId: String, watchListItemId: String): Result<Unit, DataError.Remote>
 
     suspend fun getBacklog(clubId: String): Result<List<WatchListItemDto>, DataError.Remote>
     suspend fun postBacklog(clubId: String, backlogPostDto: BacklogPostDto): Result<Unit, DataError.Remote>
+    suspend fun deleteBacklog(clubId: String, watchListItemId: String): Result<Unit, DataError.Remote>
 }

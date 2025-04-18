@@ -8,6 +8,7 @@ import cobresun.movieclub.app.watchlist.data.dto.BacklogPostDto
 import cobresun.movieclub.app.watchlist.data.dto.NextWorkDto
 import cobresun.movieclub.app.watchlist.data.dto.WatchListItemDto
 import io.ktor.client.HttpClient
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -35,6 +36,17 @@ class KtorWatchListDataSource(
         TODO("Not yet implemented")
     }
 
+    override suspend fun deleteWatchList(
+        clubId: String,
+        watchListItemId: String
+    ): Result<Unit, DataError.Remote> {
+        return safeCall {
+            httpClient.delete(
+                urlString = "$BASE_URL/api/club/$clubId/list/watchlist/$watchListItemId"
+            )
+        }
+    }
+
     override suspend fun getBacklog(clubId: String): Result<List<WatchListItemDto>, DataError.Remote> {
         return safeCall<List<WatchListItemDto>> {
             httpClient.get(
@@ -43,13 +55,27 @@ class KtorWatchListDataSource(
         }
     }
 
-    override suspend fun postBacklog(clubId: String, backlogPostDto: BacklogPostDto): Result<Unit, DataError.Remote> {
+    override suspend fun postBacklog(
+        clubId: String,
+        backlogPostDto: BacklogPostDto
+    ): Result<Unit, DataError.Remote> {
         return safeCall {
             httpClient.post(
                 urlString = "$BASE_URL/api/club/$clubId/list/backlog"
             ) {
                 setBody(backlogPostDto)
             }
+        }
+    }
+
+    override suspend fun deleteBacklog(
+        clubId: String,
+        watchListItemId: String
+    ): Result<Unit, DataError.Remote> {
+        return safeCall {
+            httpClient.delete(
+                urlString = "$BASE_URL/api/club/$clubId/list/backlog/$watchListItemId"
+            )
         }
     }
 }

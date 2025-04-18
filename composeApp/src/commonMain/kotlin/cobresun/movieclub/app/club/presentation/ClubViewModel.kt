@@ -67,6 +67,32 @@ class ClubViewModel(
                         }
                 }
             }
+
+            is ClubAction.OnDeleteBacklogItem -> {
+                viewModelScope.launch {
+                    watchListRepository.deleteBacklog(clubId, action.item.id)
+                        .onSuccess {
+                            getBacklog()
+                        }
+                        .onError {
+                            println("Error deleting movie from backlog: $it")
+                        }
+                }
+            }
+
+            is ClubAction.OnDeleteWatchListItem -> {
+                viewModelScope.launch {
+                    watchListRepository.deleteWatchList(clubId, action.item.id)
+                        .onSuccess {
+                            getWatchList()
+                        }
+                        .onError {
+                            println("Error deleting movie from watchlist: $it")
+                        }
+                }
+            }
+
+            is ClubAction.OnMoveToWatchList -> TODO()
         }
     }
 
@@ -114,6 +140,9 @@ class ClubViewModel(
 sealed interface ClubAction {
     data class OnAddMovieToWatchList(val movie: TmdbMovie) : ClubAction
     data class OnAddMovieToBacklog(val movie: TmdbMovie) : ClubAction
+    data class OnDeleteWatchListItem(val item: WatchListItem) : ClubAction
+    data class OnDeleteBacklogItem(val item: WatchListItem) : ClubAction
+    data class OnMoveToWatchList(val item: WatchListItem) : ClubAction
 }
 
 data class ClubState(

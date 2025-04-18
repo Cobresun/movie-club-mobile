@@ -29,8 +29,18 @@ class WatchListRepositoryImpl(
             }
     }
 
-    override suspend fun postWatchList(clubId: String, tmdbMovie: TmdbMovie): Result<Unit, DataError.Remote> {
+    override suspend fun postWatchList(
+        clubId: String,
+        tmdbMovie: TmdbMovie
+    ): Result<Unit, DataError.Remote> {
         return watchListDataSource.postWatchList(clubId = clubId)
+    }
+
+    override suspend fun deleteWatchList(
+        clubId: String,
+        watchListItemId: String
+    ): Result<Unit, DataError.Remote> {
+        return watchListDataSource.deleteWatchList(clubId, watchListItemId)
     }
 
     override suspend fun getBacklog(clubId: String): Result<List<WatchListItem>, DataError.Remote> {
@@ -53,5 +63,12 @@ class WatchListRepositoryImpl(
                 imageUrl = tmdbMovie.imageUrl
             )
         )
+    }
+
+    override suspend fun deleteBacklog(
+        clubId: String,
+        watchListItemId: String
+    ): Result<Unit, DataError.Remote> {
+        return watchListDataSource.deleteBacklog(clubId, watchListItemId)
     }
 }

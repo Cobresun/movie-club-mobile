@@ -26,7 +26,7 @@ fun MovieCard(
     posterImageUrl: String?,
     highlight: Boolean = false,
     modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit,
+    content: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     Card(
         modifier = modifier.padding(8.dp),
@@ -58,7 +58,7 @@ fun MovieCard(
                     fontWeight = FontWeight.Bold,
                 )
 
-                content()
+                content?.let { it() }
             }
         }
     }

@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -37,6 +38,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,8 +53,8 @@ import cobresun.movieclub.app.watchlist.domain.WatchListItem
 import kotlinx.coroutines.launch
 
 sealed class WatchListBottomSheetType {
-    data object AddMovie : WatchListBottomSheetType()
-    data object WatchListItem : WatchListBottomSheetType()
+    data object AddMovieSheet : WatchListBottomSheetType()
+    data class WatchListItemSheet(val watchListItem: WatchListItem) : WatchListBottomSheetType()
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,6 +64,9 @@ fun WatchListScreen(
     addMovieToWatchList: (TmdbMovie) -> Unit,
     backlog: AsyncResult<List<WatchListItem>>,
     addMovieToBacklog: (TmdbMovie) -> Unit,
+    onDeleteWatchListItem: (WatchListItem) -> Unit,
+    onDeleteBacklogItem: (WatchListItem) -> Unit,
+    onMoveToWatchList: (WatchListItem) -> () -> Unit,
     trendingMovies: AsyncResult<List<TmdbMovie>>,
     modifier: Modifier = Modifier,
 ) {
@@ -75,7 +80,7 @@ fun WatchListScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    scope.launch { openBottomSheet = WatchListBottomSheetType.AddMovie }
+                    scope.launch { openBottomSheet = WatchListBottomSheetType.AddMovieSheet }
                 }
             ) {
                 Icon(Icons.Filled.Add, contentDescription = "")
@@ -87,6 +92,9 @@ fun WatchListScreen(
             toggleIsShowingWatchList = { isShowingWatchList = !isShowingWatchList },
             watchList = watchList,
             backlog = backlog,
+            onSelectWatchListItem = {
+                openBottomSheet = WatchListBottomSheetType.WatchListItemSheet(it)
+            },
             modifier = modifier.padding(contentPadding)
         )
     }
@@ -97,19 +105,39 @@ fun WatchListScreen(
             sheetState = sheetState,
         ) {
             when (bottomSheetType) {
-                WatchListBottomSheetType.AddMovie -> AddMovieBottomSheetContent(
-                    trendingMovies = trendingMovies,
-                    onSelectMovie = { movie ->
-                        if (isShowingWatchList) {
-                            addMovieToWatchList(movie)
-                        } else {
-                            addMovieToBacklog(movie)
-                        }
+                is WatchListBottomSheetType.AddMovieSheet -> {
+                    AddMovieBottomSheetContent(
+                        trendingMovies = trendingMovies,
+                        onSelectMovie = { movie ->
+                            if (isShowingWatchList) {
+                                addMovieToWatchList(movie)
+                            } else {
+                                addMovieToBacklog(movie)
+                            }
 
-                        openBottomSheet = null
-                    }
-                )
-                WatchListBottomSheetType.WatchListItem -> TODO()
+                            openBottomSheet = null
+                        }
+                    )
+                }
+
+                is WatchListBottomSheetType.WatchListItemSheet -> {
+                    WatchListItemBottomSheetContent(
+                        watchListItem = bottomSheetType.watchListItem,
+                        onDelete = {
+                            if (isShowingWatchList) {
+                                onDeleteWatchListItem(bottomSheetType.watchListItem)
+                            } else {
+                                onDeleteBacklogItem(bottomSheetType.watchListItem)
+                            }
+
+                            openBottomSheet = null
+                        },
+                        onMoveToWatchList = {
+                            onMoveToWatchList(bottomSheetType.watchListItem)
+                            openBottomSheet = null
+                        }
+                    )
+                }
             }
         }
     }
@@ -163,11 +191,56 @@ fun AddMovieBottomSheetContent(
 }
 
 @Composable
+fun WatchListItemBottomSheetContent(
+    watchListItem: WatchListItem,
+    onDelete: () -> Unit,
+    onMoveToWatchList: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            modifier = Modifier.fillMaxWidth(),
+            text = watchListItem.title,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Button(
+                onClick = onDelete,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(4.dp),
+                content = {
+                    Text(text = "Delete")
+                }
+            )
+
+            Button(
+                onClick = onMoveToWatchList,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(4.dp),
+                content = {
+                    Text(text = "Move to watch list")
+                }
+            )
+        }
+
+    }
+}
+
+@Composable
 private fun ScreenContent(
     isShowingWatchList: Boolean,
     toggleIsShowingWatchList: () -> Unit,
     watchList: AsyncResult<List<WatchListItem>>,
     backlog: AsyncResult<List<WatchListItem>>,
+    onSelectWatchListItem: (WatchListItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -188,6 +261,7 @@ private fun ScreenContent(
             isShowingWatchList = isShowingWatchList,
             watchList = watchList,
             backlog = backlog,
+            onSelectWatchListItem = onSelectWatchListItem,
             searchQuery = searchQuery
         )
     }
@@ -225,6 +299,7 @@ private fun AnimatedMovieList(
     isShowingWatchList: Boolean,
     watchList: AsyncResult<List<WatchListItem>>,
     backlog: AsyncResult<List<WatchListItem>>,
+    onSelectWatchListItem: (WatchListItem) -> Unit,
     searchQuery: String,
     modifier: Modifier = Modifier
 ) {
@@ -242,6 +317,7 @@ private fun AnimatedMovieList(
 
                 WatchListGrid(
                     watchList = filteredWatchList,
+                    onSelectWatchListItem = onSelectWatchListItem,
                     modifier = modifier
                 )
             }
@@ -252,6 +328,7 @@ private fun AnimatedMovieList(
 @Composable
 private fun WatchListGrid(
     watchList: List<WatchListItem>,
+    onSelectWatchListItem: (WatchListItem) -> Unit,
     modifier: Modifier
 ) {
     MovieGrid(modifier = modifier) {
@@ -259,10 +336,9 @@ private fun WatchListGrid(
             MovieCard(
                 title = it.title,
                 posterImageUrl = it.imageUrl,
-                highlight = it.isNextMovie
-            ) {
-                // TODO: Action buttons
-            }
+                highlight = it.isNextMovie,
+                modifier = Modifier.clickable { onSelectWatchListItem(it) }
+            )
         }
     }
 }
