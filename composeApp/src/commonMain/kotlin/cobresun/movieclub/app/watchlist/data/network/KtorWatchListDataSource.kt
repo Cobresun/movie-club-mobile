@@ -6,6 +6,7 @@ import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.watchlist.data.dto.BacklogPostDto
 import cobresun.movieclub.app.watchlist.data.dto.NextWorkDto
+import cobresun.movieclub.app.watchlist.data.dto.PostWatchListItemDto
 import cobresun.movieclub.app.watchlist.data.dto.WatchListItemDto
 import io.ktor.client.HttpClient
 import io.ktor.client.request.delete
@@ -32,8 +33,19 @@ class KtorWatchListDataSource(
         }
     }
 
-    override suspend fun postWatchList(clubId: String): Result<Unit, DataError.Remote> {
-        TODO("Not yet implemented")
+
+
+    override suspend fun postWatchList(
+        clubId: String,
+        postWatchListItemDto: PostWatchListItemDto
+    ): Result<Unit, DataError.Remote> {
+        return safeCall {
+            httpClient.post(
+                urlString = "$BASE_URL/api/club/$clubId/list/watchlist"
+            ) {
+                setBody(postWatchListItemDto)
+            }
+        }
     }
 
     override suspend fun deleteWatchList(

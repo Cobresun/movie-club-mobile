@@ -82,7 +82,7 @@ fun ClubScreen(
                     addMovieToBacklog = { movie -> onAction(ClubAction.OnAddMovieToBacklog(movie)) },
                     onDeleteWatchListItem = { item -> onAction(ClubAction.OnDeleteWatchListItem(item)) },
                     onDeleteBacklogItem = { item -> onAction(ClubAction.OnDeleteBacklogItem(item)) },
-                    onMoveToWatchList = { item -> { onAction(ClubAction.OnMoveToWatchList(item)) } },
+                    onMoveToWatchList = { item -> onAction(ClubAction.OnMoveToWatchList(item)) },
                     trendingMovies = trendingMovies
                 )
             }

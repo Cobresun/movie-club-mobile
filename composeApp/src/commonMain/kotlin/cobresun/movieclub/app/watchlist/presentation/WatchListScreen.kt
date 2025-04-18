@@ -66,13 +66,17 @@ fun WatchListScreen(
     addMovieToBacklog: (TmdbMovie) -> Unit,
     onDeleteWatchListItem: (WatchListItem) -> Unit,
     onDeleteBacklogItem: (WatchListItem) -> Unit,
-    onMoveToWatchList: (WatchListItem) -> () -> Unit,
+    onMoveToWatchList: (WatchListItem) -> Unit,
     trendingMovies: AsyncResult<List<TmdbMovie>>,
     modifier: Modifier = Modifier,
 ) {
+    var searchQuery by remember { mutableStateOf("") }
+
     var isShowingWatchList by remember { mutableStateOf(true) }
+
     var openBottomSheet by rememberSaveable { mutableStateOf<WatchListBottomSheetType?>(null) }
     val sheetState = rememberModalBottomSheetState()
+    
     val scope = rememberCoroutineScope()
 
     Scaffold(
@@ -95,6 +99,8 @@ fun WatchListScreen(
             onSelectWatchListItem = {
                 openBottomSheet = WatchListBottomSheetType.WatchListItemSheet(it)
             },
+            searchQuery = searchQuery,
+            onSearchQueryChange = { searchQuery = it },
             modifier = modifier.padding(contentPadding)
         )
     }
@@ -135,6 +141,7 @@ fun WatchListScreen(
                         onMoveToWatchList = {
                             onMoveToWatchList(bottomSheetType.watchListItem)
                             openBottomSheet = null
+                            isShowingWatchList = true
                         }
                     )
                 }
@@ -241,10 +248,10 @@ private fun ScreenContent(
     watchList: AsyncResult<List<WatchListItem>>,
     backlog: AsyncResult<List<WatchListItem>>,
     onSelectWatchListItem: (WatchListItem) -> Unit,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var searchQuery by remember { mutableStateOf("") }
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -254,7 +261,7 @@ private fun ScreenContent(
             isShowingWatchList = isShowingWatchList,
             searchQuery = searchQuery,
             toggleIsShowingWatchList = toggleIsShowingWatchList,
-            onSearchQueryChange = { searchQuery = it }
+            onSearchQueryChange = { onSearchQueryChange(it) }
         )
 
         AnimatedMovieList(

@@ -45,15 +45,7 @@ class ClubViewModel(
     fun onAction(action: ClubAction) {
         when (action) {
             is ClubAction.OnAddMovieToWatchList -> {
-                viewModelScope.launch {
-                    watchListRepository.postWatchList(clubId, action.movie)
-                        .onSuccess {
-                            getWatchList()
-                        }
-                        .onError {
-                            println("Error adding movie to watchlist: $it")
-                        }
-                }
+                TODO("Not yet implemented")
             }
 
             is ClubAction.OnAddMovieToBacklog -> {
@@ -92,7 +84,24 @@ class ClubViewModel(
                 }
             }
 
-            is ClubAction.OnMoveToWatchList -> TODO()
+            is ClubAction.OnMoveToWatchList -> {
+                viewModelScope.launch {
+                    watchListRepository.postWatchList(clubId, action.item)
+                        .onSuccess {
+                            watchListRepository.deleteBacklog(clubId, action.item.id)
+                                .onSuccess {
+                                    getBacklog()
+                                    getWatchList()
+                                }
+                                .onError {
+                                    println("Error moving movie to watchlist: $it")
+                                }
+                        }
+                        .onError {
+                            println("Error moving movie to watchlist: $it")
+                        }
+                }
+            }
         }
     }
 
@@ -101,7 +110,7 @@ class ClubViewModel(
             .onSuccess { reviews ->
                 _state.update { it.copy(reviews = AsyncResult.Success(reviews)) }
             }
-            .onError { error ->
+            .onError {
                 _state.update { it.copy(reviews = AsyncResult.Error()) }
             }
     }
@@ -111,7 +120,7 @@ class ClubViewModel(
             .onSuccess { watchList ->
                 _state.update { it.copy(watchList = AsyncResult.Success(watchList)) }
             }
-            .onError { error ->
+            .onError {
                 _state.update { it.copy(watchList = AsyncResult.Error()) }
             }
     }
@@ -121,7 +130,7 @@ class ClubViewModel(
             .onSuccess { backlog ->
                 _state.update { it.copy(backlog = AsyncResult.Success(backlog)) }
             }
-            .onError { error ->
+            .onError {
                 _state.update { it.copy(backlog = AsyncResult.Error()) }
             }
     }

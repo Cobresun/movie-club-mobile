@@ -1,11 +1,12 @@
 package cobresun.movieclub.app.watchlist.data.repository
 
-import cobresun.movieclub.app.club.data.dto.WorkType
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
+import cobresun.movieclub.app.core.domain.WorkType
 import cobresun.movieclub.app.core.domain.map
 import cobresun.movieclub.app.tmdb.domain.TmdbMovie
 import cobresun.movieclub.app.watchlist.data.dto.BacklogPostDto
+import cobresun.movieclub.app.watchlist.data.dto.PostWatchListItemDto
 import cobresun.movieclub.app.watchlist.data.mappers.toWatchListItem
 import cobresun.movieclub.app.watchlist.data.network.WatchListDataSource
 import cobresun.movieclub.app.watchlist.domain.WatchListItem
@@ -31,9 +32,20 @@ class WatchListRepositoryImpl(
 
     override suspend fun postWatchList(
         clubId: String,
-        tmdbMovie: TmdbMovie
+        watchListItem: WatchListItem
     ): Result<Unit, DataError.Remote> {
-        return watchListDataSource.postWatchList(clubId = clubId)
+        return watchListDataSource.postWatchList(
+            clubId = clubId,
+            postWatchListItemDto = PostWatchListItemDto(
+                id = watchListItem.id,
+                type = watchListItem.type.value,
+                title = watchListItem.title,
+                externalId = watchListItem.externalId,
+                imageUrl = watchListItem.imageUrl,
+                createdDate = watchListItem.createdDate,
+                externalData = watchListItem.externalDataDto
+            )
+        )
     }
 
     override suspend fun deleteWatchList(
