@@ -1,6 +1,7 @@
 package cobresun.movieclub.app.reviews.presentation
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -10,7 +11,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,6 +41,12 @@ import cobresun.movieclub.app.reviews.domain.Score
 import cobresun.movieclub.app.reviews.presentation.components.AverageIconVector
 import cobresun.movieclub.app.reviews.presentation.components.ScoreChip
 
+sealed class ReviewScreenBottomSheetType {
+    data object AddMovieSheet : ReviewScreenBottomSheetType()
+    data class ReviewDetailsSheet(val review: Review) : ReviewScreenBottomSheetType()
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReviewsScreen(
     reviews: AsyncResult<List<Review>>,
@@ -39,6 +54,69 @@ fun ReviewsScreen(
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
+    var openBottomSheet by remember { mutableStateOf<ReviewScreenBottomSheetType?>(null) }
+    val sheetState = rememberModalBottomSheetState()
+
+    Scaffold(
+        modifier = modifier,
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { openBottomSheet = ReviewScreenBottomSheetType.AddMovieSheet }
+            ) {
+                Icon(
+                    Icons.Filled.Add,
+                    contentDescription = "Add movie to reviews"
+                )
+            }
+        }
+    ) { contentPadding ->
+        ScreenContent(
+            reviews = reviews,
+            onSelectReviewItem = {
+                openBottomSheet = ReviewScreenBottomSheetType.ReviewDetailsSheet(it)
+            },
+            searchQuery = searchQuery,
+            onSearchQueryChange = { searchQuery = it },
+            modifier = modifier
+        )
+    }
+
+    openBottomSheet?.let { bottomSheetType ->
+        ModalBottomSheet(
+            onDismissRequest = { openBottomSheet = null },
+            sheetState = sheetState
+        ) {
+            when (bottomSheetType) {
+                is ReviewScreenBottomSheetType.AddMovieSheet -> {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(text = "Add Movie")
+                    }
+                }
+
+                is ReviewScreenBottomSheetType.ReviewDetailsSheet -> {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Text(text = bottomSheetType.review.title)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ScreenContent(
+    reviews: AsyncResult<List<Review>>,
+    onSelectReviewItem: (Review) -> Unit,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -57,7 +135,7 @@ fun ReviewsScreen(
 
             SearchBar(
                 searchQuery = searchQuery,
-                onValueChange = ({ searchQuery = it }),
+                onValueChange = { onSearchQueryChange(it) },
                 modifier = Modifier.weight(1f)
             )
         }
@@ -76,6 +154,7 @@ fun ReviewsScreen(
 
                     ReviewGrid(
                         reviews = filteredReviews,
+                        onSelectReviewItem = onSelectReviewItem,
                         modifier = modifier,
                     )
                 }
@@ -87,6 +166,7 @@ fun ReviewsScreen(
 @Composable
 fun ReviewGrid(
     reviews: List<Review>,
+    onSelectReviewItem: (Review) -> Unit,
     modifier: Modifier,
 ) {
     MovieGrid(modifier = modifier) {
@@ -94,7 +174,7 @@ fun ReviewGrid(
             MovieCard(
                 title = it.title,
                 posterImageUrl = it.imageUrl,
-                modifier = Modifier.animateItem()
+                modifier = Modifier.animateItem().clickable { onSelectReviewItem(it) }
             ) {
                 Text(
                     text = it.createdDate,

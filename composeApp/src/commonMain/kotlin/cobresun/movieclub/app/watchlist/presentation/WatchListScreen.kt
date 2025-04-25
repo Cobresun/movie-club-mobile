@@ -28,7 +28,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,7 +49,6 @@ import cobresun.movieclub.app.core.presentation.components.MovieGrid
 import cobresun.movieclub.app.core.presentation.components.SearchBar
 import cobresun.movieclub.app.tmdb.domain.TmdbMovie
 import cobresun.movieclub.app.watchlist.domain.WatchListItem
-import kotlinx.coroutines.launch
 
 sealed class WatchListBottomSheetType {
     data object AddMovieSheet : WatchListBottomSheetType()
@@ -76,18 +74,17 @@ fun WatchListScreen(
 
     var openBottomSheet by rememberSaveable { mutableStateOf<WatchListBottomSheetType?>(null) }
     val sheetState = rememberModalBottomSheetState()
-    
-    val scope = rememberCoroutineScope()
 
     Scaffold(
         modifier = modifier,
         floatingActionButton = {
             FloatingActionButton(
-                onClick = {
-                    scope.launch { openBottomSheet = WatchListBottomSheetType.AddMovieSheet }
-                }
+                onClick = { openBottomSheet = WatchListBottomSheetType.AddMovieSheet }
             ) {
-                Icon(Icons.Filled.Add, contentDescription = "")
+                Icon(
+                    Icons.Filled.Add,
+                    contentDescription = "Add movie to ${if (isShowingWatchList) "watch list" else "backlog"}"
+                )
             }
         }
     ) { contentPadding ->
@@ -101,7 +98,7 @@ fun WatchListScreen(
             },
             searchQuery = searchQuery,
             onSearchQueryChange = { searchQuery = it },
-            modifier = modifier.padding(contentPadding)
+            modifier = modifier
         )
     }
 
@@ -344,7 +341,7 @@ private fun WatchListGrid(
                 title = it.title,
                 posterImageUrl = it.imageUrl,
                 highlight = it.isNextMovie,
-                modifier = Modifier.clickable { onSelectWatchListItem(it) }
+                modifier = Modifier.animateItem().clickable { onSelectWatchListItem(it) }
             )
         }
     }
