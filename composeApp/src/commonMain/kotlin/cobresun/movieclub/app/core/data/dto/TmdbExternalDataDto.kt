@@ -21,7 +21,7 @@ data class TmdbExternalDataDto(
     @SerialName("poster_path")
     val posterPath: String?,
     @SerialName("release_date")
-    val releaseDate: String?,
+    val releaseDate: String? = null,
     val revenue: Int?,
     val runtime: Int?,
     val status: String?,
