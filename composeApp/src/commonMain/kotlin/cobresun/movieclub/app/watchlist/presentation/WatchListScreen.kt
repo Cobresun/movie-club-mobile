@@ -22,6 +22,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -41,6 +42,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import cobresun.movieclub.app.app.AppTheme
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.AsyncResultHandler
 import cobresun.movieclub.app.core.presentation.LIGHT_GRAY
@@ -49,6 +51,7 @@ import cobresun.movieclub.app.core.presentation.components.MovieGrid
 import cobresun.movieclub.app.core.presentation.components.SearchBar
 import cobresun.movieclub.app.tmdb.domain.TmdbMovie
 import cobresun.movieclub.app.watchlist.domain.WatchListItem
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 sealed class WatchListBottomSheetType {
     data object AddMovieSheet : WatchListBottomSheetType()
@@ -344,5 +347,60 @@ private fun WatchListGrid(
                 modifier = Modifier.animateItem().clickable { onSelectWatchListItem(it) }
             )
         }
+    }
+}
+
+@Preview()
+@Composable
+fun WatchListGridPreview() {
+    AppTheme {
+        Surface {
+            WatchListGrid(
+                watchList = listOf(
+                    WatchListItem(
+                        id = "1",
+                        title = "Movie 1",
+                        createdDate = "2023-01-01",
+                        externalId = "1",
+                        imageUrl = "",
+                        externalDataDto = null,
+                        isNextMovie = false,
+
+                        ),
+                    WatchListItem(
+                        id = "2",
+                        title = "Movie 2",
+                        createdDate = "2023-01-02",
+                        externalId = "2",
+                        imageUrl = "",
+                        externalDataDto = null,
+                        isNextMovie = false,
+                    ),
+                    WatchListItem(
+                        id = "3",
+                        title = "Movie 3",
+                        createdDate = "2023-01-03",
+                        externalId = "3",
+                        imageUrl = "",
+                        externalDataDto = null,
+                        isNextMovie = false,
+                    )
+                ),
+                onSelectWatchListItem = {},
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+    }
+}
+
+@Preview()
+@Composable
+fun EmptyWatchListGridPreview() {
+    AppTheme {
+        WatchListGrid(
+            watchList = emptyList(),
+            onSelectWatchListItem = {},
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }

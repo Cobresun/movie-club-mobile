@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +17,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import cobresun.movieclub.app.app.AppTheme
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.AsyncResultHandler
 import cobresun.movieclub.app.core.domain.User
@@ -40,6 +41,7 @@ import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.domain.Score
 import cobresun.movieclub.app.reviews.presentation.components.AverageIconVector
 import cobresun.movieclub.app.reviews.presentation.components.ScoreChip
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 sealed class ReviewScreenBottomSheetType {
     data object AddMovieSheet : ReviewScreenBottomSheetType()
@@ -185,7 +187,6 @@ fun ReviewGrid(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ScoreGrid(scores: Map<User, Score>) {
     FlowRow(
@@ -221,6 +222,51 @@ fun ScoreGrid(scores: Map<User, Score>) {
                 image = AverageIconVector,
                 contentDescription = "Average",
                 score = scores.values.map { it.value }.average(),
+            )
+        }
+    }
+}
+
+@Preview
+@Composable
+fun ScoreGridPreview() {
+    AppTheme {
+        Surface {
+            ScoreGrid(
+                scores = mapOf(
+                    User(
+                        id = "1",
+                        name = "Cole",
+                        imageUrl = null
+                    ) to Score(
+                        id = "1",
+                        value = 5.0,
+                    ),
+                    User(
+                        id = "2",
+                        name = "Brian",
+                        imageUrl = null
+                    ) to Score(
+                        id = "2",
+                        value = 5.0,
+                    ),
+                    User(
+                        id = "3",
+                        name = "Wesley",
+                        imageUrl = null
+                    ) to Score(
+                        id = "3",
+                        value = 5.0,
+                    ),
+                    User(
+                        id = "4",
+                        name = "Sunny",
+                        imageUrl = null
+                    ) to Score(
+                        id = "4",
+                        value = 5.0,
+                    ),
+                ),
             )
         }
     }

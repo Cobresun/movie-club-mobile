@@ -29,9 +29,10 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-@Preview
-fun App() {
-    MaterialTheme(
+fun AppTheme(
+    content: @Composable () -> Unit
+) {
+    return MaterialTheme(
         colorScheme = darkColorScheme(
             surface = Color(0xFF222831),
             onSurface = Color.White,
@@ -39,7 +40,13 @@ fun App() {
             background = Color(0xFF222831),
             onBackground = Color.White
         ),
-    ) {
+        content = content
+    )
+}
+
+@Composable
+fun App() {
+    AppTheme {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
@@ -103,6 +110,18 @@ fun LandingPageDestination(
             onClick = onAuthClick
         ) {
             Text(text = "Auth")
+        }
+    }
+}
+
+@Preview
+@Composable
+fun LandingPageDestinationPreview() {
+    AppTheme {
+        Surface {
+            LandingPageDestination(
+                onAuthClick = {}
+            )
         }
     }
 }

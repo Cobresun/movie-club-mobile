@@ -38,7 +38,6 @@ class WatchListRepositoryImpl(
             clubId = clubId,
             postWatchListItemDto = PostWatchListItemDto(
                 id = watchListItem.id,
-                type = watchListItem.type.value,
                 title = watchListItem.title,
                 externalId = watchListItem.externalId,
                 imageUrl = watchListItem.imageUrl,
