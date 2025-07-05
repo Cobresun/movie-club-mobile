@@ -29,4 +29,8 @@ class ReviewsRepositoryImpl(
     override suspend fun postReview(clubId: String, review: NewReviewItem): Result<Unit, DataError.Remote> {
         return reviewsDataSource.postReview(clubId, review.toNewReviewItemDto())
     }
+
+    override suspend fun deleteReview(clubId: String, reviewId: String): Result<Unit, DataError.Remote> {
+        return reviewsDataSource.deleteReview(clubId, reviewId)
+    }
 }

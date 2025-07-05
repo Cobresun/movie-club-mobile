@@ -130,6 +130,18 @@ class ClubViewModel(
                         }
                 }
             }
+
+            is ClubAction.OnDeleteReview -> {
+                viewModelScope.launch {
+                    reviewsRepository.deleteReview(clubId, action.reviewId)
+                        .onSuccess {
+                            getReviews()
+                        }
+                        .onError {
+                            println("Error deleting review: $it")
+                        }
+                }
+            }
         }
     }
 
@@ -181,6 +193,7 @@ sealed interface ClubAction {
     data class OnDeleteBacklogItem(val item: WatchListItem) : ClubAction
     data class OnMoveToWatchList(val watchListItem: WatchListItem) : ClubAction
     data class OnMoveToReview(val watchListItem: WatchListItem) : ClubAction
+    data class OnDeleteReview(val reviewId: String) : ClubAction
 }
 
 data class ClubState(

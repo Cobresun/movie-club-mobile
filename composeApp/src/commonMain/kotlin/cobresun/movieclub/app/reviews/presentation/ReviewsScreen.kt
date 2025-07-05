@@ -53,6 +53,7 @@ sealed class ReviewScreenBottomSheetType {
 @Composable
 fun ReviewsScreen(
     reviews: AsyncResult<List<Review>>,
+    onDeleteReview: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -102,7 +103,10 @@ fun ReviewsScreen(
                 is ReviewScreenBottomSheetType.ReviewDetailsSheet -> {
                     MovieActionBottomSheetContent(
                         title = bottomSheetType.review.title,
-                        onDelete = { TODO("Implement delete review") },
+                        onDelete = {
+                            onDeleteReview(bottomSheetType.review.id)
+                            openBottomSheet = null
+                        },
                         primaryButtonText = null,
                         onPrimaryButtonClick = {},
                     )
@@ -279,6 +283,7 @@ private fun ReviewsScreenPreview() {
     AppTheme {
         ReviewsScreen(
             reviews = AsyncResult.Success(emptyList()),
+            onDeleteReview = {}
         )
     }
 }
@@ -324,6 +329,7 @@ private fun ReviewsScreenWithDataPreview() {
                     )
                 )
             ),
+            onDeleteReview = {}
         )
     }
 }

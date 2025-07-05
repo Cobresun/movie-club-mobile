@@ -76,7 +76,10 @@ fun ClubScreen(
             userScrollEnabled = false // Must be turned off so allow the user to swipe to open ModalDrawer
         ) { index ->
             if (index == 0) {
-                ReviewsScreen(reviews = reviews)
+                ReviewsScreen(
+                    reviews = reviews,
+                    onDeleteReview = { reviewId -> onAction(ClubAction.OnDeleteReview(reviewId)) }
+                )
             } else {
                 WatchListScreen(
                     watchList = watchList,

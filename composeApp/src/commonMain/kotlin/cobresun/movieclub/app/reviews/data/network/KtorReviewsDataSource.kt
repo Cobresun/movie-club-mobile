@@ -4,9 +4,10 @@ import cobresun.movieclub.app.core.data.safeCall
 import cobresun.movieclub.app.core.domain.Constants.BASE_URL
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
-import cobresun.movieclub.app.reviews.data.dto.ReviewDto
 import cobresun.movieclub.app.reviews.data.dto.NewReviewItemDto
+import cobresun.movieclub.app.reviews.data.dto.ReviewDto
 import io.ktor.client.HttpClient
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -29,6 +30,14 @@ class KtorReviewsDataSource(
             ) {
                 setBody(review)
             }
+        }
+    }
+
+    override suspend fun deleteReview(clubId: String, reviewId: String): Result<Unit, DataError.Remote> {
+        return safeCall {
+            httpClient.delete(
+                urlString = "$BASE_URL/api/club/$clubId/list/reviews/$reviewId"
+            )
         }
     }
 }
