@@ -34,6 +34,7 @@ import cobresun.movieclub.app.app.AppTheme
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.AsyncResultHandler
 import cobresun.movieclub.app.core.domain.User
+import cobresun.movieclub.app.core.presentation.components.MovieActionBottomSheetContent
 import cobresun.movieclub.app.core.presentation.components.MovieCard
 import cobresun.movieclub.app.core.presentation.components.MovieGrid
 import cobresun.movieclub.app.core.presentation.components.SearchBar
@@ -99,12 +100,12 @@ fun ReviewsScreen(
                 }
 
                 is ReviewScreenBottomSheetType.ReviewDetailsSheet -> {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(text = bottomSheetType.review.title)
-                    }
+                    MovieActionBottomSheetContent(
+                        title = bottomSheetType.review.title,
+                        onDelete = { TODO("Implement delete review") },
+                        primaryButtonText = null,
+                        onPrimaryButtonClick = {},
+                    )
                 }
             }
         }

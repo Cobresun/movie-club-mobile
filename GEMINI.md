@@ -21,11 +21,11 @@ The `commonMain` module is further divided into layers, following the principles
 
 - **`presentation`**: This layer is responsible for the UI and user interaction. It contains:
   - **`ViewModel`s**: These classes hold the UI state and handle user events.
+  - ViewModels should contain Action sealed interfaces that represent the different user actions.
   - **`Screen`s**: These are the Composable functions that define the UI.
   - **`components`**: Reusable UI components.
 - **`domain`**: This layer contains the core business logic of the application. It includes:
   - **`Repository` interfaces**: These define the contracts for accessing data.
-  - **Use cases**: These classes encapsulate specific business operations.
   - **Domain models**: These are the plain data classes that represent the core entities of the application.
 - **`data`**: This layer is responsible for providing data to the domain layer. It contains:
   - **`Repository` implementations**: These classes implement the `Repository` interfaces defined in the domain layer.

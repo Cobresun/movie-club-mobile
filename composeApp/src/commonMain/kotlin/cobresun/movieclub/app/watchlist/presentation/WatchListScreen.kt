@@ -16,12 +16,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -38,7 +36,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,6 +44,7 @@ import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.AsyncResultHandler
 import cobresun.movieclub.app.core.domain.WorkType
 import cobresun.movieclub.app.core.presentation.LIGHT_GRAY
+import cobresun.movieclub.app.core.presentation.components.MovieActionBottomSheetContent
 import cobresun.movieclub.app.core.presentation.components.MovieCard
 import cobresun.movieclub.app.core.presentation.components.MovieGrid
 import cobresun.movieclub.app.core.presentation.components.SearchBar
@@ -130,7 +128,7 @@ fun WatchListScreen(
 
                 is WatchListBottomSheetType.WatchListItemSheet -> {
                     MovieActionBottomSheetContent(
-                        watchListItem = bottomSheetType.watchListItem,
+                        title = bottomSheetType.watchListItem.title,
                         onDelete = {
                             if (isShowingWatchList) {
                                 onDeleteWatchListItem(bottomSheetType.watchListItem)
@@ -202,50 +200,7 @@ fun AddMovieBottomSheetContent(
     )
 }
 
-@Composable
-fun MovieActionBottomSheetContent(
-    watchListItem: WatchListItem,
-    onDelete: () -> Unit,
-    primaryButtonText: String,
-    onPrimaryButtonClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier.padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text(
-            modifier = Modifier.fillMaxWidth(),
-            text = watchListItem.title,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            OutlinedButton(
-                onClick = onDelete,
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(4.dp),
-                content = {
-                    Text(text = "Delete")
-                }
-            )
-
-            Button(
-                onClick = onPrimaryButtonClick,
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(4.dp),
-                content = {
-                    Text(text = primaryButtonText)
-                }
-            )
-        }
-    }
-}
 
 @Composable
 private fun ScreenContent(
@@ -440,16 +395,7 @@ private fun AddMovieBottomSheetContentWithDataPreview() {
 private fun MovieActionBottomSheetContentPreview() {
     AppTheme {
         MovieActionBottomSheetContent(
-            watchListItem = WatchListItem(
-                id = "1",
-                type = WorkType.MOVIE,
-                title = "The Lord of the Rings: The Fellowship of the Ring",
-                createdDate = "2021-01-01",
-                externalId = "1",
-                imageUrl = "https://www.themoviedb.org/t/p/w600_and_h900_bestv2/6oom5QYQ2yQzgp4bUS4eE2MvNte.jpg",
-                externalDataDto = null,
-                isNextMovie = false,
-            ),
+            title = "The Lord of the Rings: The Fellowship of the Ring",
             onDelete = {},
             primaryButtonText = "Review",
             onPrimaryButtonClick = {},
