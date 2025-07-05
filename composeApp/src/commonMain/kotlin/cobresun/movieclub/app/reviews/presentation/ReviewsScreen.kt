@@ -1,7 +1,6 @@
 package cobresun.movieclub.app.reviews.presentation
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -181,7 +180,8 @@ fun ReviewGrid(
             MovieCard(
                 title = it.title,
                 posterImageUrl = it.imageUrl,
-                modifier = Modifier.animateItem().clickable { onSelectReviewItem(it) }
+                modifier = Modifier.animateItem(),
+                onClick = { onSelectReviewItem(it) }
             ) {
                 Text(
                     text = it.createdDate,

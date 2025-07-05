@@ -305,7 +305,8 @@ private fun WatchListGrid(
                 title = it.title,
                 posterImageUrl = it.imageUrl,
                 highlight = it.isNextMovie,
-                modifier = Modifier.animateItem().clickable { onSelectWatchListItem(it) }
+                modifier = Modifier.animateItem(),
+                onClick = { onSelectWatchListItem(it) }
             )
         }
     }
