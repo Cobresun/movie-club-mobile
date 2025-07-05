@@ -9,6 +9,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class WatchListItemDto(
     val id: String,
+    val type: String,
     val title: String,
     @Serializable(with = InstantIso8601Serializer::class) val createdDate: Instant,
     val imageUrl: String,

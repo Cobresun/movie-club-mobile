@@ -2,8 +2,10 @@ package cobresun.movieclub.app.reviews.data.mappers
 
 import cobresun.movieclub.app.club.data.dto.MemberDto
 import cobresun.movieclub.app.core.domain.User
+import cobresun.movieclub.app.reviews.data.dto.NewReviewItemDto
 import cobresun.movieclub.app.reviews.data.dto.ReviewDto
 import cobresun.movieclub.app.reviews.data.dto.ScoreDto
+import cobresun.movieclub.app.reviews.domain.NewReviewItem
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.domain.Score
 import kotlinx.datetime.TimeZone
@@ -41,4 +43,13 @@ fun Map<String, ScoreDto>.toScores(memberDtos: List<MemberDto>): Map<User, Score
 
             user to score
         }.toMap()
+}
+
+fun NewReviewItem.toNewReviewItemDto(): NewReviewItemDto {
+    return NewReviewItemDto(
+        type = type,
+        title = title,
+        externalId = externalId,
+        imageUrl = imageUrl
+    )
 }

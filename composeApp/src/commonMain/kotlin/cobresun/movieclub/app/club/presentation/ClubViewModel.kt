@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
+import cobresun.movieclub.app.reviews.domain.NewReviewItem
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.domain.ReviewsRepository
 import cobresun.movieclub.app.tmdb.domain.TmdbMovie
@@ -86,9 +87,9 @@ class ClubViewModel(
 
             is ClubAction.OnMoveToWatchList -> {
                 viewModelScope.launch {
-                    watchListRepository.postWatchList(clubId, action.item)
+                    watchListRepository.postWatchList(clubId, action.watchListItem)
                         .onSuccess {
-                            watchListRepository.deleteBacklog(clubId, action.item.id)
+                            watchListRepository.deleteBacklog(clubId, action.watchListItem.id)
                                 .onSuccess {
                                     getBacklog()
                                     getWatchList()
@@ -99,6 +100,33 @@ class ClubViewModel(
                         }
                         .onError {
                             println("Error moving movie to watchlist: $it")
+                        }
+                }
+            }
+
+            is ClubAction.OnMoveToReview -> {
+                viewModelScope.launch {
+                    reviewsRepository.postReview(
+                        clubId,
+                        NewReviewItem(
+                            type = action.watchListItem.type.value,
+                            title = action.watchListItem.title,
+                            externalId = action.watchListItem.externalId,
+                            imageUrl = action.watchListItem.imageUrl
+                        )
+                    )
+                        .onSuccess {
+                            watchListRepository.deleteWatchList(clubId, action.watchListItem.id)
+                                .onSuccess {
+                                    getWatchList()
+                                    getReviews()
+                                }
+                                .onError {
+                                    println("Error deleting movie from watchlist for review: $it")
+                                }
+                        }
+                        .onError {
+                            println("Error posting review: $it")
                         }
                 }
             }
@@ -151,7 +179,8 @@ sealed interface ClubAction {
     data class OnAddMovieToBacklog(val movie: TmdbMovie) : ClubAction
     data class OnDeleteWatchListItem(val item: WatchListItem) : ClubAction
     data class OnDeleteBacklogItem(val item: WatchListItem) : ClubAction
-    data class OnMoveToWatchList(val item: WatchListItem) : ClubAction
+    data class OnMoveToWatchList(val watchListItem: WatchListItem) : ClubAction
+    data class OnMoveToReview(val watchListItem: WatchListItem) : ClubAction
 }
 
 data class ClubState(

@@ -4,8 +4,10 @@ import cobresun.movieclub.app.club.data.network.ClubDataSource
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.map
+import cobresun.movieclub.app.reviews.data.mappers.toNewReviewItemDto
 import cobresun.movieclub.app.reviews.data.mappers.toReview
 import cobresun.movieclub.app.reviews.data.network.ReviewsDataSource
+import cobresun.movieclub.app.reviews.domain.NewReviewItem
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.domain.ReviewsRepository
 
@@ -22,5 +24,9 @@ class ReviewsRepositoryImpl(
                     reviewDtos.map { it.toReview(members.data) }
                 }
         }
+    }
+
+    override suspend fun postReview(clubId: String, review: NewReviewItem): Result<Unit, DataError.Remote> {
+        return reviewsDataSource.postReview(clubId, review.toNewReviewItemDto())
     }
 }

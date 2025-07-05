@@ -21,6 +21,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -44,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import cobresun.movieclub.app.app.AppTheme
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.AsyncResultHandler
+import cobresun.movieclub.app.core.domain.WorkType
 import cobresun.movieclub.app.core.presentation.LIGHT_GRAY
 import cobresun.movieclub.app.core.presentation.components.MovieCard
 import cobresun.movieclub.app.core.presentation.components.MovieGrid
@@ -61,12 +63,13 @@ sealed class WatchListBottomSheetType {
 @Composable
 fun WatchListScreen(
     watchList: AsyncResult<List<WatchListItem>>,
-    addMovieToWatchList: (TmdbMovie) -> Unit,
     backlog: AsyncResult<List<WatchListItem>>,
+    addMovieToWatchList: (TmdbMovie) -> Unit,
     addMovieToBacklog: (TmdbMovie) -> Unit,
     onDeleteWatchListItem: (WatchListItem) -> Unit,
     onDeleteBacklogItem: (WatchListItem) -> Unit,
     onMoveToWatchList: (WatchListItem) -> Unit,
+    onMoveToReview: (WatchListItem) -> Unit,
     trendingMovies: AsyncResult<List<TmdbMovie>>,
     modifier: Modifier = Modifier,
 ) {
@@ -126,7 +129,7 @@ fun WatchListScreen(
                 }
 
                 is WatchListBottomSheetType.WatchListItemSheet -> {
-                    WatchListItemBottomSheetContent(
+                    MovieActionBottomSheetContent(
                         watchListItem = bottomSheetType.watchListItem,
                         onDelete = {
                             if (isShowingWatchList) {
@@ -134,13 +137,16 @@ fun WatchListScreen(
                             } else {
                                 onDeleteBacklogItem(bottomSheetType.watchListItem)
                             }
-
                             openBottomSheet = null
                         },
-                        onMoveToWatchList = {
-                            onMoveToWatchList(bottomSheetType.watchListItem)
+                        primaryButtonText = if (isShowingWatchList) "Review" else "Move to watch list",
+                        onPrimaryButtonClick = {
+                            if (isShowingWatchList) {
+                                onMoveToReview(bottomSheetType.watchListItem)
+                            } else {
+                                onMoveToWatchList(bottomSheetType.watchListItem)
+                            }
                             openBottomSheet = null
-                            isShowingWatchList = true
                         }
                     )
                 }
@@ -197,15 +203,17 @@ fun AddMovieBottomSheetContent(
 }
 
 @Composable
-fun WatchListItemBottomSheetContent(
+fun MovieActionBottomSheetContent(
     watchListItem: WatchListItem,
     onDelete: () -> Unit,
-    onMoveToWatchList: () -> Unit,
+    primaryButtonText: String,
+    onPrimaryButtonClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier.padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
             modifier = Modifier.fillMaxWidth(),
@@ -218,7 +226,7 @@ fun WatchListItemBottomSheetContent(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Button(
+            OutlinedButton(
                 onClick = onDelete,
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(4.dp),
@@ -228,15 +236,14 @@ fun WatchListItemBottomSheetContent(
             )
 
             Button(
-                onClick = onMoveToWatchList,
+                onClick = onPrimaryButtonClick,
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(4.dp),
                 content = {
-                    Text(text = "Move to watch list")
+                    Text(text = primaryButtonText)
                 }
             )
         }
-
     }
 }
 
@@ -361,6 +368,7 @@ private fun WatchListScreenPreview() {
             onDeleteWatchListItem = {},
             onDeleteBacklogItem = {},
             onMoveToWatchList = {},
+            onMoveToReview = {},
             trendingMovies = AsyncResult.Success(emptyList()),
         )
     }
@@ -375,6 +383,7 @@ private fun WatchListScreenWithDataPreview() {
                 listOf(
                     WatchListItem(
                         id = "1",
+                        type = WorkType.MOVIE,
                         title = "The Lord of the Rings: The Fellowship of the Ring",
                         createdDate = "2021-01-01",
                         externalId = "1",
@@ -390,6 +399,7 @@ private fun WatchListScreenWithDataPreview() {
             onDeleteWatchListItem = {},
             onDeleteBacklogItem = {},
             onMoveToWatchList = {},
+            onMoveToReview = {},
             trendingMovies = AsyncResult.Success(emptyList()),
         )
     }
@@ -427,11 +437,12 @@ private fun AddMovieBottomSheetContentWithDataPreview() {
 
 @Composable
 @Preview
-private fun WatchListItemBottomSheetContentPreview() {
+private fun MovieActionBottomSheetContentPreview() {
     AppTheme {
-        WatchListItemBottomSheetContent(
+        MovieActionBottomSheetContent(
             watchListItem = WatchListItem(
                 id = "1",
+                type = WorkType.MOVIE,
                 title = "The Lord of the Rings: The Fellowship of the Ring",
                 createdDate = "2021-01-01",
                 externalId = "1",
@@ -440,7 +451,8 @@ private fun WatchListItemBottomSheetContentPreview() {
                 isNextMovie = false,
             ),
             onDelete = {},
-            onMoveToWatchList = {},
+            primaryButtonText = "Review",
+            onPrimaryButtonClick = {},
         )
     }
 }

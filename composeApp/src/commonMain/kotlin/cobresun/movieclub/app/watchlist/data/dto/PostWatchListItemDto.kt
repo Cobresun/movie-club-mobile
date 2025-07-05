@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class PostWatchListItemDto(
     val id: String,
+    val type: String,
     val title: String,
     val externalId: String,
     val imageUrl: String,

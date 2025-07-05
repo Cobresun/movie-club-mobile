@@ -32,6 +32,7 @@ The `commonMain` module is further divided into layers, following the principles
   - **Data sources**: These classes are responsible for fetching data from the network or a local database.
   - **DTOs (Data Transfer Objects)**: These are the data classes that represent the data coming from the network or database.
   - **Mappers**: These classes are responsible for mapping DTOs to domain models.
+  - We should never leak DTOs into the presentation or domain layers. Use mappers to map DTOs to domain models.
 
 ### Feature Modules
 

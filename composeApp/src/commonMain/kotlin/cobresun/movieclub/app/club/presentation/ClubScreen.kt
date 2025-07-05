@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cobresun.movieclub.app.app.AppTheme
 import cobresun.movieclub.app.core.domain.AsyncResult
+import cobresun.movieclub.app.core.domain.WorkType
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.presentation.ReviewsScreen
 import cobresun.movieclub.app.tmdb.domain.TmdbMovie
@@ -79,12 +80,13 @@ fun ClubScreen(
             } else {
                 WatchListScreen(
                     watchList = watchList,
-                    addMovieToWatchList = { movie -> onAction(ClubAction.OnAddMovieToWatchList(movie)) },
                     backlog = backlog,
+                    addMovieToWatchList = { movie -> onAction(ClubAction.OnAddMovieToWatchList(movie)) },
                     addMovieToBacklog = { movie -> onAction(ClubAction.OnAddMovieToBacklog(movie)) },
                     onDeleteWatchListItem = { item -> onAction(ClubAction.OnDeleteWatchListItem(item)) },
                     onDeleteBacklogItem = { item -> onAction(ClubAction.OnDeleteBacklogItem(item)) },
                     onMoveToWatchList = { item -> onAction(ClubAction.OnMoveToWatchList(item)) },
+                    onMoveToReview = { item -> onAction(ClubAction.OnMoveToReview(item)) },
                     trendingMovies = trendingMovies
                 )
             }
@@ -143,6 +145,7 @@ private fun ClubScreenPreview() {
                 listOf(
                     WatchListItem(
                         id = "1",
+                        type = WorkType.MOVIE,
                         title = "Pulp Fiction",
                         createdDate = "2023-03-10",
                         externalId = "680",
@@ -152,6 +155,7 @@ private fun ClubScreenPreview() {
                     ),
                     WatchListItem(
                         id = "2",
+                        type = WorkType.MOVIE,
                         title = "The Dark Knight",
                         createdDate = "2023-04-05",
                         externalId = "155",
@@ -165,6 +169,7 @@ private fun ClubScreenPreview() {
                 listOf(
                     WatchListItem(
                         id = "3",
+                        type = WorkType.MOVIE,
                         title = "Forrest Gump",
                         createdDate = "2023-05-01",
                         externalId = "13",
@@ -174,6 +179,7 @@ private fun ClubScreenPreview() {
                     ),
                     WatchListItem(
                         id = "4",
+                        type = WorkType.MOVIE,
                         title = "Inception",
                         createdDate = "2023-06-12",
                         externalId = "27205",
