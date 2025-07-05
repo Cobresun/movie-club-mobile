@@ -271,3 +271,58 @@ fun ScoreGridPreview() {
         }
     }
 }
+
+@Composable
+@Preview
+private fun ReviewsScreenPreview() {
+    AppTheme {
+        ReviewsScreen(
+            reviews = AsyncResult.Success(emptyList()),
+        )
+    }
+}
+
+@Composable
+@Preview
+private fun ReviewsScreenWithDataPreview() {
+    AppTheme {
+        ReviewsScreen(
+            reviews = AsyncResult.Success(
+                listOf(
+                    Review(
+                        id = "1",
+                        title = "The Lord of the Rings: The Fellowship of the Ring",
+                        imageUrl = "https://www.themoviedb.org/t/p/w600_and_h900_bestv2/6oom5QYQ2yQzgp4bUS4eE2MvNte.jpg",
+                        createdDate = "2021-01-01",
+                        scores = mapOf(
+                            User(
+                                id = "1",
+                                name = "Cole",
+                                imageUrl = null
+                            ) to Score(
+                                id = "1",
+                                value = 5.0,
+                            ),
+                        )
+                    ),
+                    Review(
+                        id = "2",
+                        title = "The Lord of the Rings: The Two Towers",
+                        imageUrl = "https://image.tmdb.org/t/p/w154/null",
+                        createdDate = "2021-01-01",
+                        scores = mapOf(
+                            User(
+                                id = "1",
+                                name = "Cole",
+                                imageUrl = null
+                            ) to Score(
+                                id = "1",
+                                value = 5.0,
+                            ),
+                        )
+                    )
+                )
+            ),
+        )
+    }
+}

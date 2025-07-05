@@ -34,6 +34,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cobresun.movieclub.app.core.domain.AsyncResult
+import org.jetbrains.compose.ui.tooling.preview.Preview
+import cobresun.movieclub.app.app.AppTheme
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -95,6 +97,16 @@ private fun AuthScreen(
     }
 }
 
+@Composable
+@Preview
+private fun AuthScreenPreview() {
+    AppTheme {
+        AuthScreen(
+            onAction = {},
+        )
+    }
+}
+
 // TODO: This doesn't seem to work on iOS?
 @Composable
 fun PasswordTextField(
@@ -137,4 +149,26 @@ fun PasswordTextField(
             }
         }
     )
+}
+
+@Composable
+@Preview
+private fun PasswordTextFieldPreview() {
+    AppTheme {
+        val state = remember { TextFieldState() }
+        PasswordTextField(
+            state = state,
+        )
+    }
+}
+
+@Composable
+@Preview
+private fun PasswordTextFieldFilledPreview() {
+    AppTheme {
+        val state = remember { TextFieldState("some password") }
+        PasswordTextField(
+            state = state,
+        )
+    }
 }

@@ -1,6 +1,7 @@
 package cobresun.movieclub.app.core.presentation.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -16,7 +17,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import cobresun.movieclub.app.app.AppTheme
 import coil3.compose.AsyncImage
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 const val MOVIE_CARD_HIGHLIGHT_BORDER_COLOR = 0xFFFFD700
 
@@ -36,7 +39,7 @@ fun MovieCard(
         )
     ) {
         Column {
-            if (posterImageUrl != null) {
+            if (posterImageUrl != null && !posterImageUrl.endsWith("null")) {
                 AsyncImage(
                     model = posterImageUrl,
                     contentDescription = null,
@@ -44,7 +47,21 @@ fun MovieCard(
                     contentScale = ContentScale.FillBounds
                 )
             } else {
-                TODO("Add placeholder")
+                Column(
+                    modifier = Modifier
+                        .height(256.dp)
+                        .background(Color.LightGray),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Missing poster",
+                        modifier = Modifier.padding(32.dp),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.DarkGray
+                    )
+                }
             }
 
             Column(
@@ -61,5 +78,29 @@ fun MovieCard(
                 content?.let { it() }
             }
         }
+    }
+}
+
+@Preview
+@Composable
+fun MovieCardWithPosterPreview() {
+    AppTheme {
+        MovieCard(
+            title = "Movie Title",
+            posterImageUrl = "https://image.tmdb.org/t/p/w500/poster.jpg",
+            highlight = false,
+        )
+    }
+}
+
+@Preview
+@Composable
+fun MovieCardWithoutPosterPreview() {
+    AppTheme {
+        MovieCard(
+            title = "Movie Title",
+            posterImageUrl = null,
+            highlight = false,
+        )
     }
 }

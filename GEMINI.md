@@ -69,5 +69,6 @@ When contributing to the project, please follow the existing architecture and co
 - **Create a new feature module** for each new feature.
 - **Follow the Clean Architecture principles** by separating the UI, business logic, and data layers.
 - **Use Koin for dependency injection**.
+- **Use Jetpack Compose for all UI code. Add @Preview composables with edge cases and AppTheme applied.**
 - **Write unit tests** for your code.
 - **Keep the code in `commonMain`** as much as possible, and only use platform-specific code when necessary.

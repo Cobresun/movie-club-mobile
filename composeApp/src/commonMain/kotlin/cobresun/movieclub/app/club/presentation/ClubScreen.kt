@@ -19,12 +19,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import cobresun.movieclub.app.app.AppTheme
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.presentation.ReviewsScreen
 import cobresun.movieclub.app.tmdb.domain.TmdbMovie
 import cobresun.movieclub.app.watchlist.domain.WatchListItem
 import cobresun.movieclub.app.watchlist.presentation.WatchListScreen
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -111,5 +113,95 @@ fun ClubScreen(
                 }
             )
         }
+    }
+}
+
+@Composable
+@Preview
+private fun ClubScreenPreview() {
+    AppTheme {
+        ClubScreen(
+            reviews = AsyncResult.Success(
+                listOf(
+                    Review(
+                        id = "1",
+                        title = "The Shawshank Redemption",
+                        imageUrl = "https://image.tmdb.org/t/p/w500/q6y0oRbfh6IUxXp9C9AZ2UeFz5x.jpg",
+                        createdDate = "2023-01-15",
+                        scores = emptyMap()
+                    ),
+                    Review(
+                        id = "2",
+                        title = "The Godfather",
+                        imageUrl = "https://image.tmdb.org/t/p/w500/3bhkrj58Vtu7enYsRolD1fZdja1.jpg",
+                        createdDate = "2023-02-20",
+                        scores = emptyMap()
+                    )
+                )
+            ),
+            watchList = AsyncResult.Success(
+                listOf(
+                    WatchListItem(
+                        id = "1",
+                        title = "Pulp Fiction",
+                        createdDate = "2023-03-10",
+                        externalId = "680",
+                        imageUrl = "https://image.tmdb.org/t/p/w500/d5iIlFn5s0ImszBLlWP9PHTdsgJ.jpg",
+                        externalDataDto = null,
+                        isNextMovie = false
+                    ),
+                    WatchListItem(
+                        id = "2",
+                        title = "The Dark Knight",
+                        createdDate = "2023-04-05",
+                        externalId = "155",
+                        imageUrl = "https://image.tmdb.org/t/p/w500/qJ2tW6WMUD9CkiRZI9A6UzmiQNx.jpg",
+                        externalDataDto = null,
+                        isNextMovie = false
+                    )
+                )
+            ),
+            backlog = AsyncResult.Success(
+                listOf(
+                    WatchListItem(
+                        id = "3",
+                        title = "Forrest Gump",
+                        createdDate = "2023-05-01",
+                        externalId = "13",
+                        imageUrl = "https://image.tmdb.org/t/p/w500/arw2FuxgC2LzJgR2g222z222z222z222.jpg",
+                        externalDataDto = null,
+                        isNextMovie = false
+                    ),
+                    WatchListItem(
+                        id = "4",
+                        title = "Inception",
+                        createdDate = "2023-06-12",
+                        externalId = "27205",
+                        imageUrl = "https://image.tmdb.org/t/p/w500/s3TBrRGB1EO7Wk0i222z222z222z222.jpg",
+                        externalDataDto = null,
+                        isNextMovie = false
+                    )
+                )
+            ),
+            trendingMovies = AsyncResult.Success(
+                listOf(
+                    TmdbMovie(
+                        id = 1,
+                        title = "Dune: Part Two",
+                        releaseYear = "2024",
+                        imageUrl = "/czQnC1tXz222z222z222z222z222z222.jpg",
+                        popularity = 123.45
+                    ),
+                    TmdbMovie(
+                        id = 2,
+                        title = "Godzilla x Kong: The New Empire",
+                        releaseYear = "2024",
+                        imageUrl = "/gKkl3z222z222z222z222z222z222z222.jpg",
+                        popularity = 98.76
+                    )
+                )
+            ),
+            onAction = {},
+        )
     }
 }

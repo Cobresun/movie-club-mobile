@@ -22,7 +22,6 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -350,57 +349,98 @@ private fun WatchListGrid(
     }
 }
 
-@Preview()
 @Composable
-fun WatchListGridPreview() {
+@Preview
+private fun WatchListScreenPreview() {
     AppTheme {
-        Surface {
-            WatchListGrid(
-                watchList = listOf(
-                    WatchListItem(
-                        id = "1",
-                        title = "Movie 1",
-                        createdDate = "2023-01-01",
-                        externalId = "1",
-                        imageUrl = "",
-                        externalDataDto = null,
-                        isNextMovie = false,
-
-                        ),
-                    WatchListItem(
-                        id = "2",
-                        title = "Movie 2",
-                        createdDate = "2023-01-02",
-                        externalId = "2",
-                        imageUrl = "",
-                        externalDataDto = null,
-                        isNextMovie = false,
-                    ),
-                    WatchListItem(
-                        id = "3",
-                        title = "Movie 3",
-                        createdDate = "2023-01-03",
-                        externalId = "3",
-                        imageUrl = "",
-                        externalDataDto = null,
-                        isNextMovie = false,
-                    )
-                ),
-                onSelectWatchListItem = {},
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+        WatchListScreen(
+            watchList = AsyncResult.Success(emptyList()),
+            addMovieToWatchList = {},
+            backlog = AsyncResult.Success(emptyList()),
+            addMovieToBacklog = {},
+            onDeleteWatchListItem = {},
+            onDeleteBacklogItem = {},
+            onMoveToWatchList = {},
+            trendingMovies = AsyncResult.Success(emptyList()),
+        )
     }
 }
 
-@Preview()
 @Composable
-fun EmptyWatchListGridPreview() {
+@Preview
+private fun WatchListScreenWithDataPreview() {
     AppTheme {
-        WatchListGrid(
-            watchList = emptyList(),
-            onSelectWatchListItem = {},
-            modifier = Modifier.fillMaxSize()
+        WatchListScreen(
+            watchList = AsyncResult.Success(
+                listOf(
+                    WatchListItem(
+                        id = "1",
+                        title = "The Lord of the Rings: The Fellowship of the Ring",
+                        createdDate = "2021-01-01",
+                        externalId = "1",
+                        imageUrl = "https://www.themoviedb.org/t/p/w600_and_h900_bestv2/6oom5QYQ2yQzgp4bUS4eE2MvNte.jpg",
+                        externalDataDto = null,
+                        isNextMovie = false,
+                    )
+                )
+            ),
+            addMovieToWatchList = {},
+            backlog = AsyncResult.Success(emptyList()),
+            addMovieToBacklog = {},
+            onDeleteWatchListItem = {},
+            onDeleteBacklogItem = {},
+            onMoveToWatchList = {},
+            trendingMovies = AsyncResult.Success(emptyList()),
+        )
+    }
+}
+
+@Composable
+@Preview
+private fun AddMovieBottomSheetContentPreview() {
+    AppTheme {
+        AddMovieBottomSheetContent(
+            trendingMovies = AsyncResult.Success(emptyList()),
+        )
+    }
+}
+
+@Composable
+@Preview
+private fun AddMovieBottomSheetContentWithDataPreview() {
+    AppTheme {
+        AddMovieBottomSheetContent(
+            trendingMovies = AsyncResult.Success(
+                listOf(
+                    TmdbMovie(
+                        id = 1,
+                        title = "The Lord of the Rings: The Fellowship of the Ring",
+                        releaseYear = "2001",
+                        imageUrl = "/6oom5QYQ2yQzgp4bUS4eE2MvNte.jpg",
+                        popularity = 0.0,
+                    )
+                )
+            ),
+        )
+    }
+}
+
+@Composable
+@Preview
+private fun WatchListItemBottomSheetContentPreview() {
+    AppTheme {
+        WatchListItemBottomSheetContent(
+            watchListItem = WatchListItem(
+                id = "1",
+                title = "The Lord of the Rings: The Fellowship of the Ring",
+                createdDate = "2021-01-01",
+                externalId = "1",
+                imageUrl = "https://www.themoviedb.org/t/p/w600_and_h900_bestv2/6oom5QYQ2yQzgp4bUS4eE2MvNte.jpg",
+                externalDataDto = null,
+                isNextMovie = false,
+            ),
+            onDelete = {},
+            onMoveToWatchList = {},
         )
     }
 }
