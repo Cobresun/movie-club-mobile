@@ -14,7 +14,7 @@ plugins {
 
     alias(libs.plugins.wire)
 
-    id("com.codingfeline.buildkonfig") version "+"
+    id("com.codingfeline.buildkonfig") version "0.17.1"
 }
 
 kotlin {
