@@ -38,7 +38,7 @@ class AuthViewModel(
                 _state.update { it.copy(user = AsyncResult.Success(Unit)) }
             }
             .onError { error ->
-                _state.update { it.copy(user = AsyncResult.Loading) }
+                _state.update { it.copy(user = AsyncResult.Error()) }
             }
     }
 

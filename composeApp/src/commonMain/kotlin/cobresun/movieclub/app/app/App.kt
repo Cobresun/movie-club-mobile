@@ -1,17 +1,19 @@
 package cobresun.movieclub.app.app
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -51,41 +53,62 @@ fun App() {
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            val navController = rememberNavController()
-
-            // TODO: I don't like that this flashes the landing page first, this whole approach seems ugly?
             val authViewModel = koinViewModel<AuthViewModel>()
-            val state by authViewModel.state.collectAsStateWithLifecycle()
-            LaunchedEffect(state.user) {
-                if (state.user is AsyncResult.Success) {
-                    navController.navigate(Route.ClubGraph)
+            val authState by authViewModel.state.collectAsStateWithLifecycle()
+
+            // Wait for initial auth check to complete
+            when (authState.user) {
+                is AsyncResult.Loading -> {
+                    // Show loading spinner while checking auth
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+                is AsyncResult.Success, is AsyncResult.Error -> {
+                    // Auth check complete, render navigation
+                    // Error is treated as "not authenticated" - show LandingPage
+                    val isAuthenticated = authState.user is AsyncResult.Success
+                    AppNavigation(isAuthenticated = isAuthenticated)
                 }
             }
+        }
+    }
+}
 
-            NavHost(
-                navController = navController,
-                startDestination = Route.LandingPage,
-            ) {
-                composable<Route.LandingPage> {
-                    LandingPageDestination(
-                        onAuthClick = {
-                            navController.navigate(Route.AuthGraph)
+@Composable
+private fun AppNavigation(isAuthenticated: Boolean) {
+    val navController = rememberNavController()
+
+    NavHost(
+        navController = navController,
+        startDestination = if (isAuthenticated) Route.ClubGraph else Route.LandingPage,
+    ) {
+        composable<Route.LandingPage> {
+            LandingPageDestination(
+                onAuthClick = {
+                    navController.navigate(Route.AuthGraph)
+                }
+            )
+        }
+
+        composable<Route.AuthGraph> {
+            AuthScreenRoot(
+                onAuthorized = {
+                    navController.navigate(Route.ClubGraph) {
+                        // Clear entire backstack including LandingPage and AuthGraph
+                        popUpTo(Route.LandingPage) {
+                            inclusive = true
                         }
-                    )
+                    }
                 }
+            )
+        }
 
-                composable<Route.AuthGraph> {
-                    AuthScreenRoot(
-                        onAuthorized = {
-                            navController.navigate(Route.ClubGraph)
-                        }
-                    )
-                }
-
-                composable<Route.ClubGraph> {
-                    ClubsScreenRoot()
-                }
-            }
+        composable<Route.ClubGraph> {
+            ClubsScreenRoot()
         }
     }
 }
