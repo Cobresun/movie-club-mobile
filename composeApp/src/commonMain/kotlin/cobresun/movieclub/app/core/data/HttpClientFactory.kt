@@ -75,7 +75,7 @@ object HttpClientFactory {
 
                     // TODO: Add TMDB to this
                     sendWithoutRequest { request ->
-                        request.url.host == "www.googleapis.com"
+                        request.url.host == "cobresun-movie-club.netlify.app"
                     }
                 }
             }
