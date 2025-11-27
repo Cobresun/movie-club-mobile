@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -24,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -271,6 +274,33 @@ private fun AnimatedMovieList(
     searchQuery: String,
     modifier: Modifier = Modifier
 ) {
+    val watchListGridState = rememberLazyGridState()
+    val backlogGridState = rememberLazyGridState()
+
+    var watchListSavedScrollPosition by remember { mutableStateOf<Int?>(null) }
+    var backlogSavedScrollPosition by remember { mutableStateOf<Int?>(null) }
+    var previousSearchQuery by remember { mutableStateOf("") }
+
+    LaunchedEffect(searchQuery) {
+        val isSearchStarting = previousSearchQuery.isEmpty() && searchQuery.isNotEmpty()
+        val isSearchClearing = previousSearchQuery.isNotEmpty() && searchQuery.isEmpty()
+
+        if (isSearchStarting) {
+            // Save current position for both lists
+            watchListSavedScrollPosition = watchListGridState.firstVisibleItemIndex
+            backlogSavedScrollPosition = backlogGridState.firstVisibleItemIndex
+        } else if (isSearchClearing) {
+            // Restore position for the currently visible list
+            if (isShowingWatchList) {
+                watchListSavedScrollPosition?.let { watchListGridState.scrollToItem(it) }
+            } else {
+                backlogSavedScrollPosition?.let { backlogGridState.scrollToItem(it) }
+            }
+        }
+
+        previousSearchQuery = searchQuery
+    }
+
     AnimatedContent(
         targetState = if (isShowingWatchList) watchList else backlog,
         modifier = Modifier.fillMaxSize(),
@@ -286,6 +316,7 @@ private fun AnimatedMovieList(
                 WatchListGrid(
                     watchList = filteredWatchList,
                     onSelectWatchListItem = onSelectWatchListItem,
+                    state = if (isShowingWatchList) watchListGridState else backlogGridState,
                     modifier = modifier
                 )
             }
@@ -297,9 +328,13 @@ private fun AnimatedMovieList(
 private fun WatchListGrid(
     watchList: List<WatchListItem>,
     onSelectWatchListItem: (WatchListItem) -> Unit,
+    state: LazyGridState,
     modifier: Modifier
 ) {
-    MovieGrid(modifier = modifier) {
+    MovieGrid(
+        modifier = modifier,
+        state = state
+    ) {
         items(items = watchList, key = { it.id }) {
             MovieCard(
                 title = it.title,

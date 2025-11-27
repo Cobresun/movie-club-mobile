@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -20,6 +22,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -123,6 +126,23 @@ private fun ScreenContent(
     onSearchQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val gridState = rememberLazyGridState()
+    var savedScrollPosition by remember { mutableStateOf<Int?>(null) }
+    var previousSearchQuery by remember { mutableStateOf("") }
+
+    LaunchedEffect(searchQuery) {
+        val isSearchStarting = previousSearchQuery.isEmpty() && searchQuery.isNotEmpty()
+        val isSearchClearing = previousSearchQuery.isNotEmpty() && searchQuery.isEmpty()
+
+        if (isSearchStarting) {
+            savedScrollPosition = gridState.firstVisibleItemIndex
+        } else if (isSearchClearing) {
+            savedScrollPosition?.let { gridState.scrollToItem(it) }
+        }
+
+        previousSearchQuery = searchQuery
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -161,6 +181,7 @@ private fun ScreenContent(
                     ReviewGrid(
                         reviews = filteredReviews,
                         onSelectReviewItem = onSelectReviewItem,
+                        state = gridState,
                         modifier = modifier,
                     )
                 }
@@ -173,9 +194,13 @@ private fun ScreenContent(
 fun ReviewGrid(
     reviews: List<Review>,
     onSelectReviewItem: (Review) -> Unit,
+    state: LazyGridState,
     modifier: Modifier,
 ) {
-    MovieGrid(modifier = modifier) {
+    MovieGrid(
+        modifier = modifier,
+        state = state
+    ) {
         items(items = reviews, key = { it.id }) {
             MovieCard(
                 title = it.title,
