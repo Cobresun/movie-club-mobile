@@ -104,7 +104,6 @@ fun WatchListScreen(
             },
             searchQuery = searchQuery,
             onSearchQueryChange = { searchQuery = it },
-            modifier = modifier
         )
     }
 
@@ -119,7 +118,9 @@ fun WatchListScreen(
                         trendingMovies = trendingMovies,
                         onSelectMovie = { movie ->
                             if (isShowingWatchList) {
+                                // For now this just adds to the backlog
                                 addMovieToWatchList(movie)
+                                isShowingWatchList = false
                             } else {
                                 addMovieToBacklog(movie)
                             }

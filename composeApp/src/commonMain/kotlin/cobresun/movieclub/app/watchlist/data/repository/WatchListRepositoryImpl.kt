@@ -3,6 +3,7 @@ package cobresun.movieclub.app.watchlist.data.repository
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.WorkType
+import cobresun.movieclub.app.core.domain.flatMap
 import cobresun.movieclub.app.core.domain.map
 import cobresun.movieclub.app.tmdb.domain.TmdbMovie
 import cobresun.movieclub.app.watchlist.data.dto.BacklogPostDto
@@ -16,18 +17,18 @@ class WatchListRepositoryImpl(
     private val watchListDataSource: WatchListDataSource
 ) : WatchListRepository {
     override suspend fun getWatchList(clubId: String): Result<List<WatchListItem>, DataError.Remote> {
-        val nextWork = watchListDataSource.getNextWork(clubId)
-        val nextWorkId = if (nextWork is Result.Success) nextWork.data.workId else null
-
-        return watchListDataSource.getWatchList(clubId)
-            .map { watchListDtos ->
-                watchListDtos
-                    .map {
-                        val isNext = if (nextWork is Result.Success) it.id == nextWorkId else false
-                        it.toWatchListItem(isNextMovie = isNext)
-                    }
-                    .sortedBy { !it.isNextMovie }
+        return watchListDataSource.getWatchList(clubId).flatMap { watchListDtos ->
+            watchListDataSource.getNextWork(clubId).map { nextWorkDto ->
+                val items = watchListDtos.map { it.toWatchListItem() }
+                val nextId = nextWorkDto.workId
+                if (nextId != null) {
+                    items.map { it.copy(isNextMovie = it.id == nextId) }
+                        .sortedBy { !it.isNextMovie }
+                } else {
+                    items
+                }
             }
+        }
     }
 
     override suspend fun postWatchList(
@@ -48,6 +49,24 @@ class WatchListRepositoryImpl(
         )
     }
 
+    override suspend fun postWatchListFromMovie(
+        clubId: String,
+        tmdbMovie: TmdbMovie
+    ): Result<Unit, DataError.Remote> {
+        // Note: The API doesn't support adding directly to watchlist from a movie.
+        // Items must go through backlog first where the server generates an ID.
+        // This method adds to backlog as a workaround.
+        return watchListDataSource.postBacklog(
+            clubId = clubId,
+            backlogPostDto = BacklogPostDto(
+                type = WorkType.MOVIE.value,
+                title = tmdbMovie.title,
+                externalId = tmdbMovie.id.toString(),
+                imageUrl = tmdbMovie.imageUrl
+            )
+        )
+    }
+
     override suspend fun deleteWatchList(
         clubId: String,
         watchListItemId: String
@@ -57,9 +76,7 @@ class WatchListRepositoryImpl(
 
     override suspend fun getBacklog(clubId: String): Result<List<WatchListItem>, DataError.Remote> {
         return watchListDataSource.getBacklog(clubId)
-            .map { watchListDtos ->
-                watchListDtos.map { it.toWatchListItem() }
-            }
+            .map { dtos -> dtos.map { it.toWatchListItem() } }
     }
 
     override suspend fun postBacklog(

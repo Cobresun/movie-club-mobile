@@ -4,10 +4,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
@@ -49,29 +49,30 @@ fun AppTheme(
 @Composable
 fun App() {
     AppTheme {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
-        ) {
-            val authViewModel = koinViewModel<AuthViewModel>()
-            val authState by authViewModel.state.collectAsStateWithLifecycle()
+        Scaffold { paddingValues ->
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                val authViewModel = koinViewModel<AuthViewModel>()
+                val authState by authViewModel.state.collectAsStateWithLifecycle()
 
-            // Wait for initial auth check to complete
-            when (authState.user) {
-                is AsyncResult.Loading -> {
-                    // Show loading spinner while checking auth
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
+                when (authState.user) {
+                    is AsyncResult.Loading -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     }
-                }
-                is AsyncResult.Success, is AsyncResult.Error -> {
-                    // Auth check complete, render navigation
-                    // Error is treated as "not authenticated" - show LandingPage
-                    val isAuthenticated = authState.user is AsyncResult.Success
-                    AppNavigation(isAuthenticated = isAuthenticated)
+
+                    is AsyncResult.Success, is AsyncResult.Error -> {
+                        val isAuthenticated = authState.user is AsyncResult.Success
+                        AppNavigation(isAuthenticated = isAuthenticated)
+                    }
                 }
             }
         }
@@ -120,7 +121,6 @@ fun LandingPageDestination(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Text(

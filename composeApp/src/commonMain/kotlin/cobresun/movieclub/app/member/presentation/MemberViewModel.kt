@@ -4,14 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.Club
-import cobresun.movieclub.app.core.domain.onError
-import cobresun.movieclub.app.core.domain.onSuccess
+import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.member.domain.MemberRepository
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class MemberViewModel(
@@ -19,23 +16,23 @@ class MemberViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(MemberState())
     val state = _state.asStateFlow()
-        .onStart {
-            getClubs()
-        }
-        .stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5000L),
-            _state.value
-        )
 
-    private fun getClubs() = viewModelScope.launch {
-        memberRepository.getClubs()
-            .onSuccess { clubs ->
-                _state.value = _state.value.copy(clubs = AsyncResult.Success(clubs))
+    init {
+        loadClubs()
+    }
+
+    private fun loadClubs() {
+        viewModelScope.launch {
+            _state.update { it.copy(clubs = AsyncResult.Loading) }
+            when (val result = memberRepository.getClubs()) {
+                is Result.Success -> {
+                    _state.update { it.copy(clubs = AsyncResult.Success(result.data)) }
+                }
+                is Result.Error -> {
+                    _state.update { it.copy(clubs = AsyncResult.Error()) }
+                }
             }
-            .onError { error ->
-                _state.value = _state.value.copy(clubs = AsyncResult.Error())
-            }
+        }
     }
 }
 

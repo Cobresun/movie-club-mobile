@@ -41,7 +41,7 @@ val sharedModule = module {
     // Auth
     single { KtorIdentityDataSource(get()) }.bind<IdentityDataSource>()
     single { AuthRepositoryImpl(get(), get()) }.bind<AuthRepository>()
-    viewModel { AuthViewModel(get()) }
+    viewModel<AuthViewModel> { AuthViewModel(get()) }
 
     // Member
     single { KtorMemberDataSource(get()) }.bind<MemberDataSource>()

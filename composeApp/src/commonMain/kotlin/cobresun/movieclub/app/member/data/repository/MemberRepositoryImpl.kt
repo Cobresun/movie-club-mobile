@@ -13,13 +13,11 @@ import cobresun.movieclub.app.member.domain.MemberRepository
 class MemberRepositoryImpl(
     private val memberDataSource: MemberDataSource
 ) : MemberRepository {
-    override suspend fun getMember(
-    ): Result<Member, DataError.Remote> {
+    override suspend fun getMember(): Result<Member, DataError.Remote> {
         return memberDataSource.getMember().map { it.toMember() }
     }
 
-    override suspend fun getClubs(
-    ): Result<List<Club>, DataError.Remote> {
+    override suspend fun getClubs(): Result<List<Club>, DataError.Remote> {
         return memberDataSource.getClubs()
             .map { clubDtos -> clubDtos.map { it.toClub() } }
     }

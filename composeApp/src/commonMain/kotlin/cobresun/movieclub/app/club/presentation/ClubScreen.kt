@@ -4,10 +4,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -35,14 +37,28 @@ fun ClubScreenRoot(
     viewModel: ClubViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
 
-    ClubScreen(
-        reviews = state.reviews,
-        watchList = state.watchList,
-        backlog = state.backlog,
-        trendingMovies = state.trendingMovies,
-        onAction = viewModel::onAction
-    )
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.onAction(ClubAction.OnClearError)
+        }
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
+        ClubScreen(
+            reviews = state.reviews,
+            watchList = state.watchList,
+            backlog = state.backlog,
+            trendingMovies = state.trendingMovies,
+            onAction = viewModel::onAction,
+            modifier = Modifier.padding(paddingValues)
+        )
+    }
 }
 
 @Composable
@@ -69,7 +85,7 @@ fun ClubScreen(
         }
     }
 
-    Column(modifier = modifier.statusBarsPadding()) {
+    Column {
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.weight(1f),

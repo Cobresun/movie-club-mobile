@@ -4,13 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cobresun.movieclub.app.auth.domain.AuthRepository
 import cobresun.movieclub.app.core.domain.AsyncResult
+import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -19,27 +17,27 @@ class AuthViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(AuthState())
     val state = _state.asStateFlow()
-        .onStart {
-            getUser()
-        }
-        .stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5000L),
-            _state.value
-        )
+
+    init {
+        checkAuthentication()
+    }
 
     fun onAction(action: AuthAction) = when (action) {
         is AuthAction.LogIn -> login(action.email, action.password)
     }
 
-    private fun getUser() = viewModelScope.launch {
-        authRepository.getUser()
-            .onSuccess {
-                _state.update { it.copy(user = AsyncResult.Success(Unit)) }
+    private fun checkAuthentication() {
+        viewModelScope.launch {
+            _state.update { it.copy(user = AsyncResult.Loading) }
+            when (val result = authRepository.getUser()) {
+                is Result.Success -> {
+                    _state.update { it.copy(user = AsyncResult.Success(Unit)) }
+                }
+                is Result.Error -> {
+                    _state.update { it.copy(user = AsyncResult.Error(dataError = result.error)) }
+                }
             }
-            .onError { error ->
-                _state.update { it.copy(user = AsyncResult.Error()) }
-            }
+        }
     }
 
     private fun login(email: String, password: String) = viewModelScope.launch {
@@ -50,7 +48,7 @@ class AuthViewModel(
                 _state.update { it.copy(user = AsyncResult.Success(Unit)) }
             }
             .onError { error ->
-                _state.update { it.copy(user = AsyncResult.Error()) }
+                _state.update { it.copy(user = AsyncResult.Error(dataError = error)) }
             }
     }
 }
