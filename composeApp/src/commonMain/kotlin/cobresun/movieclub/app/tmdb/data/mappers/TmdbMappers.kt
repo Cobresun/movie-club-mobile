@@ -9,7 +9,7 @@ fun TmdbMovieDto.toTmdbMovie(): TmdbMovie {
     return TmdbMovie(
         id = id,
         title = title,
-        releaseYear = releaseDate.subSequence(0, 4).toString(), // TODO: Sure feels like there needs to be a better way than this...
+        releaseYear = releaseDate.take(4),
         popularity = popularity,
         imageUrl = "${BASE_IMAGE_URL}${posterPath}"
     )
