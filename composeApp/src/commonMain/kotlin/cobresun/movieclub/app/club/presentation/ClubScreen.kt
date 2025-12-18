@@ -94,6 +94,7 @@ fun ClubScreen(
             if (index == 0) {
                 ReviewsScreen(
                     reviews = reviews,
+                    watchList = watchList,
                     onDeleteReview = { reviewId -> onAction(ClubAction.OnDeleteReview(reviewId)) }
                 )
             } else {

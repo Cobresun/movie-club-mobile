@@ -1,16 +1,22 @@
 package cobresun.movieclub.app.reviews.presentation
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,13 +35,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cobresun.movieclub.app.app.AppTheme
+import cobresun.movieclub.app.core.data.dto.TmdbExternalDataDto
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.AsyncResultHandler
 import cobresun.movieclub.app.core.domain.User
+import cobresun.movieclub.app.core.domain.extractYearFromDateString
+import cobresun.movieclub.app.core.presentation.LIGHT_GRAY
 import cobresun.movieclub.app.core.presentation.components.MovieActionBottomSheetContent
 import cobresun.movieclub.app.core.presentation.components.MovieCard
 import cobresun.movieclub.app.core.presentation.components.MovieGrid
@@ -44,6 +58,7 @@ import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.domain.Score
 import cobresun.movieclub.app.reviews.presentation.components.AverageIconVector
 import cobresun.movieclub.app.reviews.presentation.components.ScoreChip
+import cobresun.movieclub.app.watchlist.domain.WatchListItem
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 sealed class ReviewScreenBottomSheetType {
@@ -55,6 +70,7 @@ sealed class ReviewScreenBottomSheetType {
 @Composable
 fun ReviewsScreen(
     reviews: AsyncResult<List<Review>>,
+    watchList: AsyncResult<List<WatchListItem>>,
     onDeleteReview: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -94,12 +110,9 @@ fun ReviewsScreen(
         ) {
             when (bottomSheetType) {
                 is ReviewScreenBottomSheetType.AddMovieSheet -> {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(text = "Add Movie")
-                    }
+                    AddMovieBottomSheetContent(
+                        watchList = watchList
+                    )
                 }
 
                 is ReviewScreenBottomSheetType.ReviewDetailsSheet -> {
@@ -116,6 +129,58 @@ fun ReviewsScreen(
             }
         }
     }
+}
+
+private fun extractReleaseYear(externalDataDto: TmdbExternalDataDto?): String? {
+    return extractYearFromDateString(externalDataDto?.releaseDate)
+}
+
+@Composable
+private fun AddMovieBottomSheetContent(
+    watchList: AsyncResult<List<WatchListItem>>,
+    modifier: Modifier = Modifier
+) {
+    AsyncResultHandler(
+        asyncResult = watchList,
+        onSuccess = { movies ->
+            LazyColumn(
+                modifier = modifier.padding(16.dp)
+            ) {
+                item {
+                    Text(
+                        text = "From Watch List",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                items(items = movies, key = { it.id }) { item ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(4.dp)
+                            .background(
+                                color = Color(LIGHT_GRAY),
+                                shape = RoundedCornerShape(4.dp)
+                            )
+                            .clickable { /* no-op for now */ }
+                    ) {
+                        Text(
+                            text = buildAnnotatedString {
+                                append(item.title)
+                                append(" ")
+                                withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
+                                    extractReleaseYear(item.externalDataDto)?.let {
+                                        append("($it)")
+                                    }
+                                }
+                            },
+                            modifier = Modifier.padding(8.dp),
+                        )
+                    }
+                }
+            }
+        }
+    )
 }
 
 @Composable
@@ -308,6 +373,7 @@ private fun ReviewsScreenPreview() {
     AppTheme {
         ReviewsScreen(
             reviews = AsyncResult.Success(emptyList()),
+            watchList = AsyncResult.Success(emptyList()),
             onDeleteReview = {}
         )
     }
@@ -354,6 +420,7 @@ private fun ReviewsScreenWithDataPreview() {
                     )
                 )
             ),
+            watchList = AsyncResult.Success(emptyList()),
             onDeleteReview = {}
         )
     }
