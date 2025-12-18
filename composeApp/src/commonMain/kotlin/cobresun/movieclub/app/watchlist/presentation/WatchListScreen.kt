@@ -303,21 +303,24 @@ private fun AnimatedMovieList(
     }
 
     AnimatedContent(
-        targetState = if (isShowingWatchList) watchList else backlog,
+        targetState = isShowingWatchList,
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
-    ) { targetState ->
+    ) { showingWatchList ->
+        val currentList = if (showingWatchList) watchList else backlog
+        val currentGridState = if (showingWatchList) watchListGridState else backlogGridState
+
         AsyncResultHandler(
-            asyncResult = targetState,
-            onSuccess = { watchList ->
-                val filteredWatchList = watchList.filter { review ->
-                    review.title.contains(searchQuery.trim(), ignoreCase = true)
+            asyncResult = currentList,
+            onSuccess = { items ->
+                val filteredItems = items.filter { item ->
+                    item.title.contains(searchQuery.trim(), ignoreCase = true)
                 }
 
                 WatchListGrid(
-                    watchList = filteredWatchList,
+                    watchList = filteredItems,
                     onSelectWatchListItem = onSelectWatchListItem,
-                    state = if (isShowingWatchList) watchListGridState else backlogGridState,
+                    state = currentGridState,
                     modifier = modifier
                 )
             }
