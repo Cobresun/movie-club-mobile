@@ -12,6 +12,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,7 +72,10 @@ fun App() {
 
                     is AsyncResult.Success, is AsyncResult.Error -> {
                         val isAuthenticated = authState.user is AsyncResult.Success
-                        AppNavigation(isAuthenticated = isAuthenticated)
+                        AppNavigation(
+                            isAuthenticated = isAuthenticated,
+                            authViewModel = authViewModel
+                        )
                     }
                 }
             }
@@ -80,8 +84,23 @@ fun App() {
 }
 
 @Composable
-private fun AppNavigation(isAuthenticated: Boolean) {
+private fun AppNavigation(
+    isAuthenticated: Boolean,
+    authViewModel: AuthViewModel
+) {
     val navController = rememberNavController()
+
+    // Handle logout - navigate to landing page when user becomes unauthenticated
+    LaunchedEffect(isAuthenticated) {
+        if (!isAuthenticated) {
+            navController.navigate(Route.LandingPage) {
+                // Clear entire backstack when logging out
+                popUpTo(0) {
+                    inclusive = true
+                }
+            }
+        }
+    }
 
     NavHost(
         navController = navController,
@@ -109,7 +128,7 @@ private fun AppNavigation(isAuthenticated: Boolean) {
         }
 
         composable<Route.ClubGraph> {
-            ClubsScreenRoot()
+            ClubsScreenRoot(authViewModel = authViewModel)
         }
     }
 }

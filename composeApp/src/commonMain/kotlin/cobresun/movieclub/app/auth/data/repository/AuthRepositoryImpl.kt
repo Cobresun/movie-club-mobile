@@ -35,4 +35,9 @@ class AuthRepositoryImpl(
         return identityDataSource.getUser()
             .map { userDto -> userDto.toUser() }
     }
+
+    override suspend fun logout(): Result<Unit, DataError.Remote> {
+        bearerTokenStorage.updateToken(BearerTokens("", ""))
+        return Result.Success(Unit)
+    }
 }

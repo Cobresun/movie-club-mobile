@@ -3,14 +3,24 @@ package cobresun.movieclub.app.club.presentation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContentPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,6 +32,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import cobresun.movieclub.app.app.Route
+import cobresun.movieclub.app.auth.presentation.AuthAction
+import cobresun.movieclub.app.auth.presentation.AuthViewModel
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.AsyncResultHandler
 import cobresun.movieclub.app.core.domain.Club
@@ -32,14 +44,19 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun ClubsScreenRoot(
     viewModel: MemberViewModel = koinViewModel(),
+    authViewModel: AuthViewModel,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    ClubsScreen(clubs = state.clubs)
+    ClubsScreen(
+        clubs = state.clubs,
+        onLogout = { authViewModel.onAction(AuthAction.Logout) }
+    )
 }
 
 @Composable
 fun ClubsScreen(
     clubs: AsyncResult<List<Club>>,
+    onLogout: () -> Unit = {},
 ) {
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -52,7 +69,8 @@ fun ClubsScreen(
                 onClubClick = {
                     navController.navigate(Route.Club(it))
                     coroutineScope.launch { drawerState.close() }
-                }
+                },
+                onLogout = onLogout
             )
         },
         modifier = Modifier.background(color = MaterialTheme.colorScheme.surface),
@@ -94,10 +112,13 @@ private fun EmptyClubsScreen() {
 private fun ModalDrawerContent(
     clubs: AsyncResult<List<Club>>,
     onClubClick: (String) -> Unit,
+    onLogout: () -> Unit,
 ) {
     ModalDrawerSheet {
         Column(
-            modifier = Modifier.safeContentPadding()
+            modifier = Modifier
+                .safeContentPadding()
+                .fillMaxHeight()
         ) {
             when (clubs) {
                 is AsyncResult.Error -> {}
@@ -114,6 +135,28 @@ private fun ModalDrawerContent(
                         }
                     }
                 }
+            }
+
+            // Push logout button to bottom
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Visual separator
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            // Logout button
+            TextButton(
+                onClick = onLogout,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Logout,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Log Out")
             }
         }
     }

@@ -24,6 +24,7 @@ class AuthViewModel(
 
     fun onAction(action: AuthAction) = when (action) {
         is AuthAction.LogIn -> login(action.email, action.password)
+        is AuthAction.Logout -> logout()
     }
 
     private fun checkAuthentication() {
@@ -48,6 +49,17 @@ class AuthViewModel(
                 _state.update { it.copy(user = AsyncResult.Success(Unit)) }
             }
             .onError { error ->
+                _state.update { it.copy(user = AsyncResult.Error(dataError = error)) }
+            }
+    }
+
+    private fun logout() = viewModelScope.launch {
+        authRepository.logout()
+            .onSuccess {
+                _state.update { it.copy(user = AsyncResult.Error(dataError = null)) }
+            }
+            .onError { error ->
+                // Even if logout fails, clear auth state
                 _state.update { it.copy(user = AsyncResult.Error(dataError = error)) }
             }
     }
