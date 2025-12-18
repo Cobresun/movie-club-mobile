@@ -72,6 +72,7 @@ fun ReviewsScreen(
     reviews: AsyncResult<List<Review>>,
     watchList: AsyncResult<List<WatchListItem>>,
     onDeleteReview: (String) -> Unit,
+    onMoveToReview: (WatchListItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -111,7 +112,11 @@ fun ReviewsScreen(
             when (bottomSheetType) {
                 is ReviewScreenBottomSheetType.AddMovieSheet -> {
                     AddMovieBottomSheetContent(
-                        watchList = watchList
+                        watchList = watchList,
+                        onMoveToReview = { item ->
+                            onMoveToReview(item)
+                            openBottomSheet = null
+                        }
                     )
                 }
 
@@ -138,6 +143,7 @@ private fun extractReleaseYear(externalDataDto: TmdbExternalDataDto?): String? {
 @Composable
 private fun AddMovieBottomSheetContent(
     watchList: AsyncResult<List<WatchListItem>>,
+    onMoveToReview: (WatchListItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
     AsyncResultHandler(
@@ -162,7 +168,7 @@ private fun AddMovieBottomSheetContent(
                                 color = Color(LIGHT_GRAY),
                                 shape = RoundedCornerShape(4.dp)
                             )
-                            .clickable { /* no-op for now */ }
+                            .clickable { onMoveToReview(item) }
                     ) {
                         Text(
                             text = buildAnnotatedString {
@@ -374,7 +380,8 @@ private fun ReviewsScreenPreview() {
         ReviewsScreen(
             reviews = AsyncResult.Success(emptyList()),
             watchList = AsyncResult.Success(emptyList()),
-            onDeleteReview = {}
+            onDeleteReview = {},
+            onMoveToReview = {}
         )
     }
 }
@@ -421,7 +428,8 @@ private fun ReviewsScreenWithDataPreview() {
                 )
             ),
             watchList = AsyncResult.Success(emptyList()),
-            onDeleteReview = {}
+            onDeleteReview = {},
+            onMoveToReview = {}
         )
     }
 }
