@@ -50,13 +50,13 @@ import cobresun.movieclub.app.core.domain.AsyncResultHandler
 import cobresun.movieclub.app.core.domain.User
 import cobresun.movieclub.app.core.domain.extractYearFromDateString
 import cobresun.movieclub.app.core.presentation.LIGHT_GRAY
-import cobresun.movieclub.app.core.presentation.components.MovieActionBottomSheetContent
 import cobresun.movieclub.app.core.presentation.components.MovieCard
 import cobresun.movieclub.app.core.presentation.components.MovieGrid
 import cobresun.movieclub.app.core.presentation.components.SearchBar
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.domain.Score
 import cobresun.movieclub.app.reviews.presentation.components.AverageIconVector
+import cobresun.movieclub.app.reviews.presentation.components.ReviewDetailsBottomSheetContent
 import cobresun.movieclub.app.reviews.presentation.components.ScoreChip
 import cobresun.movieclub.app.watchlist.domain.WatchListItem
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -78,7 +78,7 @@ fun ReviewsScreen(
     var searchQuery by remember { mutableStateOf("") }
 
     var openBottomSheet by remember { mutableStateOf<ReviewScreenBottomSheetType?>(null) }
-    val sheetState = rememberModalBottomSheetState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     Scaffold(
         modifier = modifier,
@@ -121,14 +121,18 @@ fun ReviewsScreen(
                 }
 
                 is ReviewScreenBottomSheetType.ReviewDetailsSheet -> {
-                    MovieActionBottomSheetContent(
+                    ReviewDetailsBottomSheetContent(
                         title = bottomSheetType.review.title,
+                        createdDate = bottomSheetType.review.createdDate,
+                        posterImageUrl = bottomSheetType.review.imageUrl,
+                        scores = bottomSheetType.review.scores,
                         onDelete = {
                             onDeleteReview(bottomSheetType.review.id)
                             openBottomSheet = null
                         },
-                        primaryButtonText = null,
-                        onPrimaryButtonClick = {},
+                        onShare = {
+                            // TODO: Implement share functionality (copy URL to clipboard)
+                        }
                     )
                 }
             }
@@ -291,7 +295,6 @@ fun ReviewGrid(
 @Composable
 fun ScoreGrid(scores: Map<User, Score>) {
     FlowRow(
-        modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {

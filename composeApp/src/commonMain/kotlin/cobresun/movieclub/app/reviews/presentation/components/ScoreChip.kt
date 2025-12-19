@@ -4,8 +4,12 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -17,20 +21,33 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cobresun.movieclub.app.core.presentation.LIGHT_GRAY
 import coil3.compose.AsyncImage
 import kotlin.math.roundToLong
 
+enum class ScoreChipSize(
+    val avatarSize: Dp,
+    val fontSize: TextUnit,
+    val horizontalPadding: Dp
+) {
+    Small(avatarSize = 32.dp, fontSize = 12.sp, horizontalPadding = 8.dp),
+    Large(avatarSize = 48.dp, fontSize = 18.sp, horizontalPadding = 12.dp)
+}
+
 @Composable
 fun ScoreChip(
     imageUrl: String,
     contentDescription: String,
     score: Double,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    size: ScoreChipSize = ScoreChipSize.Small
 ) {
     ScoreChipPill(
+        size = size,
         modifier = modifier,
         imageContent = {
             AsyncImage(
@@ -38,10 +55,10 @@ fun ScoreChip(
                 contentDescription = contentDescription,
                 modifier = Modifier
                     .clip(CircleShape)
-                    .size(32.dp)
+                    .size(size.avatarSize)
             )
         },
-        scoreContent = { ScoreText(score) }
+        scoreContent = { ScoreText(score, size) }
     )
 }
 
@@ -50,9 +67,11 @@ fun ScoreChip(
     image: ImageVector,
     contentDescription: String,
     score: Double,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    size: ScoreChipSize = ScoreChipSize.Small
 ) {
     ScoreChipPill(
+        size = size,
         modifier = modifier,
         imageContent = {
             Image(
@@ -60,10 +79,10 @@ fun ScoreChip(
                 contentDescription = contentDescription,
                 modifier = Modifier
                     .clip(CircleShape)
-                    .size(32.dp)
+                    .size(size.avatarSize)
             )
         },
-        scoreContent = { ScoreText(score) }
+        scoreContent = { ScoreText(score, size) }
     )
 }
 
@@ -73,25 +92,29 @@ fun ScoreChip(
     lastName: String?,
     contentDescription: String,
     score: Double,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    size: ScoreChipSize = ScoreChipSize.Small
 ) {
     ScoreChipPill(
+        size = size,
         modifier = modifier,
         imageContent = {
             // TODO("Add placeholder image using user's initials")
         },
-        scoreContent = { ScoreText(score) }
+        scoreContent = { ScoreText(score, size) }
     )
 }
 
 @Composable
 fun ScoreChipPill(
+    size: ScoreChipSize,
     modifier: Modifier = Modifier,
     imageContent: @Composable () -> Unit,
-    scoreContent: @Composable () -> Unit,
+    scoreContent: @Composable RowScope.() -> Unit,
 ) {
     Box(
         modifier = modifier
+            .wrapContentWidth()
             .background(
                 color = Color(LIGHT_GRAY),
                 shape = RoundedCornerShape(100)
@@ -107,12 +130,14 @@ fun ScoreChipPill(
 }
 
 @Composable
-fun ScoreText(score: Double) {
+fun RowScope.ScoreText(score: Double, size: ScoreChipSize) {
     Text(
         text = score.toRoundedString(),
-        modifier = Modifier.padding(horizontal = 8.dp),
-        style = TextStyle.Default.copy(fontSize = 12.sp),
-        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .weight(1f)
+            .padding(horizontal = size.horizontalPadding)
+            .wrapContentHeight(Alignment.CenterVertically),
+        style = TextStyle.Default.copy(fontSize = size.fontSize, textAlign = TextAlign.Center),
         maxLines = 1,
     )
 }
