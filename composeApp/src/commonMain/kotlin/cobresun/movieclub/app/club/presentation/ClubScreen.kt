@@ -24,6 +24,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cobresun.movieclub.app.app.AppTheme
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.WorkType
+import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.presentation.ReviewsScreen
 import cobresun.movieclub.app.tmdb.domain.TmdbMovie
@@ -55,7 +56,7 @@ fun ClubScreenRoot(
             watchList = state.watchList,
             backlog = state.backlog,
             trendingMovies = state.trendingMovies,
-            currentUserId = state.currentUserId,
+            currentUser = state.currentUser,
             onAction = viewModel::onAction,
             modifier = Modifier.padding(paddingValues)
         )
@@ -68,7 +69,7 @@ fun ClubScreen(
     watchList: AsyncResult<List<WatchListItem>>,
     backlog: AsyncResult<List<WatchListItem>>,
     trendingMovies: AsyncResult<List<TmdbMovie>>,
-    currentUserId: String?,
+    currentUser: Member?,
     onAction: (ClubAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -97,7 +98,7 @@ fun ClubScreen(
                 ReviewsScreen(
                     reviews = reviews,
                     watchList = watchList,
-                    currentUserId = currentUserId,
+                    currentUser = currentUser,
                     onDeleteReview = { reviewId -> onAction(ClubAction.OnDeleteReview(reviewId)) },
                     onMoveToReview = { item -> onAction(ClubAction.OnMoveToReview(item)) },
                     onSubmitScore = { reviewWorkId, scoreId, scoreValue ->
@@ -234,7 +235,12 @@ private fun ClubScreenPreview() {
                     )
                 )
             ),
-            currentUserId = "1",
+            currentUser = Member(
+                id = "1",
+                name = "John Doe",
+                imageUrl = "https://image.tmdb.org/t/p/w500/q6y0oR",
+                email = "john.mclean@examplepetstore.com"
+            ),
             onAction = {},
         )
     }

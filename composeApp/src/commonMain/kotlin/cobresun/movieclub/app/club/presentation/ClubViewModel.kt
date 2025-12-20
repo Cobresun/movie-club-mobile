@@ -7,6 +7,7 @@ import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
+import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.reviews.domain.NewReviewItem
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.domain.ReviewsRepository
@@ -48,7 +49,7 @@ class ClubViewModel(
                 is Result.Success -> {
                     _state.update {
                         it.copy(
-                            currentUserId = result.data.id
+                            currentUser = result.data
                         )
                     }
                 }
@@ -269,5 +270,5 @@ data class ClubState(
     val watchList: AsyncResult<List<WatchListItem>> = AsyncResult.Loading,
     val backlog: AsyncResult<List<WatchListItem>> = AsyncResult.Loading,
     val trendingMovies: AsyncResult<List<TmdbMovie>> = AsyncResult.Loading,
-    val currentUserId: String? = null
+    val currentUser: Member? = null
 )

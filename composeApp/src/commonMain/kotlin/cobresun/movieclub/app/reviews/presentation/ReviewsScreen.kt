@@ -53,6 +53,7 @@ import cobresun.movieclub.app.core.presentation.LIGHT_GRAY
 import cobresun.movieclub.app.core.presentation.components.MovieCard
 import cobresun.movieclub.app.core.presentation.components.MovieGrid
 import cobresun.movieclub.app.core.presentation.components.SearchBar
+import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.domain.Score
 import cobresun.movieclub.app.reviews.presentation.components.AverageIconVector
@@ -71,7 +72,7 @@ sealed class ReviewScreenBottomSheetType {
 fun ReviewsScreen(
     reviews: AsyncResult<List<Review>>,
     watchList: AsyncResult<List<WatchListItem>>,
-    currentUserId: String?,
+    currentUser: Member?,
     onDeleteReview: (String) -> Unit,
     onMoveToReview: (WatchListItem) -> Unit,
     onSubmitScore: (reviewWorkId: String, scoreId: String?, score: Double) -> Unit,
@@ -128,9 +129,10 @@ fun ReviewsScreen(
                         createdDate = bottomSheetType.review.createdDate,
                         posterImageUrl = bottomSheetType.review.imageUrl,
                         scores = bottomSheetType.review.scores,
-                        currentUserId = currentUserId,
+                        currentUser = currentUser,
                         onScoreSubmit = { scoreId, scoreValue ->
                             onSubmitScore(bottomSheetType.review.id, scoreId, scoreValue)
+                            openBottomSheet = null
                         },
                         onDelete = {
                             onDeleteReview(bottomSheetType.review.id)
@@ -393,7 +395,12 @@ private fun ReviewsScreenPreview() {
         ReviewsScreen(
             reviews = AsyncResult.Success(emptyList()),
             watchList = AsyncResult.Success(emptyList()),
-            currentUserId = "1",
+            currentUser = Member(
+                id = "1",
+                name = "John Doe",
+                imageUrl = "https://image.tmdb.org/t/p/w500/q6y0oRbfh6IUxXp9C9AZ2UeFz5x.jpg",
+                email = "john.mckinley@examplepetstore.com"
+            ),
             onDeleteReview = {},
             onMoveToReview = {},
             onSubmitScore = { _, _, _ -> }
@@ -445,7 +452,12 @@ private fun ReviewsScreenWithDataPreview() {
                 )
             ),
             watchList = AsyncResult.Success(emptyList()),
-            currentUserId = "1",
+            currentUser = Member(
+                id = "1",
+                name = "John Doe",
+                imageUrl = "https://image.tmdb.org/t/p/w500/q6y0oRbfh6IUxXp9C9AZ2UeFz5x.jpg",
+                email = "john.mckinley@examplepetstore.com"
+            ),
             onDeleteReview = {},
             onMoveToReview = {},
             onSubmitScore = { _, _, _ -> }
