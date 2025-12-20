@@ -50,7 +50,7 @@ val sharedModule = module {
 
     // Club
     single { KtorClubDataSource(get()) }.bind<ClubDataSource>()
-    viewModel { ClubViewModel(get(), get(), get(), get()) }
+    viewModel { ClubViewModel(get(), get(), get(), get(), get()) }
 
     // Reviews
     single { KtorReviewsDataSource(get()) }.bind<ReviewsDataSource>()

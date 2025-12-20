@@ -7,4 +7,10 @@ interface ReviewsRepository {
     suspend fun getReviews(clubId: String): Result<List<Review>, DataError.Remote>
     suspend fun postReview(clubId: String, review: NewReviewItem): Result<Unit, DataError.Remote>
     suspend fun deleteReview(clubId: String, reviewId: String): Result<Unit, DataError.Remote>
+    suspend fun submitScore(
+        clubId: String,
+        reviewWorkId: String,
+        scoreId: String?,
+        score: Double
+    ): Result<Unit, DataError.Remote>
 }

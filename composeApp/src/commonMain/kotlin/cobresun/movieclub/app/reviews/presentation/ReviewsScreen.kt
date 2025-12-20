@@ -71,8 +71,10 @@ sealed class ReviewScreenBottomSheetType {
 fun ReviewsScreen(
     reviews: AsyncResult<List<Review>>,
     watchList: AsyncResult<List<WatchListItem>>,
+    currentUserId: String?,
     onDeleteReview: (String) -> Unit,
     onMoveToReview: (WatchListItem) -> Unit,
+    onSubmitScore: (reviewWorkId: String, scoreId: String?, score: Double) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -126,6 +128,10 @@ fun ReviewsScreen(
                         createdDate = bottomSheetType.review.createdDate,
                         posterImageUrl = bottomSheetType.review.imageUrl,
                         scores = bottomSheetType.review.scores,
+                        currentUserId = currentUserId,
+                        onScoreSubmit = { scoreId, scoreValue ->
+                            onSubmitScore(bottomSheetType.review.id, scoreId, scoreValue)
+                        },
                         onDelete = {
                             onDeleteReview(bottomSheetType.review.id)
                             openBottomSheet = null
@@ -341,7 +347,8 @@ fun ScoreGridPreview() {
                     User(
                         id = "1",
                         name = "Cole",
-                        imageUrl = null
+                        imageUrl = null,
+                        email = "cole@example.com"
                     ) to Score(
                         id = "1",
                         value = 5.0,
@@ -349,7 +356,8 @@ fun ScoreGridPreview() {
                     User(
                         id = "2",
                         name = "Brian",
-                        imageUrl = null
+                        imageUrl = null,
+                        email = "brian@example.com"
                     ) to Score(
                         id = "2",
                         value = 5.0,
@@ -357,7 +365,8 @@ fun ScoreGridPreview() {
                     User(
                         id = "3",
                         name = "Wesley",
-                        imageUrl = null
+                        imageUrl = null,
+                        email = "wesley@example.com"
                     ) to Score(
                         id = "3",
                         value = 5.0,
@@ -365,7 +374,8 @@ fun ScoreGridPreview() {
                     User(
                         id = "4",
                         name = "Sunny",
-                        imageUrl = null
+                        imageUrl = null,
+                        email = "sunny@example.com"
                     ) to Score(
                         id = "4",
                         value = 5.0,
@@ -383,8 +393,10 @@ private fun ReviewsScreenPreview() {
         ReviewsScreen(
             reviews = AsyncResult.Success(emptyList()),
             watchList = AsyncResult.Success(emptyList()),
+            currentUserId = "1",
             onDeleteReview = {},
-            onMoveToReview = {}
+            onMoveToReview = {},
+            onSubmitScore = { _, _, _ -> }
         )
     }
 }
@@ -405,7 +417,8 @@ private fun ReviewsScreenWithDataPreview() {
                             User(
                                 id = "1",
                                 name = "Cole",
-                                imageUrl = null
+                                imageUrl = null,
+                                email = "cole@example.com"
                             ) to Score(
                                 id = "1",
                                 value = 5.0,
@@ -421,7 +434,8 @@ private fun ReviewsScreenWithDataPreview() {
                             User(
                                 id = "1",
                                 name = "Cole",
-                                imageUrl = null
+                                imageUrl = null,
+                                email = "cole@example.com"
                             ) to Score(
                                 id = "1",
                                 value = 5.0,
@@ -431,8 +445,10 @@ private fun ReviewsScreenWithDataPreview() {
                 )
             ),
             watchList = AsyncResult.Success(emptyList()),
+            currentUserId = "1",
             onDeleteReview = {},
-            onMoveToReview = {}
+            onMoveToReview = {},
+            onSubmitScore = { _, _, _ -> }
         )
     }
 }

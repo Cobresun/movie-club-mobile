@@ -34,7 +34,8 @@ fun Map<String, ScoreDto>.toScores(memberDtos: List<MemberDto>): Map<User, Score
             val user = User(
                 id = memberDto.id,
                 name = memberDto.name,
-                imageUrl = memberDto.image
+                imageUrl = memberDto.image,
+                email = memberDto.email
             )
 
             val score = Score(

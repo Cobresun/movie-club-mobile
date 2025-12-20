@@ -9,4 +9,6 @@ interface ReviewsDataSource {
     suspend fun getReviews(clubId: String): Result<List<ReviewDto>, DataError.Remote>
     suspend fun postReview(clubId: String, review: NewReviewItemDto): Result<Unit, DataError.Remote>
     suspend fun deleteReview(clubId: String, reviewId: String): Result<Unit, DataError.Remote>
+    suspend fun submitScore(clubId: String, workId: String, score: Double): Result<Unit, DataError.Remote>
+    suspend fun updateScore(clubId: String, reviewId: String, score: Double): Result<Unit, DataError.Remote>
 }

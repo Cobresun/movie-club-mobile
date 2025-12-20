@@ -32,10 +32,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
 import cobresun.movieclub.app.app.AppTheme
 import cobresun.movieclub.app.core.domain.User
 import cobresun.movieclub.app.reviews.domain.Score
+import coil3.compose.AsyncImage
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
@@ -44,6 +44,8 @@ fun ReviewDetailsBottomSheetContent(
     createdDate: String,
     posterImageUrl: String,
     scores: Map<User, Score>,
+    currentUserId: String?,
+    onScoreSubmit: (scoreId: String?, scoreValue: Double) -> Unit,
     onDelete: () -> Unit,
     onShare: () -> Unit,
     modifier: Modifier = Modifier
@@ -104,27 +106,61 @@ fun ReviewDetailsBottomSheetContent(
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(scores.toList()) { (user, score) ->
+                        val isCurrentUser = currentUserId != null && currentUserId == user.id
                         val imageUrl = user.imageUrl
 
-                        if (imageUrl != null) {
-                            ScoreChip(
+                        if (isCurrentUser) {
+                            EditableScoreChip(
                                 imageUrl = imageUrl,
-                                contentDescription = user.name,
-                                score = score.value,
+                                firstName = user.name.split(" ").firstOrNull(),
+                                lastName = user.name.split(" ").getOrNull(1),
+                                userName = user.name,
+                                currentScore = score.value,
+                                isEditable = true,
+                                onScoreSubmit = { newScore ->
+                                    onScoreSubmit(score.id, newScore)
+                                },
                                 size = ScoreChipSize.Large
                             )
                         } else {
-                            val initials = user.name.split(" ")
-
-                            if (initials.isNotEmpty()) {
+                            if (imageUrl != null) {
                                 ScoreChip(
-                                    firstName = initials.first(),
-                                    lastName = if (initials.size > 1) initials.last() else null,
+                                    imageUrl = imageUrl,
                                     contentDescription = user.name,
                                     score = score.value,
                                     size = ScoreChipSize.Large
                                 )
+                            } else {
+                                val initials = user.name.split(" ")
+
+                                if (initials.isNotEmpty()) {
+                                    ScoreChip(
+                                        firstName = initials.first(),
+                                        lastName = if (initials.size > 1) initials.last() else null,
+                                        contentDescription = user.name,
+                                        score = score.value,
+                                        size = ScoreChipSize.Large
+                                    )
+                                }
                             }
+                        }
+                    }
+
+                    // Add new score if current user hasn't scored yet
+                    if (currentUserId != null && !scores.keys.any { it.id == currentUserId }) {
+                        item {
+                            EditableScoreChip(
+                                imageUrl = null,
+                                firstName = null,
+                                lastName = null,
+                                userName = "You",
+                                currentScore = null,
+                                isEditable = true,
+                                onScoreSubmit = { newScore ->
+                                    onScoreSubmit(null, newScore)
+                                },
+                                size = ScoreChipSize.Large
+                            )
                         }
                     }
 
@@ -202,10 +238,12 @@ fun ReviewDetailsBottomSheetContentPreview() {
                 createdDate = "2021-01-01",
                 posterImageUrl = "https://www.themoviedb.org/t/p/w600_and_h900_bestv2/6oom5QYQ2yQzgp4bUS4eE2MvNte.jpg",
                 scores = mapOf(
-                    User(id = "1", name = "Cole", imageUrl = null) to Score(id = "1", value = 9.5),
-                    User(id = "2", name = "Brian", imageUrl = null) to Score(id = "2", value = 8.0),
-                    User(id = "3", name = "Wesley", imageUrl = null) to Score(id = "3", value = 9.0),
+                    User(id = "1", name = "Cole", imageUrl = null, email = "cole@example.com") to Score(id = "1", value = 9.5),
+                    User(id = "2", name = "Brian", imageUrl = null, email = "brian@example.com") to Score(id = "2", value = 8.0),
+                    User(id = "3", name = "Wesley", imageUrl = null, email = "wesley@example.com") to Score(id = "3", value = 9.0),
                 ),
+                currentUserId = "2",
+                onScoreSubmit = { _, _ -> },
                 onDelete = {},
                 onShare = {}
             )
@@ -223,6 +261,8 @@ fun ReviewDetailsBottomSheetContentNoScoresPreview() {
                 createdDate = "2024-01-15",
                 posterImageUrl = "https://image.tmdb.org/t/p/w500/poster.jpg",
                 scores = emptyMap(),
+                currentUserId = "1",
+                onScoreSubmit = { _, _ -> },
                 onDelete = {},
                 onShare = {}
             )

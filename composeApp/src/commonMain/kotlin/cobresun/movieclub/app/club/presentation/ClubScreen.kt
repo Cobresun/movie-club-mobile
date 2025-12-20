@@ -55,6 +55,7 @@ fun ClubScreenRoot(
             watchList = state.watchList,
             backlog = state.backlog,
             trendingMovies = state.trendingMovies,
+            currentUserId = state.currentUserId,
             onAction = viewModel::onAction,
             modifier = Modifier.padding(paddingValues)
         )
@@ -67,6 +68,7 @@ fun ClubScreen(
     watchList: AsyncResult<List<WatchListItem>>,
     backlog: AsyncResult<List<WatchListItem>>,
     trendingMovies: AsyncResult<List<TmdbMovie>>,
+    currentUserId: String?,
     onAction: (ClubAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -95,8 +97,12 @@ fun ClubScreen(
                 ReviewsScreen(
                     reviews = reviews,
                     watchList = watchList,
+                    currentUserId = currentUserId,
                     onDeleteReview = { reviewId -> onAction(ClubAction.OnDeleteReview(reviewId)) },
-                    onMoveToReview = { item -> onAction(ClubAction.OnMoveToReview(item)) }
+                    onMoveToReview = { item -> onAction(ClubAction.OnMoveToReview(item)) },
+                    onSubmitScore = { reviewWorkId, scoreId, scoreValue ->
+                        onAction(ClubAction.OnSubmitScore(reviewWorkId, scoreId, scoreValue))
+                    }
                 )
             } else {
                 WatchListScreen(
@@ -228,6 +234,7 @@ private fun ClubScreenPreview() {
                     )
                 )
             ),
+            currentUserId = "1",
             onAction = {},
         )
     }

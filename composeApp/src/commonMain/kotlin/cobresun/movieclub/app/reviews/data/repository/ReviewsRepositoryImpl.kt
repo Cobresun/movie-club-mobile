@@ -41,4 +41,17 @@ class ReviewsRepositoryImpl(
     ): Result<Unit, DataError.Remote> {
         return reviewsDataSource.deleteReview(clubId, reviewId)
     }
+
+    override suspend fun submitScore(
+        clubId: String,
+        reviewWorkId: String,
+        scoreId: String?,
+        score: Double
+    ): Result<Unit, DataError.Remote> {
+        return if (scoreId == null) {
+            reviewsDataSource.submitScore(clubId, reviewWorkId, score)
+        } else {
+            reviewsDataSource.updateScore(clubId, scoreId, score)
+        }
+    }
 }

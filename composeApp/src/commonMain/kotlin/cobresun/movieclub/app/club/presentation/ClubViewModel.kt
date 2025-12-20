@@ -23,7 +23,8 @@ class ClubViewModel(
     savedStateHandle: SavedStateHandle,
     private val reviewsRepository: ReviewsRepository,
     private val watchListRepository: WatchListRepository,
-    private val tmdbRepository: TmdbRepository
+    private val tmdbRepository: TmdbRepository,
+    private val memberRepository: cobresun.movieclub.app.member.domain.MemberRepository
 ) : ViewModel() {
     private val clubId = requireNotNull(savedStateHandle.get<String>("clubId"))
 
@@ -34,10 +35,28 @@ class ClubViewModel(
     val state = _state.asStateFlow()
 
     init {
+        loadCurrentUser()
         loadReviews()
         loadWatchList()
         loadBacklog()
         loadTrendingMovies()
+    }
+
+    private fun loadCurrentUser() {
+        viewModelScope.launch {
+            when (val result = memberRepository.getMember()) {
+                is Result.Success -> {
+                    _state.update {
+                        it.copy(
+                            currentUserId = result.data.id
+                        )
+                    }
+                }
+                is Result.Error -> {
+                    // Silently fail - user can still view, just not edit
+                }
+            }
+        }
     }
 
     private fun loadReviews() {
@@ -204,6 +223,23 @@ class ClubViewModel(
                 }
             }
 
+            is ClubAction.OnSubmitScore -> {
+                viewModelScope.launch {
+                    reviewsRepository.submitScore(
+                        clubId = clubId,
+                        reviewWorkId = action.reviewWorkId,
+                        scoreId = action.scoreId,
+                        score = action.scoreValue
+                    )
+                        .onSuccess {
+                            loadReviews()
+                        }
+                        .onError {
+                            _errorMessage.update { "Failed to submit score" }
+                        }
+                }
+            }
+
             is ClubAction.OnClearError -> {
                 _errorMessage.update { null }
             }
@@ -220,6 +256,11 @@ sealed interface ClubAction {
     data class OnMoveToWatchList(val watchListItem: WatchListItem) : ClubAction
     data class OnMoveToReview(val watchListItem: WatchListItem) : ClubAction
     data class OnDeleteReview(val reviewId: String) : ClubAction
+    data class OnSubmitScore(
+        val reviewWorkId: String,
+        val scoreId: String?,
+        val scoreValue: Double
+    ) : ClubAction
     data object OnClearError : ClubAction
 }
 
@@ -227,5 +268,6 @@ data class ClubState(
     val reviews: AsyncResult<List<Review>> = AsyncResult.Loading,
     val watchList: AsyncResult<List<WatchListItem>> = AsyncResult.Loading,
     val backlog: AsyncResult<List<WatchListItem>> = AsyncResult.Loading,
-    val trendingMovies: AsyncResult<List<TmdbMovie>> = AsyncResult.Loading
+    val trendingMovies: AsyncResult<List<TmdbMovie>> = AsyncResult.Loading,
+    val currentUserId: String? = null
 )
