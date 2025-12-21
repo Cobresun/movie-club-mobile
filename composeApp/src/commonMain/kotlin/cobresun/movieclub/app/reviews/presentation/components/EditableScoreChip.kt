@@ -7,9 +7,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Icon
@@ -24,12 +21,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import cobresun.movieclub.app.core.presentation.components.PlatformNumericTextField
 import coil3.compose.AsyncImage
 
 @Composable
@@ -95,26 +90,20 @@ fun EditableScoreChip(
         scoreContent = {
             when {
                 isEditing -> {
-                    BasicTextField(
+                    PlatformNumericTextField(
                         value = inputValue,
                         onValueChange = { inputValue = it },
                         modifier = Modifier
                             .width(60.dp)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                            .focusRequester(focusRequester),
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
                         textStyle = LocalTextStyle.current.copy(
                             fontSize = size.fontSize,
                             textAlign = TextAlign.Center,
                             color = Color.White
                         ),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Decimal,
-                            imeAction = ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onDone = { handleSubmit() }
-                        ),
-                        singleLine = true
+                        singleLine = true,
+                        onDone = { handleSubmit() },
+                        focusRequester = focusRequester
                     )
                 }
                 currentScore != null -> {
