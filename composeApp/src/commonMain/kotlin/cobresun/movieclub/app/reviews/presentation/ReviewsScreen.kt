@@ -26,6 +26,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -76,6 +77,8 @@ fun ReviewsScreen(
     onDeleteReview: (String) -> Unit,
     onMoveToReview: (WatchListItem) -> Unit,
     onSubmitScore: (reviewWorkId: String, scoreId: String?, score: Double) -> Unit,
+    isRefreshingReviews: Boolean = false,
+    onRefreshReviews: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -103,6 +106,8 @@ fun ReviewsScreen(
             },
             searchQuery = searchQuery,
             onSearchQueryChange = { searchQuery = it },
+            isRefreshingReviews = isRefreshingReviews,
+            onRefreshReviews = onRefreshReviews,
             modifier = modifier
         )
     }
@@ -207,6 +212,8 @@ private fun ScreenContent(
     onSelectReviewItem: (Review) -> Unit,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
+    isRefreshingReviews: Boolean = false,
+    onRefreshReviews: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val gridState = rememberLazyGridState()
@@ -249,26 +256,32 @@ private fun ScreenContent(
             )
         }
 
-        AnimatedContent(
-            targetState = reviews,
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) { targetState ->
-            AsyncResultHandler(
-                asyncResult = targetState,
-                onSuccess = { reviews ->
-                    val filteredReviews = reviews.filter { review ->
-                        review.title.contains(searchQuery.trim(), ignoreCase = true)
-                    }
+        PullToRefreshBox(
+            isRefreshing = isRefreshingReviews,
+            onRefresh = onRefreshReviews,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            AnimatedContent(
+                targetState = reviews,
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) { targetState ->
+                AsyncResultHandler(
+                    asyncResult = targetState,
+                    onSuccess = { reviews ->
+                        val filteredReviews = reviews.filter { review ->
+                            review.title.contains(searchQuery.trim(), ignoreCase = true)
+                        }
 
-                    ReviewGrid(
-                        reviews = filteredReviews,
-                        onSelectReviewItem = onSelectReviewItem,
-                        state = gridState,
-                        modifier = modifier,
-                    )
-                }
-            )
+                        ReviewGrid(
+                            reviews = filteredReviews,
+                            onSelectReviewItem = onSelectReviewItem,
+                            state = gridState,
+                            modifier = modifier,
+                        )
+                    }
+                )
+            }
         }
     }
 }

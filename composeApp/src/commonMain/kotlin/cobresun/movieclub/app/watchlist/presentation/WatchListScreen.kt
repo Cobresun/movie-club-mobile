@@ -24,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -72,6 +73,10 @@ fun WatchListScreen(
     onMoveToWatchList: (WatchListItem) -> Unit,
     onMoveToReview: (WatchListItem) -> Unit,
     trendingMovies: AsyncResult<List<TmdbMovie>>,
+    isRefreshingWatchList: Boolean = false,
+    isRefreshingBacklog: Boolean = false,
+    onRefreshWatchList: () -> Unit = {},
+    onRefreshBacklog: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -104,6 +109,10 @@ fun WatchListScreen(
             },
             searchQuery = searchQuery,
             onSearchQueryChange = { searchQuery = it },
+            isRefreshingWatchList = isRefreshingWatchList,
+            isRefreshingBacklog = isRefreshingBacklog,
+            onRefreshWatchList = onRefreshWatchList,
+            onRefreshBacklog = onRefreshBacklog,
         )
     }
 
@@ -215,6 +224,10 @@ private fun ScreenContent(
     onSelectWatchListItem: (WatchListItem) -> Unit,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
+    isRefreshingWatchList: Boolean = false,
+    isRefreshingBacklog: Boolean = false,
+    onRefreshWatchList: () -> Unit = {},
+    onRefreshBacklog: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -234,7 +247,11 @@ private fun ScreenContent(
             watchList = watchList,
             backlog = backlog,
             onSelectWatchListItem = onSelectWatchListItem,
-            searchQuery = searchQuery
+            searchQuery = searchQuery,
+            isRefreshingWatchList = isRefreshingWatchList,
+            isRefreshingBacklog = isRefreshingBacklog,
+            onRefreshWatchList = onRefreshWatchList,
+            onRefreshBacklog = onRefreshBacklog
         )
     }
 }
@@ -273,6 +290,10 @@ private fun AnimatedMovieList(
     backlog: AsyncResult<List<WatchListItem>>,
     onSelectWatchListItem: (WatchListItem) -> Unit,
     searchQuery: String,
+    isRefreshingWatchList: Boolean = false,
+    isRefreshingBacklog: Boolean = false,
+    onRefreshWatchList: () -> Unit = {},
+    onRefreshBacklog: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val watchListGridState = rememberLazyGridState()
@@ -302,29 +323,38 @@ private fun AnimatedMovieList(
         previousSearchQuery = searchQuery
     }
 
-    AnimatedContent(
-        targetState = isShowingWatchList,
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) { showingWatchList ->
-        val currentList = if (showingWatchList) watchList else backlog
-        val currentGridState = if (showingWatchList) watchListGridState else backlogGridState
+    val isRefreshing = if (isShowingWatchList) isRefreshingWatchList else isRefreshingBacklog
+    val onRefresh = if (isShowingWatchList) onRefreshWatchList else onRefreshBacklog
 
-        AsyncResultHandler(
-            asyncResult = currentList,
-            onSuccess = { items ->
-                val filteredItems = items.filter { item ->
-                    item.title.contains(searchQuery.trim(), ignoreCase = true)
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        AnimatedContent(
+            targetState = isShowingWatchList,
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) { showingWatchList ->
+            val currentList = if (showingWatchList) watchList else backlog
+            val currentGridState = if (showingWatchList) watchListGridState else backlogGridState
+
+            AsyncResultHandler(
+                asyncResult = currentList,
+                onSuccess = { items ->
+                    val filteredItems = items.filter { item ->
+                        item.title.contains(searchQuery.trim(), ignoreCase = true)
+                    }
+
+                    WatchListGrid(
+                        watchList = filteredItems,
+                        onSelectWatchListItem = onSelectWatchListItem,
+                        state = currentGridState,
+                        modifier = modifier
+                    )
                 }
-
-                WatchListGrid(
-                    watchList = filteredItems,
-                    onSelectWatchListItem = onSelectWatchListItem,
-                    state = currentGridState,
-                    modifier = modifier
-                )
-            }
-        )
+            )
+        }
     }
 }
 

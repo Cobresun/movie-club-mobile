@@ -53,6 +53,7 @@ class ClubViewModel(
                         )
                     }
                 }
+
                 is Result.Error -> {
                     // Silently fail - user can still view, just not edit
                 }
@@ -67,6 +68,7 @@ class ClubViewModel(
                 is Result.Success -> {
                     _state.update { it.copy(reviews = AsyncResult.Success(result.data)) }
                 }
+
                 is Result.Error -> {
                     _state.update { it.copy(reviews = AsyncResult.Error()) }
                 }
@@ -81,6 +83,7 @@ class ClubViewModel(
                 is Result.Success -> {
                     _state.update { it.copy(watchList = AsyncResult.Success(result.data)) }
                 }
+
                 is Result.Error -> {
                     _state.update { it.copy(watchList = AsyncResult.Error()) }
                 }
@@ -95,6 +98,7 @@ class ClubViewModel(
                 is Result.Success -> {
                     _state.update { it.copy(backlog = AsyncResult.Success(result.data)) }
                 }
+
                 is Result.Error -> {
                     _state.update { it.copy(backlog = AsyncResult.Error()) }
                 }
@@ -109,8 +113,72 @@ class ClubViewModel(
                 is Result.Success -> {
                     _state.update { it.copy(trendingMovies = AsyncResult.Success(result.data)) }
                 }
+
                 is Result.Error -> {
                     _state.update { it.copy(trendingMovies = AsyncResult.Error()) }
+                }
+            }
+        }
+    }
+
+    private fun refreshReviews() {
+        viewModelScope.launch {
+            _state.update { it.copy(isRefreshingReviews = true) }
+            when (val result = reviewsRepository.getReviews(clubId)) {
+                is Result.Success -> {
+                    _state.update {
+                        it.copy(
+                            reviews = AsyncResult.Success(result.data),
+                            isRefreshingReviews = false
+                        )
+                    }
+                }
+
+                is Result.Error -> {
+                    _state.update { it.copy(isRefreshingReviews = false) }
+                    _errorMessage.update { "Failed to refresh reviews" }
+                }
+            }
+        }
+    }
+
+    private fun refreshWatchList() {
+        viewModelScope.launch {
+            _state.update { it.copy(isRefreshingWatchList = true) }
+            when (val result = watchListRepository.getWatchList(clubId)) {
+                is Result.Success -> {
+                    _state.update {
+                        it.copy(
+                            watchList = AsyncResult.Success(result.data),
+                            isRefreshingWatchList = false
+                        )
+                    }
+                }
+
+                is Result.Error -> {
+                    _state.update { it.copy(isRefreshingWatchList = false) }
+                    _errorMessage.update { "Failed to refresh watch list" }
+                }
+            }
+        }
+    }
+
+    private fun refreshBacklog() {
+        viewModelScope.launch {
+            _state.update { it.copy(isRefreshingBacklog = true) }
+            when (val result = watchListRepository.getBacklog(clubId)) {
+                is Result.Success -> {
+                    _state.update {
+                        it.copy(
+                            backlog = AsyncResult.Success(result.data),
+                            isRefreshingBacklog = false
+                        )
+                    }
+                }
+
+                is Result.Error -> {
+                    _state.update { it.copy(isRefreshingBacklog = false) }
+                    _errorMessage.update { "Failed to refresh backlog" }
                 }
             }
         }
@@ -244,6 +312,10 @@ class ClubViewModel(
             is ClubAction.OnClearError -> {
                 _errorMessage.update { null }
             }
+
+            is ClubAction.OnRefreshReviews -> refreshReviews()
+            is ClubAction.OnRefreshWatchList -> refreshWatchList()
+            is ClubAction.OnRefreshBacklog -> refreshBacklog()
         }
     }
 
@@ -262,7 +334,11 @@ sealed interface ClubAction {
         val scoreId: String?,
         val scoreValue: Double
     ) : ClubAction
+
     data object OnClearError : ClubAction
+    data object OnRefreshReviews : ClubAction
+    data object OnRefreshWatchList : ClubAction
+    data object OnRefreshBacklog : ClubAction
 }
 
 data class ClubState(
@@ -270,5 +346,8 @@ data class ClubState(
     val watchList: AsyncResult<List<WatchListItem>> = AsyncResult.Loading,
     val backlog: AsyncResult<List<WatchListItem>> = AsyncResult.Loading,
     val trendingMovies: AsyncResult<List<TmdbMovie>> = AsyncResult.Loading,
-    val currentUser: Member? = null
+    val currentUser: Member? = null,
+    val isRefreshingReviews: Boolean = false,
+    val isRefreshingWatchList: Boolean = false,
+    val isRefreshingBacklog: Boolean = false
 )

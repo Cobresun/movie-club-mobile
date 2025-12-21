@@ -57,6 +57,7 @@ fun ClubScreenRoot(
             backlog = state.backlog,
             trendingMovies = state.trendingMovies,
             currentUser = state.currentUser,
+            state = state,
             onAction = viewModel::onAction,
             modifier = Modifier.padding(paddingValues)
         )
@@ -70,6 +71,7 @@ fun ClubScreen(
     backlog: AsyncResult<List<WatchListItem>>,
     trendingMovies: AsyncResult<List<TmdbMovie>>,
     currentUser: Member?,
+    state: ClubState,
     onAction: (ClubAction) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -103,7 +105,9 @@ fun ClubScreen(
                     onMoveToReview = { item -> onAction(ClubAction.OnMoveToReview(item)) },
                     onSubmitScore = { reviewWorkId, scoreId, scoreValue ->
                         onAction(ClubAction.OnSubmitScore(reviewWorkId, scoreId, scoreValue))
-                    }
+                    },
+                    isRefreshingReviews = state.isRefreshingReviews,
+                    onRefreshReviews = { onAction(ClubAction.OnRefreshReviews) }
                 )
             } else {
                 WatchListScreen(
@@ -115,7 +119,11 @@ fun ClubScreen(
                     onDeleteBacklogItem = { item -> onAction(ClubAction.OnDeleteBacklogItem(item)) },
                     onMoveToWatchList = { item -> onAction(ClubAction.OnMoveToWatchList(item)) },
                     onMoveToReview = { item -> onAction(ClubAction.OnMoveToReview(item)) },
-                    trendingMovies = trendingMovies
+                    trendingMovies = trendingMovies,
+                    isRefreshingWatchList = state.isRefreshingWatchList,
+                    isRefreshingBacklog = state.isRefreshingBacklog,
+                    onRefreshWatchList = { onAction(ClubAction.OnRefreshWatchList) },
+                    onRefreshBacklog = { onAction(ClubAction.OnRefreshBacklog) }
                 )
             }
         }
@@ -240,6 +248,16 @@ private fun ClubScreenPreview() {
                 name = "John Doe",
                 imageUrl = "https://image.tmdb.org/t/p/w500/q6y0oR",
                 email = "john.mclean@examplepetstore.com"
+            ),
+            state = ClubState(
+                reviews = AsyncResult.Success(emptyList()),
+                watchList = AsyncResult.Success(emptyList()),
+                backlog = AsyncResult.Success(emptyList()),
+                trendingMovies = AsyncResult.Success(emptyList()),
+                currentUser = null,
+                isRefreshingReviews = false,
+                isRefreshingWatchList = false,
+                isRefreshingBacklog = false
             ),
             onAction = {},
         )
