@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -27,7 +26,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -102,12 +100,12 @@ fun EditableScoreChip(
                         onValueChange = { inputValue = it },
                         modifier = Modifier
                             .width(60.dp)
-                            .background(Color.White, RoundedCornerShape(4.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                             .focusRequester(focusRequester),
                         textStyle = LocalTextStyle.current.copy(
                             fontSize = size.fontSize,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
+                            color = Color.White
                         ),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Decimal,
@@ -127,7 +125,7 @@ fun EditableScoreChip(
                         imageVector = Icons.Filled.Add,
                         contentDescription = "Add score",
                         modifier = Modifier
-                            .size(size.avatarSize / 2)
+                            .width(60.dp)
                             .padding(horizontal = size.horizontalPadding)
                     )
                 }
