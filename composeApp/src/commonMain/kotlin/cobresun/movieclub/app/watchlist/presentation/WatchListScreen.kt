@@ -72,6 +72,7 @@ fun WatchListScreen(
     onDeleteBacklogItem: (WatchListItem) -> Unit,
     onMoveToWatchList: (WatchListItem) -> Unit,
     onMoveToReview: (WatchListItem) -> Unit,
+    onSetNextWatch: (WatchListItem) -> Unit,
     trendingMovies: AsyncResult<List<TmdbMovie>>,
     isRefreshingWatchList: Boolean = false,
     isRefreshingBacklog: Boolean = false,
@@ -157,6 +158,15 @@ fun WatchListScreen(
                             } else {
                                 onMoveToWatchList(bottomSheetType.watchListItem)
                             }
+                            openBottomSheet = null
+                        },
+                        secondaryButtonText = if (isShowingWatchList && !bottomSheetType.watchListItem.isNextMovie) {
+                            "Next watch"
+                        } else {
+                            null
+                        },
+                        onSecondaryButtonClick = {
+                            onSetNextWatch(bottomSheetType.watchListItem)
                             openBottomSheet = null
                         }
                     )
@@ -394,6 +404,7 @@ private fun WatchListScreenPreview() {
             onDeleteBacklogItem = {},
             onMoveToWatchList = {},
             onMoveToReview = {},
+            onSetNextWatch = {},
             trendingMovies = AsyncResult.Success(emptyList()),
         )
     }
@@ -425,6 +436,7 @@ private fun WatchListScreenWithDataPreview() {
             onDeleteBacklogItem = {},
             onMoveToWatchList = {},
             onMoveToReview = {},
+            onSetNextWatch = {},
             trendingMovies = AsyncResult.Success(emptyList()),
         )
     }

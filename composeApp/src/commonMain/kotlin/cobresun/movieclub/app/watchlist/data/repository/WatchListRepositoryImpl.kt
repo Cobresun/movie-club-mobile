@@ -100,4 +100,8 @@ class WatchListRepositoryImpl(
     ): Result<Unit, DataError.Remote> {
         return watchListDataSource.deleteBacklog(clubId, watchListItemId)
     }
+
+    override suspend fun setNextWatch(clubId: String, workId: String): Result<Unit, DataError.Remote> {
+        return watchListDataSource.setNextWork(clubId, workId)
+    }
 }

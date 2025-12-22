@@ -280,6 +280,18 @@ class ClubViewModel(
                 }
             }
 
+            is ClubAction.OnSetNextWatch -> {
+                viewModelScope.launch {
+                    watchListRepository.setNextWatch(clubId, action.watchListItem.id)
+                        .onSuccess {
+                            loadWatchList()
+                        }
+                        .onError {
+                            _errorMessage.update { "Failed to set next watch" }
+                        }
+                }
+            }
+
             is ClubAction.OnDeleteReview -> {
                 viewModelScope.launch {
                     reviewsRepository.deleteReview(clubId, action.reviewId)
@@ -328,6 +340,7 @@ sealed interface ClubAction {
     data class OnDeleteBacklogItem(val item: WatchListItem) : ClubAction
     data class OnMoveToWatchList(val watchListItem: WatchListItem) : ClubAction
     data class OnMoveToReview(val watchListItem: WatchListItem) : ClubAction
+    data class OnSetNextWatch(val watchListItem: WatchListItem) : ClubAction
     data class OnDeleteReview(val reviewId: String) : ClubAction
     data class OnSubmitScore(
         val reviewWorkId: String,

@@ -24,6 +24,8 @@ fun MovieActionBottomSheetContent(
     onDelete: () -> Unit,
     primaryButtonText: String?,
     onPrimaryButtonClick: () -> Unit,
+    secondaryButtonText: String? = null,
+    onSecondaryButtonClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -61,6 +63,17 @@ fun MovieActionBottomSheetContent(
                     }
                 )
             }
+        }
+
+        secondaryButtonText?.let {
+            Button(
+                onClick = onSecondaryButtonClick,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(4.dp),
+                content = {
+                    Text(text = it)
+                }
+            )
         }
     }
 }

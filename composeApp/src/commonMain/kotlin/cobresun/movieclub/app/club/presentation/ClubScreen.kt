@@ -119,6 +119,7 @@ fun ClubScreen(
                     onDeleteBacklogItem = { item -> onAction(ClubAction.OnDeleteBacklogItem(item)) },
                     onMoveToWatchList = { item -> onAction(ClubAction.OnMoveToWatchList(item)) },
                     onMoveToReview = { item -> onAction(ClubAction.OnMoveToReview(item)) },
+                    onSetNextWatch = { item -> onAction(ClubAction.OnSetNextWatch(item)) },
                     trendingMovies = trendingMovies,
                     isRefreshingWatchList = state.isRefreshingWatchList,
                     isRefreshingBacklog = state.isRefreshingBacklog,

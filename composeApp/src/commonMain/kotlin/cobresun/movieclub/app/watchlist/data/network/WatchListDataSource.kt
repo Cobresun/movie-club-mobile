@@ -10,6 +10,8 @@ import cobresun.movieclub.app.watchlist.data.dto.WatchListItemDto
 interface WatchListDataSource {
     suspend fun getNextWork(clubId: String): Result<NextWorkDto, DataError.Remote>
 
+    suspend fun setNextWork(clubId: String, workId: String): Result<Unit, DataError.Remote>
+
     suspend fun getWatchList(
         clubId: String
     ): Result<List<WatchListItemDto>, DataError.Remote>

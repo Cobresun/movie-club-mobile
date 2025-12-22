@@ -13,4 +13,6 @@ interface WatchListRepository {
     suspend fun getBacklog(clubId: String): Result<List<WatchListItem>, DataError.Remote>
     suspend fun postBacklog(clubId: String, tmdbMovie: TmdbMovie): Result<Unit, DataError.Remote>
     suspend fun deleteBacklog(clubId: String, watchListItemId: String): Result<Unit, DataError.Remote>
+
+    suspend fun setNextWatch(clubId: String, workId: String): Result<Unit, DataError.Remote>
 }
