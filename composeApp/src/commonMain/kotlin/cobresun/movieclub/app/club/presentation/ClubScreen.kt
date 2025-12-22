@@ -41,6 +41,18 @@ fun ClubScreenRoot(
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
     val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
 
+    var selectedTab by remember { mutableStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        viewModel.navigationEvents.collect { event ->
+            when (event) {
+                ClubNavigationEvent.NavigateToReviewsTab -> {
+                    selectedTab = 0
+                }
+            }
+        }
+    }
+
     LaunchedEffect(errorMessage) {
         errorMessage?.let { message ->
             snackbarHostState.showSnackbar(message)
@@ -59,6 +71,8 @@ fun ClubScreenRoot(
             currentUser = state.currentUser,
             state = state,
             onAction = viewModel::onAction,
+            selectedTab = selectedTab,
+            onTabSelected = { selectedTab = it },
             modifier = Modifier.padding(paddingValues)
         )
     }
@@ -73,10 +87,11 @@ fun ClubScreen(
     currentUser: Member?,
     state: ClubState,
     onAction: (ClubAction) -> Unit,
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var selectedTab by remember { mutableStateOf(0) }
-    val pagerState = rememberPagerState(initialPage = 0) { 2 }
+    val pagerState = rememberPagerState(initialPage = selectedTab) { 2 }
 
     LaunchedEffect(selectedTab) {
         if (pagerState.currentPage != selectedTab) {
@@ -86,7 +101,7 @@ fun ClubScreen(
 
     LaunchedEffect(pagerState.currentPage) {
         if (pagerState.currentPage != selectedTab) {
-            selectedTab = pagerState.currentPage
+            onTabSelected(pagerState.currentPage)
         }
     }
 
@@ -140,13 +155,13 @@ fun ClubScreen(
                 tabs = {
                     Tab(
                         selected = selectedTab == 0,
-                        onClick = { selectedTab = 0 },
+                        onClick = { onTabSelected(0) },
                         text = { Text(text = "Reviews") }
                     )
 
                     Tab(
                         selected = selectedTab == 1,
-                        onClick = { selectedTab = 1 },
+                        onClick = { onTabSelected(1) },
                         text = { Text(text = "Watch List") }
                     )
                 }
@@ -261,6 +276,8 @@ private fun ClubScreenPreview() {
                 isRefreshingBacklog = false
             ),
             onAction = {},
+            selectedTab = 0,
+            onTabSelected = {}
         )
     }
 }

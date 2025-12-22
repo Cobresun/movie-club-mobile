@@ -16,9 +16,16 @@ import cobresun.movieclub.app.tmdb.domain.TmdbRepository
 import cobresun.movieclub.app.watchlist.domain.WatchListItem
 import cobresun.movieclub.app.watchlist.domain.WatchListRepository
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+sealed interface ClubNavigationEvent {
+    data object NavigateToReviewsTab : ClubNavigationEvent
+}
 
 class ClubViewModel(
     savedStateHandle: SavedStateHandle,
@@ -34,6 +41,9 @@ class ClubViewModel(
 
     private val _state = MutableStateFlow(ClubState())
     val state = _state.asStateFlow()
+
+    private val _navigationEvents = MutableSharedFlow<ClubNavigationEvent>()
+    val navigationEvents: SharedFlow<ClubNavigationEvent> = _navigationEvents.asSharedFlow()
 
     init {
         loadCurrentUser()
@@ -269,6 +279,7 @@ class ClubViewModel(
                                 .onSuccess {
                                     loadReviews()
                                     loadWatchList()
+                                    _navigationEvents.emit(ClubNavigationEvent.NavigateToReviewsTab)
                                 }
                                 .onError {
                                     _errorMessage.update { "Failed to create review" }
