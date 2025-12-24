@@ -10,13 +10,12 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.ui.Alignment
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -28,9 +27,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
@@ -70,12 +75,24 @@ fun ClubsScreen(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
 
+    // Track the current club ID from navigation
+    var currentClubId by remember { mutableStateOf<String?>(null) }
+
+    // Update currentClubId when the first club loads
+    LaunchedEffect(clubs) {
+        if (clubs is AsyncResult.Success && currentClubId == null && clubs.data.isNotEmpty()) {
+            currentClubId = clubs.data.first().id
+        }
+    }
+
     ModalNavigationDrawer(
         drawerContent = {
             ModalDrawerContent(
                 clubs = clubs,
-                onClubClick = {
-                    navController.navigate(Route.Club(it))
+                currentClubId = currentClubId,
+                onClubClick = { clubId ->
+                    currentClubId = clubId
+                    navController.navigate(Route.Club(clubId))
                     coroutineScope.launch { drawerState.close() }
                 },
                 onCreateClubClick = {
@@ -135,6 +152,7 @@ private fun EmptyClubsScreen() {
 @Composable
 private fun ModalDrawerContent(
     clubs: AsyncResult<List<Club>>,
+    currentClubId: String?,
     onClubClick: (String) -> Unit,
     onCreateClubClick: () -> Unit,
     onLogout: () -> Unit,
@@ -142,21 +160,48 @@ private fun ModalDrawerContent(
     ModalDrawerSheet {
         Column(
             modifier = Modifier
-                .safeContentPadding()
                 .fillMaxHeight()
         ) {
+            Text(
+                text = "Clubs",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+            )
+
             when (clubs) {
                 is AsyncResult.Error -> {}
                 is AsyncResult.Loading -> {}
                 is AsyncResult.Success -> {
                     AsyncResultHandler(clubs) {
                         it.forEach { club ->
-                            Text(
-                                text = club.name,
+                            Row(
                                 modifier = Modifier
-                                    .padding(16.dp)
+                                    .fillMaxWidth()
+                                    .background(
+                                        color = if (club.id == currentClubId)
+                                            MaterialTheme.colorScheme.primaryContainer
+                                        else Color.Transparent
+                                    )
                                     .clickable { onClubClick(club.id) }
-                            )
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = club.name,
+                                    color = if (club.id == currentClubId)
+                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                    else MaterialTheme.colorScheme.onSurface
+                                )
+                                if (club.id == currentClubId) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
