@@ -4,6 +4,7 @@ import cobresun.movieclub.app.core.domain.Club
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.map
+import cobresun.movieclub.app.member.data.dto.CreateClubRequestDto
 import cobresun.movieclub.app.member.data.mappers.toClub
 import cobresun.movieclub.app.member.data.mappers.toMember
 import cobresun.movieclub.app.member.data.network.MemberDataSource
@@ -20,5 +21,17 @@ class MemberRepositoryImpl(
     override suspend fun getClubs(): Result<List<Club>, DataError.Remote> {
         return memberDataSource.getClubs()
             .map { clubDtos -> clubDtos.map { it.toClub() } }
+    }
+
+    override suspend fun createClub(
+        name: String,
+        memberEmail: String
+    ): Result<String, DataError.Remote> {
+        val request = CreateClubRequestDto(
+            name = name,
+            members = listOf(memberEmail)
+        )
+        return memberDataSource.createClub(request)
+            .map { response -> response.clubId }
     }
 }

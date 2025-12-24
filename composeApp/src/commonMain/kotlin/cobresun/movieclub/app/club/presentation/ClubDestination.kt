@@ -2,7 +2,9 @@ package cobresun.movieclub.app.club.presentation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,12 +15,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
@@ -37,6 +42,7 @@ import cobresun.movieclub.app.auth.presentation.AuthViewModel
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.AsyncResultHandler
 import cobresun.movieclub.app.core.domain.Club
+import cobresun.movieclub.app.member.presentation.CreateClubScreenRoot
 import cobresun.movieclub.app.member.presentation.MemberViewModel
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
@@ -49,7 +55,8 @@ fun ClubsScreenRoot(
     val state by viewModel.state.collectAsStateWithLifecycle()
     ClubsScreen(
         clubs = state.clubs,
-        onLogout = { authViewModel.onAction(AuthAction.Logout) }
+        onLogout = { authViewModel.onAction(AuthAction.Logout) },
+        memberViewModel = viewModel
     )
 }
 
@@ -57,6 +64,7 @@ fun ClubsScreenRoot(
 fun ClubsScreen(
     clubs: AsyncResult<List<Club>>,
     onLogout: () -> Unit = {},
+    memberViewModel: MemberViewModel,
 ) {
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -68,6 +76,10 @@ fun ClubsScreen(
                 clubs = clubs,
                 onClubClick = {
                     navController.navigate(Route.Club(it))
+                    coroutineScope.launch { drawerState.close() }
+                },
+                onCreateClubClick = {
+                    navController.navigate(Route.CreateClub)
                     coroutineScope.launch { drawerState.close() }
                 },
                 onLogout = onLogout
@@ -92,6 +104,18 @@ fun ClubsScreen(
                 composable<Route.EmptyClubs> {
                     EmptyClubsScreen()
                 }
+
+                composable<Route.CreateClub> {
+                    CreateClubScreenRoot(
+                        memberViewModel = memberViewModel,
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToClub = { clubId ->
+                            navController.navigate(Route.Club(clubId)) {
+                                popUpTo<Route.CreateClub> { inclusive = true }
+                            }
+                        }
+                    )
+                }
             }
         }
     }
@@ -112,6 +136,7 @@ private fun EmptyClubsScreen() {
 private fun ModalDrawerContent(
     clubs: AsyncResult<List<Club>>,
     onClubClick: (String) -> Unit,
+    onCreateClubClick: () -> Unit,
     onLogout: () -> Unit,
 ) {
     ModalDrawerSheet {
@@ -134,6 +159,29 @@ private fun ModalDrawerContent(
                             )
                         }
                     }
+                }
+            }
+
+            // Create Club Button
+            OutlinedCard(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .clickable { onCreateClubClick() }
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text("Create New Club")
                 }
             }
 

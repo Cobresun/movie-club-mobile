@@ -19,4 +19,7 @@ sealed interface Route {
 
     @Serializable
     data object EmptyClubs : Route
+
+    @Serializable
+    data object CreateClub : Route
 }

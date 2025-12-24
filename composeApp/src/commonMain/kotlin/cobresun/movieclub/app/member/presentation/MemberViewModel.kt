@@ -21,6 +21,10 @@ class MemberViewModel(
         loadClubs()
     }
 
+    fun refresh() {
+        loadClubs()
+    }
+
     private fun loadClubs() {
         viewModelScope.launch {
             _state.update { it.copy(clubs = AsyncResult.Loading) }
