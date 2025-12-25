@@ -146,6 +146,7 @@ fun ReviewsScreen(
                         },
                         onShare = {
                             onShareReview(bottomSheetType.review.id)
+                            openBottomSheet = null
                         }
                     )
                 }

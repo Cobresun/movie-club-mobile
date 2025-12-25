@@ -28,12 +28,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -51,12 +54,22 @@ fun ClubSettingsScreenRoot(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
+    val successMessage by viewModel.successMessage.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    // Show error message
-    errorMessage?.let { message ->
-        LaunchedEffect(message) {
-            // TODO: Show Snackbar when available
+    // Show error messages
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
             viewModel.onAction(ClubSettingsAction.OnClearError)
+        }
+    }
+
+    // Show success messages
+    LaunchedEffect(successMessage) {
+        successMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.onAction(ClubSettingsAction.OnClearSuccess)
         }
     }
 
@@ -73,6 +86,7 @@ fun ClubSettingsScreenRoot(
 
     ClubSettingsScreen(
         state = state,
+        snackbarHostState = snackbarHostState,
         onNavigateBack = onNavigateBack,
         onAction = viewModel::onAction
     )
@@ -82,10 +96,12 @@ fun ClubSettingsScreenRoot(
 @Composable
 fun ClubSettingsScreen(
     state: ClubSettingsState,
+    snackbarHostState: SnackbarHostState,
     onNavigateBack: () -> Unit,
     onAction: (ClubSettingsAction) -> Unit
 ) {
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Club Settings") },

@@ -39,6 +39,7 @@ fun ClubScreenRoot(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
+    val successMessage by viewModel.successMessage.collectAsStateWithLifecycle()
     val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
 
     var selectedTab by remember { mutableStateOf(0) }
@@ -57,6 +58,13 @@ fun ClubScreenRoot(
         errorMessage?.let { message ->
             snackbarHostState.showSnackbar(message)
             viewModel.onAction(ClubAction.OnClearError)
+        }
+    }
+
+    LaunchedEffect(successMessage) {
+        successMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            viewModel.onAction(ClubAction.OnClearSuccess)
         }
     }
 

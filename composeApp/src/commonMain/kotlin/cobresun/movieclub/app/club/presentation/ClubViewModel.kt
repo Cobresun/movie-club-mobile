@@ -43,6 +43,9 @@ class ClubViewModel(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage = _errorMessage.asStateFlow()
 
+    private val _successMessage = MutableStateFlow<String?>(null)
+    val successMessage = _successMessage.asStateFlow()
+
     private val _state = MutableStateFlow(ClubState())
     val state = _state.asStateFlow()
 
@@ -341,6 +344,7 @@ class ClubViewModel(
                     try {
                         val shareUrl = "${Constants.BASE_URL}/share/club/$clubId/review/${action.reviewId}"
                         clipboardManager.copyToClipboard(shareUrl)
+                        _successMessage.update { "Link copied to clipboard" }
                     } catch (e: Exception) {
                         _errorMessage.update { "Failed to copy share link" }
                     }
@@ -349,6 +353,10 @@ class ClubViewModel(
 
             is ClubAction.OnClearError -> {
                 _errorMessage.update { null }
+            }
+
+            is ClubAction.OnClearSuccess -> {
+                _successMessage.update { null }
             }
 
             is ClubAction.OnRefreshReviews -> refreshReviews()
@@ -376,6 +384,7 @@ sealed interface ClubAction {
     data class OnShareReview(val reviewId: String) : ClubAction
 
     data object OnClearError : ClubAction
+    data object OnClearSuccess : ClubAction
     data object OnRefreshReviews : ClubAction
     data object OnRefreshWatchList : ClubAction
     data object OnRefreshBacklog : ClubAction

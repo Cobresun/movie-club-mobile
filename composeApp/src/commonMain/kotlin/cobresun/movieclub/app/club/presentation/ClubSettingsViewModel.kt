@@ -26,6 +26,7 @@ sealed interface ClubSettingsAction {
     data object OnConfirmLeaveClub : ClubSettingsAction
     data object OnCancelLeaveClub : ClubSettingsAction
     data object OnClearError : ClubSettingsAction
+    data object OnClearSuccess : ClubSettingsAction
 }
 
 sealed interface ClubSettingsNavigationEvent {
@@ -49,6 +50,9 @@ class ClubSettingsViewModel(
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage = _errorMessage.asStateFlow()
+
+    private val _successMessage = MutableStateFlow<String?>(null)
+    val successMessage = _successMessage.asStateFlow()
 
     private val _state = MutableStateFlow(ClubSettingsState())
     val state = _state.asStateFlow()
@@ -96,6 +100,7 @@ class ClubSettingsViewModel(
                 viewModelScope.launch {
                     try {
                         clipboardManager.copyToClipboard(_state.value.inviteLink)
+                        _successMessage.update { "Link copied to clipboard" }
                         _state.update { it.copy(hasCopiedLink = true) }
                         delay(2000)
                         _state.update { it.copy(hasCopiedLink = false) }
@@ -134,6 +139,9 @@ class ClubSettingsViewModel(
             }
             is ClubSettingsAction.OnClearError -> {
                 _errorMessage.update { null }
+            }
+            is ClubSettingsAction.OnClearSuccess -> {
+                _successMessage.update { null }
             }
         }
     }
