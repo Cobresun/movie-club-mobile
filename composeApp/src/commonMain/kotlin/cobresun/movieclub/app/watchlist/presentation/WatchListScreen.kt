@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.items
@@ -18,9 +19,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -76,13 +79,14 @@ fun WatchListScreen(
     trendingMovies: AsyncResult<List<TmdbMovie>>,
     isRefreshingWatchList: Boolean = false,
     isRefreshingBacklog: Boolean = false,
+    isAddingToBacklog: Boolean = false,
     onRefreshWatchList: () -> Unit = {},
     onRefreshBacklog: () -> Unit = {},
+    isShowingWatchList: Boolean = true,
+    onToggleWatchListView: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var searchQuery by remember { mutableStateOf("") }
-
-    var isShowingWatchList by remember { mutableStateOf(true) }
 
     var openBottomSheet by rememberSaveable { mutableStateOf<WatchListBottomSheetType?>(null) }
     val sheetState = rememberModalBottomSheetState()
@@ -91,18 +95,30 @@ fun WatchListScreen(
         modifier = modifier,
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { openBottomSheet = WatchListBottomSheetType.AddMovieSheet }
+                onClick = {
+                    if (!isAddingToBacklog) {
+                        openBottomSheet = WatchListBottomSheetType.AddMovieSheet
+                    }
+                }
             ) {
-                Icon(
-                    Icons.Filled.Add,
-                    contentDescription = "Add movie to ${if (isShowingWatchList) "watch list" else "backlog"}"
-                )
+                if (isAddingToBacklog) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(
+                        Icons.Filled.Add,
+                        contentDescription = "Add movie to ${if (isShowingWatchList) "watch list" else "backlog"}"
+                    )
+                }
             }
         }
     ) { contentPadding ->
         ScreenContent(
             isShowingWatchList = isShowingWatchList,
-            toggleIsShowingWatchList = { isShowingWatchList = !isShowingWatchList },
+            toggleIsShowingWatchList = onToggleWatchListView,
             watchList = watchList,
             backlog = backlog,
             onSelectWatchListItem = {
@@ -130,7 +146,7 @@ fun WatchListScreen(
                             if (isShowingWatchList) {
                                 // For now this just adds to the backlog
                                 addMovieToWatchList(movie)
-                                isShowingWatchList = false
+                                onToggleWatchListView()
                             } else {
                                 addMovieToBacklog(movie)
                             }

@@ -18,8 +18,8 @@ import cobresun.movieclub.app.tmdb.domain.TmdbMovie
 import cobresun.movieclub.app.tmdb.domain.TmdbRepository
 import cobresun.movieclub.app.watchlist.domain.WatchListItem
 import cobresun.movieclub.app.watchlist.domain.WatchListRepository
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 
 sealed interface ClubNavigationEvent {
     data object NavigateToReviewsTab : ClubNavigationEvent
+    data object NavigateToWatchListTab : ClubNavigationEvent
 }
 
 class ClubViewModel(
@@ -201,15 +202,38 @@ class ClubViewModel(
         }
     }
 
+    private fun refreshBacklogAfterAdd() {
+        viewModelScope.launch {
+            when (val result = watchListRepository.getBacklog(clubId)) {
+                is Result.Success -> {
+                    _state.update {
+                        it.copy(
+                            backlog = AsyncResult.Success(result.data),
+                            isAddingToBacklog = false
+                        )
+                    }
+                }
+
+                is Result.Error -> {
+                    // Keep existing list visible, just clear the loading flag
+                    _state.update { it.copy(isAddingToBacklog = false) }
+                    _errorMessage.update { "Movie added but failed to refresh list" }
+                }
+            }
+        }
+    }
+
     fun onAction(action: ClubAction) {
         when (action) {
             is ClubAction.OnAddMovieToWatchList -> {
                 viewModelScope.launch {
+                    _state.update { it.copy(isAddingToBacklog = true) }
                     watchListRepository.postWatchListFromMovie(clubId, action.movie)
                         .onSuccess {
-                            loadBacklog()
+                            refreshBacklogAfterAdd()
                         }
                         .onError {
+                            _state.update { it.copy(isAddingToBacklog = false) }
                             _errorMessage.update { "Failed to add movie" }
                         }
                 }
@@ -217,11 +241,13 @@ class ClubViewModel(
 
             is ClubAction.OnAddMovieToBacklog -> {
                 viewModelScope.launch {
+                    _state.update { it.copy(isAddingToBacklog = true) }
                     watchListRepository.postBacklog(clubId, action.movie)
                         .onSuccess {
-                            loadBacklog()
+                            refreshBacklogAfterAdd()
                         }
                         .onError {
+                            _state.update { it.copy(isAddingToBacklog = false) }
                             _errorMessage.update { "Failed to add movie to backlog" }
                         }
                 }
@@ -231,7 +257,7 @@ class ClubViewModel(
                 viewModelScope.launch {
                     watchListRepository.deleteBacklog(clubId, action.item.id)
                         .onSuccess {
-                            loadBacklog()
+                            refreshBacklog()
                         }
                         .onError {
                             _errorMessage.update { "Failed to delete item" }
@@ -243,7 +269,7 @@ class ClubViewModel(
                 viewModelScope.launch {
                     watchListRepository.deleteWatchList(clubId, action.item.id)
                         .onSuccess {
-                            loadWatchList()
+                            refreshWatchList()
                         }
                         .onError {
                             _errorMessage.update { "Failed to delete item" }
@@ -253,12 +279,13 @@ class ClubViewModel(
 
             is ClubAction.OnMoveToWatchList -> {
                 viewModelScope.launch {
+                    _navigationEvents.emit(ClubNavigationEvent.NavigateToWatchListTab)
                     watchListRepository.postWatchList(clubId, action.watchListItem)
                         .onSuccess {
                             watchListRepository.deleteBacklog(clubId, action.watchListItem.id)
                                 .onSuccess {
-                                    loadWatchList()
-                                    loadBacklog()
+                                    refreshWatchList()
+                                    refreshBacklog()
                                 }
                                 .onError {
                                     _errorMessage.update { "Failed to move item" }
@@ -284,8 +311,8 @@ class ClubViewModel(
                         .onSuccess {
                             watchListRepository.deleteWatchList(clubId, action.watchListItem.id)
                                 .onSuccess {
-                                    loadReviews()
-                                    loadWatchList()
+                                    refreshReviews()
+                                    refreshWatchList()
                                     _navigationEvents.emit(ClubNavigationEvent.NavigateToReviewsTab)
                                 }
                                 .onError {
@@ -302,7 +329,7 @@ class ClubViewModel(
                 viewModelScope.launch {
                     watchListRepository.setNextWatch(clubId, action.watchListItem.id)
                         .onSuccess {
-                            loadWatchList()
+                            refreshWatchList()
                         }
                         .onError {
                             _errorMessage.update { "Failed to set next watch" }
@@ -314,7 +341,7 @@ class ClubViewModel(
                 viewModelScope.launch {
                     reviewsRepository.deleteReview(clubId, action.reviewId)
                         .onSuccess {
-                            loadReviews()
+                            refreshReviews()
                         }
                         .onError {
                             _errorMessage.update { "Failed to delete review" }
@@ -331,7 +358,7 @@ class ClubViewModel(
                         score = action.scoreValue
                     )
                         .onSuccess {
-                            loadReviews()
+                            refreshReviews()
                         }
                         .onError {
                             _errorMessage.update { "Failed to submit score" }
@@ -398,5 +425,6 @@ data class ClubState(
     val currentUser: Member? = null,
     val isRefreshingReviews: Boolean = false,
     val isRefreshingWatchList: Boolean = false,
-    val isRefreshingBacklog: Boolean = false
+    val isRefreshingBacklog: Boolean = false,
+    val isAddingToBacklog: Boolean = false
 )

@@ -109,7 +109,9 @@ fun ClubsScreen(
                 currentClubId = currentClubId,
                 onClubClick = { clubId ->
                     currentClubId = clubId
-                    navController.navigate(Route.Club(clubId))
+                    navController.navigate(Route.Club(clubId)) {
+                        popUpTo<Route.Club> { inclusive = true }
+                    }
                     coroutineScope.launch { drawerState.close() }
                 },
                 onCreateClubClick = {

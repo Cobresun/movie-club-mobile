@@ -43,12 +43,17 @@ fun ClubScreenRoot(
     val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
 
     var selectedTab by remember { mutableStateOf(0) }
+    var isShowingWatchList by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         viewModel.navigationEvents.collect { event ->
             when (event) {
                 ClubNavigationEvent.NavigateToReviewsTab -> {
                     selectedTab = 0
+                }
+                ClubNavigationEvent.NavigateToWatchListTab -> {
+                    selectedTab = 1
+                    isShowingWatchList = true
                 }
             }
         }
@@ -81,6 +86,8 @@ fun ClubScreenRoot(
             onAction = viewModel::onAction,
             selectedTab = selectedTab,
             onTabSelected = { selectedTab = it },
+            isShowingWatchList = isShowingWatchList,
+            onToggleWatchListView = { isShowingWatchList = !isShowingWatchList },
             modifier = Modifier.padding(paddingValues)
         )
     }
@@ -97,6 +104,8 @@ fun ClubScreen(
     onAction: (ClubAction) -> Unit,
     selectedTab: Int,
     onTabSelected: (Int) -> Unit,
+    isShowingWatchList: Boolean,
+    onToggleWatchListView: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val pagerState = rememberPagerState(initialPage = selectedTab) { 2 }
@@ -147,8 +156,11 @@ fun ClubScreen(
                     trendingMovies = trendingMovies,
                     isRefreshingWatchList = state.isRefreshingWatchList,
                     isRefreshingBacklog = state.isRefreshingBacklog,
+                    isAddingToBacklog = state.isAddingToBacklog,
                     onRefreshWatchList = { onAction(ClubAction.OnRefreshWatchList) },
-                    onRefreshBacklog = { onAction(ClubAction.OnRefreshBacklog) }
+                    onRefreshBacklog = { onAction(ClubAction.OnRefreshBacklog) },
+                    isShowingWatchList = isShowingWatchList,
+                    onToggleWatchListView = onToggleWatchListView
                 )
             }
         }
@@ -286,7 +298,9 @@ private fun ClubScreenPreview() {
             ),
             onAction = {},
             selectedTab = 0,
-            onTabSelected = {}
+            onTabSelected = {},
+            isShowingWatchList = true,
+            onToggleWatchListView = {}
         )
     }
 }
