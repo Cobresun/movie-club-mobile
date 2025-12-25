@@ -9,14 +9,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -26,6 +29,7 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,7 +46,8 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun ClubSettingsScreenRoot(
     viewModel: ClubSettingsViewModel = koinViewModel(),
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateAfterLeave: () -> Unit
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
@@ -52,6 +57,17 @@ fun ClubSettingsScreenRoot(
         LaunchedEffect(message) {
             // TODO: Show Snackbar when available
             viewModel.onAction(ClubSettingsAction.OnClearError)
+        }
+    }
+
+    // Handle navigation events
+    LaunchedEffect(Unit) {
+        viewModel.navigationEvents.collect { event ->
+            when (event) {
+                is ClubSettingsNavigationEvent.NavigateAfterLeave -> {
+                    onNavigateAfterLeave()
+                }
+            }
         }
     }
 
@@ -104,7 +120,33 @@ fun ClubSettingsScreen(
 
             // Leave Club Section
             LeaveClubSection(
-                onLeaveClick = { onAction(ClubSettingsAction.OnLeaveClub) }
+                onLeaveClick = { onAction(ClubSettingsAction.OnLeaveClub) },
+                isLeavingClub = state.isLeavingClub
+            )
+        }
+
+        // Leave Confirmation Dialog
+        if (state.showLeaveConfirmation) {
+            AlertDialog(
+                onDismissRequest = { onAction(ClubSettingsAction.OnCancelLeaveClub) },
+                title = { Text("Leave Club?") },
+                text = {
+                    Text("Are you sure you want to leave this club? You will need an invite link to rejoin.")
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = { onAction(ClubSettingsAction.OnConfirmLeaveClub) }
+                    ) {
+                        Text("Leave", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { onAction(ClubSettingsAction.OnCancelLeaveClub) }
+                    ) {
+                        Text("Cancel")
+                    }
+                }
             )
         }
     }
@@ -215,7 +257,10 @@ private fun InviteLinkSection(
 }
 
 @Composable
-private fun LeaveClubSection(onLeaveClick: () -> Unit) {
+private fun LeaveClubSection(
+    onLeaveClick: () -> Unit,
+    isLeavingClub: Boolean = false
+) {
     Column {
         Spacer(modifier = Modifier.height(8.dp))
         HorizontalDivider()
@@ -224,12 +269,22 @@ private fun LeaveClubSection(onLeaveClick: () -> Unit) {
         Button(
             onClick = onLeaveClick,
             modifier = Modifier.fillMaxWidth(),
+            enabled = !isLeavingClub,
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.error,
                 contentColor = MaterialTheme.colorScheme.onError
             )
         ) {
-            Text("Leave Club")
+            if (isLeavingClub) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = MaterialTheme.colorScheme.onError
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Leaving...")
+            } else {
+                Text("Leave Club")
+            }
         }
     }
 }

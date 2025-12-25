@@ -7,10 +7,15 @@ import cobresun.movieclub.app.club.domain.ClubRepository
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.Constants.BASE_URL
 import cobresun.movieclub.app.core.domain.Result
+import cobresun.movieclub.app.core.domain.onError
+import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.core.platform.ClipboardManager
 import cobresun.movieclub.app.member.domain.Member
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -18,7 +23,13 @@ import kotlinx.coroutines.launch
 sealed interface ClubSettingsAction {
     data object OnCopyInviteLink : ClubSettingsAction
     data object OnLeaveClub : ClubSettingsAction
+    data object OnConfirmLeaveClub : ClubSettingsAction
+    data object OnCancelLeaveClub : ClubSettingsAction
     data object OnClearError : ClubSettingsAction
+}
+
+sealed interface ClubSettingsNavigationEvent {
+    data object NavigateAfterLeave : ClubSettingsNavigationEvent
 }
 
 data class ClubSettingsState(
@@ -26,6 +37,7 @@ data class ClubSettingsState(
     val inviteLink: String = "",
     val hasCopiedLink: Boolean = false,
     val isLeavingClub: Boolean = false,
+    val showLeaveConfirmation: Boolean = false
 )
 
 class ClubSettingsViewModel(
@@ -40,6 +52,9 @@ class ClubSettingsViewModel(
 
     private val _state = MutableStateFlow(ClubSettingsState())
     val state = _state.asStateFlow()
+
+    private val _navigationEvents = MutableSharedFlow<ClubSettingsNavigationEvent>()
+    val navigationEvents: SharedFlow<ClubSettingsNavigationEvent> = _navigationEvents.asSharedFlow()
 
     init {
         loadMembers()
@@ -90,7 +105,32 @@ class ClubSettingsViewModel(
                 }
             }
             is ClubSettingsAction.OnLeaveClub -> {
-                _errorMessage.update { "Leave club functionality not implemented yet" }
+                _state.update { it.copy(showLeaveConfirmation = true) }
+            }
+            is ClubSettingsAction.OnCancelLeaveClub -> {
+                _state.update { it.copy(showLeaveConfirmation = false) }
+            }
+            is ClubSettingsAction.OnConfirmLeaveClub -> {
+                viewModelScope.launch {
+                    _state.update {
+                        it.copy(
+                            showLeaveConfirmation = false,
+                            isLeavingClub = true
+                        )
+                    }
+
+                    clubRepository.leaveClub(clubId)
+                        .onSuccess {
+                            _state.update { it.copy(isLeavingClub = false) }
+                            _navigationEvents.emit(ClubSettingsNavigationEvent.NavigateAfterLeave)
+                        }
+                        .onError {
+                            _state.update { it.copy(isLeavingClub = false) }
+                            _errorMessage.update {
+                                "Failed to leave club. Check your connection and try again."
+                            }
+                        }
+                }
             }
             is ClubSettingsAction.OnClearError -> {
                 _errorMessage.update { null }

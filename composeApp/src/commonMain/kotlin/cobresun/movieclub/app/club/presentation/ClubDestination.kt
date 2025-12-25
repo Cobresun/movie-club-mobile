@@ -79,10 +79,26 @@ fun ClubsScreen(
     // Track the current club ID from navigation
     var currentClubId by remember { mutableStateOf<String?>(null) }
 
-    // Update currentClubId when the first club loads
+    // Update currentClubId when clubs change
     LaunchedEffect(clubs) {
-        if (clubs is AsyncResult.Success && currentClubId == null && clubs.data.isNotEmpty()) {
-            currentClubId = clubs.data.first().id
+        if (clubs is AsyncResult.Success && clubs.data.isNotEmpty()) {
+            val clubIds = clubs.data.map { it.id }
+
+            // If no club selected, select the first one
+            if (currentClubId == null) {
+                currentClubId = clubs.data.first().id
+            }
+            // If current club was removed, switch to another club
+            else if (currentClubId !in clubIds) {
+                val newClubId = clubs.data.first().id
+                currentClubId = newClubId
+
+                // Navigate to the new club
+                navController.navigate(Route.Club(newClubId)) {
+                    // Clear back stack to prevent going back to the removed club
+                    popUpTo<Route.Club> { inclusive = true }
+                }
+            }
         }
     }
 
@@ -132,6 +148,7 @@ fun ClubsScreen(
                         memberViewModel = memberViewModel,
                         onNavigateBack = { navController.popBackStack() },
                         onNavigateToClub = { clubId ->
+                            currentClubId = clubId
                             navController.navigate(Route.Club(clubId)) {
                                 popUpTo<Route.CreateClub> { inclusive = true }
                             }
@@ -141,7 +158,19 @@ fun ClubsScreen(
 
                 composable<Route.ClubSettings> {
                     ClubSettingsScreenRoot(
-                        onNavigateBack = { navController.popBackStack() }
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateAfterLeave = {
+                            // Refresh clubs list
+                            memberViewModel.refresh()
+
+                            // Pop both ClubSettings and Club screens
+                            // NavHost will observe updated clubs and redirect appropriately
+                            navController.popBackStack()
+                            navController.popBackStack()
+
+                            // Close drawer
+                            coroutineScope.launch { drawerState.close() }
+                        }
                     )
                 }
             }
