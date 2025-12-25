@@ -27,8 +27,20 @@ class AuthRepositoryImpl(
             }
     }
 
-    override suspend fun register(email: String, password: String): Result<User, DataError.Remote> {
-        TODO("Not yet implemented")
+    override suspend fun register(
+        email: String,
+        password: String,
+        fullName: String
+    ): Result<User, DataError.Remote> {
+        return identityDataSource.signup(email, password, fullName)
+            .flatMap { tokenDto ->
+                bearerTokenStorage.updateToken(
+                    BearerTokens(tokenDto.accessToken, tokenDto.refreshToken)
+                )
+
+                identityDataSource.getUser()
+                    .map { userDto -> userDto.toUser() }
+            }
     }
 
     override suspend fun getUser(): Result<User, DataError.Remote> {

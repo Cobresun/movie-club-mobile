@@ -6,7 +6,11 @@ import cobresun.movieclub.app.core.domain.Result
 
 interface AuthRepository {
     suspend fun login(email: String, password: String): Result<User, DataError.Remote>
-    suspend fun register(email: String, password: String): Result<User, DataError.Remote>
+    suspend fun register(
+        email: String,
+        password: String,
+        fullName: String
+    ): Result<User, DataError.Remote>
     suspend fun getUser(): Result<User, DataError.Remote>
 
     /**

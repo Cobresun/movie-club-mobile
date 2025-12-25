@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -59,10 +60,13 @@ fun ClubsScreenRoot(
     authViewModel: AuthViewModel,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val authState by authViewModel.state.collectAsStateWithLifecycle()
+
     ClubsScreen(
         clubs = state.clubs,
         onLogout = { authViewModel.onAction(AuthAction.Logout) },
-        memberViewModel = viewModel
+        memberViewModel = viewModel,
+        isLoggingOut = authState.isLoggingOut
     )
 }
 
@@ -71,6 +75,7 @@ fun ClubsScreen(
     clubs: AsyncResult<List<Club>>,
     onLogout: () -> Unit = {},
     memberViewModel: MemberViewModel,
+    isLoggingOut: Boolean = false,
 ) {
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(DrawerValue.Closed)
@@ -122,7 +127,8 @@ fun ClubsScreen(
                 onSettingsClick = { clubId ->
                     navController.navigate(Route.ClubSettings(clubId))
                     coroutineScope.launch { drawerState.close() }
-                }
+                },
+                isLoggingOut = isLoggingOut
             )
         },
         modifier = Modifier.background(color = MaterialTheme.colorScheme.surface),
@@ -198,7 +204,8 @@ private fun ModalDrawerContent(
     onClubClick: (String) -> Unit,
     onCreateClubClick: () -> Unit,
     onLogout: () -> Unit,
-    onSettingsClick: (String) -> Unit
+    onSettingsClick: (String) -> Unit,
+    isLoggingOut: Boolean = false
 ) {
     ModalDrawerSheet {
         Column(
@@ -302,17 +309,27 @@ private fun ModalDrawerContent(
             // Logout button
             TextButton(
                 onClick = onLogout,
+                enabled = !isLoggingOut,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Logout,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Log Out")
+                if (isLoggingOut) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Logging out...")
+                } else {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Logout,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Log Out")
+                }
             }
         }
     }

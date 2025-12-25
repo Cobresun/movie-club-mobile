@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.core.data
 
+import cobresun.movieclub.app.auth.data.dto.ErrorResponseDto
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import io.ktor.client.call.NoTransformationFoundException
@@ -43,6 +44,18 @@ suspend inline fun <reified T> responseToResult(
         408 -> Result.Error(DataError.Remote.REQUEST_TIMEOUT)
         429 -> Result.Error(DataError.Remote.TOO_MANY_REQUESTS)
         in 500..599 -> Result.Error(DataError.Remote.SERVER)
-        else -> Result.Error(DataError.Remote.UNKNOWN)
+        else -> {
+            // Try to parse error response for specific error cases
+            try {
+                val errorResponse = response.body<ErrorResponseDto>()
+                if (errorResponse.errorDescription?.contains("Email not confirmed", ignoreCase = true) == true) {
+                    Result.Error(DataError.Remote.EMAIL_NOT_CONFIRMED)
+                } else {
+                    Result.Error(DataError.Remote.UNKNOWN)
+                }
+            } catch (e: Exception) {
+                Result.Error(DataError.Remote.UNKNOWN)
+            }
+        }
     }
 }

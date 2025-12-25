@@ -90,13 +90,17 @@ private fun AppNavigation(
 ) {
     val navController = rememberNavController()
 
-    // Handle logout - navigate to landing page when user becomes unauthenticated
-    LaunchedEffect(isAuthenticated) {
-        if (!isAuthenticated) {
-            navController.navigate(Route.LandingPage) {
-                // Clear entire backstack when logging out
-                popUpTo(0) {
-                    inclusive = true
+    // Handle logout - navigate to landing page when navigation event received
+    LaunchedEffect(Unit) {
+        authViewModel.navigationEvents.collect { event ->
+            when (event) {
+                is AuthViewModel.AuthNavigationEvent.NavigateToLandingPage -> {
+                    navController.navigate(Route.LandingPage) {
+                        // Clear entire backstack when logging out
+                        popUpTo(0) {
+                            inclusive = true
+                        }
+                    }
                 }
             }
         }
