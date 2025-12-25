@@ -77,6 +77,7 @@ fun ReviewsScreen(
     onDeleteReview: (String) -> Unit,
     onMoveToReview: (WatchListItem) -> Unit,
     onSubmitScore: (reviewWorkId: String, scoreId: String?, score: Double) -> Unit,
+    onShareReview: (String) -> Unit,
     isRefreshingReviews: Boolean = false,
     onRefreshReviews: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -144,7 +145,7 @@ fun ReviewsScreen(
                             openBottomSheet = null
                         },
                         onShare = {
-                            // TODO: Implement share functionality (copy URL to clipboard)
+                            onShareReview(bottomSheetType.review.id)
                         }
                     )
                 }
@@ -416,7 +417,8 @@ private fun ReviewsScreenPreview() {
             ),
             onDeleteReview = {},
             onMoveToReview = {},
-            onSubmitScore = { _, _, _ -> }
+            onSubmitScore = { _, _, _ -> },
+            onShareReview = {}
         )
     }
 }
@@ -473,7 +475,8 @@ private fun ReviewsScreenWithDataPreview() {
             ),
             onDeleteReview = {},
             onMoveToReview = {},
-            onSubmitScore = { _, _, _ -> }
+            onSubmitScore = { _, _, _ -> },
+            onShareReview = {}
         )
     }
 }

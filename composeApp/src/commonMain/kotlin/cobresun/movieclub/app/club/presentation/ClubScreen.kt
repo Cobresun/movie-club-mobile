@@ -121,6 +121,7 @@ fun ClubScreen(
                     onSubmitScore = { reviewWorkId, scoreId, scoreValue ->
                         onAction(ClubAction.OnSubmitScore(reviewWorkId, scoreId, scoreValue))
                     },
+                    onShareReview = { reviewId -> onAction(ClubAction.OnShareReview(reviewId)) },
                     isRefreshingReviews = state.isRefreshingReviews,
                     onRefreshReviews = { onAction(ClubAction.OnRefreshReviews) }
                 )

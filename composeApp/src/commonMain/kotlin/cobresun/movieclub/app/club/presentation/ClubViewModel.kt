@@ -4,10 +4,13 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cobresun.movieclub.app.core.domain.AsyncResult
+import cobresun.movieclub.app.core.domain.Constants
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
+import cobresun.movieclub.app.core.platform.ClipboardManager
 import cobresun.movieclub.app.member.domain.Member
+import cobresun.movieclub.app.member.domain.MemberRepository
 import cobresun.movieclub.app.reviews.domain.NewReviewItem
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.domain.ReviewsRepository
@@ -32,7 +35,8 @@ class ClubViewModel(
     private val reviewsRepository: ReviewsRepository,
     private val watchListRepository: WatchListRepository,
     private val tmdbRepository: TmdbRepository,
-    private val memberRepository: cobresun.movieclub.app.member.domain.MemberRepository
+    private val memberRepository: MemberRepository,
+    private val clipboardManager: ClipboardManager
 ) : ViewModel() {
     private val clubId = requireNotNull(savedStateHandle.get<String>("clubId"))
 
@@ -332,6 +336,17 @@ class ClubViewModel(
                 }
             }
 
+            is ClubAction.OnShareReview -> {
+                viewModelScope.launch {
+                    try {
+                        val shareUrl = "${Constants.BASE_URL}/share/club/$clubId/review/${action.reviewId}"
+                        clipboardManager.copyToClipboard(shareUrl)
+                    } catch (e: Exception) {
+                        _errorMessage.update { "Failed to copy share link" }
+                    }
+                }
+            }
+
             is ClubAction.OnClearError -> {
                 _errorMessage.update { null }
             }
@@ -358,6 +373,7 @@ sealed interface ClubAction {
         val scoreId: String?,
         val scoreValue: Double
     ) : ClubAction
+    data class OnShareReview(val reviewId: String) : ClubAction
 
     data object OnClearError : ClubAction
     data object OnRefreshReviews : ClubAction
