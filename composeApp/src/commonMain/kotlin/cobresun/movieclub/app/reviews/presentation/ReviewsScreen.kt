@@ -1,6 +1,5 @@
 package cobresun.movieclub.app.reviews.presentation
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,6 +30,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -263,27 +263,21 @@ private fun ScreenContent(
             onRefresh = onRefreshReviews,
             modifier = Modifier.fillMaxSize()
         ) {
-            AnimatedContent(
-                targetState = reviews,
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) { targetState ->
-                AsyncResultHandler(
-                    asyncResult = targetState,
-                    onSuccess = { reviews ->
-                        val filteredReviews = reviews.filter { review ->
-                            review.title.contains(searchQuery.trim(), ignoreCase = true)
-                        }
-
-                        ReviewGrid(
-                            reviews = filteredReviews,
-                            onSelectReviewItem = onSelectReviewItem,
-                            state = gridState,
-                            modifier = modifier,
-                        )
+            AsyncResultHandler(
+                asyncResult = reviews,
+                onSuccess = { reviews ->
+                    val filteredReviews = reviews.filter { review ->
+                        review.title.contains(searchQuery.trim(), ignoreCase = true)
                     }
-                )
-            }
+
+                    ReviewGrid(
+                        reviews = filteredReviews,
+                        onSelectReviewItem = onSelectReviewItem,
+                        state = gridState,
+                        modifier = modifier,
+                    )
+                }
+            )
         }
     }
 }
@@ -299,48 +293,61 @@ fun ReviewGrid(
         modifier = modifier,
         state = state
     ) {
-        items(items = reviews, key = { it.id }) {
+        items(items = reviews, key = { it.id }) { review ->
+            val scoreAverage = remember(review.id, review.scores) {
+                if (review.scores.isNotEmpty()) {
+                    review.scores.values.map { it.value }.average()
+                } else {
+                    0.0
+                }
+            }
+
             MovieCard(
-                title = it.title,
-                posterImageUrl = it.imageUrl,
+                title = review.title,
+                posterImageUrl = review.imageUrl,
                 modifier = Modifier.animateItem(),
-                onClick = { onSelectReviewItem(it) }
+                onClick = { onSelectReviewItem(review) }
             ) {
                 Text(
-                    text = it.createdDate,
+                    text = review.createdDate,
                 )
-                ScoreGrid(scores = it.scores)
+                ScoreGrid(
+                    scores = review.scores,
+                    scoreAverage = scoreAverage
+                )
             }
         }
     }
 }
 
 @Composable
-fun ScoreGrid(scores: Map<User, Score>) {
+fun ScoreGrid(scores: Map<User, Score>, scoreAverage: Double) {
     FlowRow(
         verticalArrangement = Arrangement.spacedBy(4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        scores.forEach {
-            val imageUrl = it.key.imageUrl
+        scores.forEach { (user, score) ->
+            key(user.id) {
+                val imageUrl = user.imageUrl
 
-            if (imageUrl != null) {
-                ScoreChip(
-                    imageUrl = imageUrl,
-                    contentDescription = it.key.name,
-                    score = it.value.value,
-                )
-            } else {
-                val initials = it.key.name.split(" ")
+                if (imageUrl != null) {
+                    ScoreChip(
+                        imageUrl = imageUrl,
+                        contentDescription = user.name,
+                        score = score.value,
+                    )
+                } else {
+                    val initials = user.name.split(" ")
 
-                if (initials.isEmpty()) return@forEach
-
-                ScoreChip(
-                    firstName = initials.first(),
-                    lastName = if (initials.size > 1) initials.last() else null,
-                    contentDescription = it.key.name,
-                    score = it.value.value,
-                )
+                    if (initials.isNotEmpty()) {
+                        ScoreChip(
+                            firstName = initials.first(),
+                            lastName = if (initials.size > 1) initials.last() else null,
+                            contentDescription = user.name,
+                            score = score.value,
+                        )
+                    }
+                }
             }
         }
 
@@ -348,7 +355,7 @@ fun ScoreGrid(scores: Map<User, Score>) {
             ScoreChip(
                 image = AverageIconVector,
                 contentDescription = "Average",
-                score = scores.values.map { it.value }.average(),
+                score = scoreAverage,
             )
         }
     }
@@ -398,6 +405,7 @@ fun ScoreGridPreview() {
                         value = 5.0,
                     ),
                 ),
+                scoreAverage = 5.0
             )
         }
     }
