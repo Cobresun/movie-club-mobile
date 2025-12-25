@@ -7,6 +7,9 @@ import cobresun.movieclub.app.auth.domain.AuthRepository
 import cobresun.movieclub.app.auth.presentation.AuthViewModel
 import cobresun.movieclub.app.club.data.network.ClubDataSource
 import cobresun.movieclub.app.club.data.network.KtorClubDataSource
+import cobresun.movieclub.app.club.data.repository.ClubRepositoryImpl
+import cobresun.movieclub.app.club.domain.ClubRepository
+import cobresun.movieclub.app.club.presentation.ClubSettingsViewModel
 import cobresun.movieclub.app.club.presentation.ClubViewModel
 import cobresun.movieclub.app.core.data.BearerTokenStorage
 import cobresun.movieclub.app.core.data.HttpClientFactory
@@ -53,7 +56,9 @@ val sharedModule = module {
 
     // Club
     single { KtorClubDataSource(get()) }.bind<ClubDataSource>()
+    single { ClubRepositoryImpl(get()) }.bind<ClubRepository>()
     viewModelOf(::ClubViewModel)
+    viewModelOf(::ClubSettingsViewModel)
 
     // Reviews
     single { KtorReviewsDataSource(get()) }.bind<ReviewsDataSource>()

@@ -22,4 +22,9 @@ sealed interface Route {
 
     @Serializable
     data object CreateClub : Route
+
+    @Serializable
+    data class ClubSettings(
+        val clubId: String
+    ) : Route
 }

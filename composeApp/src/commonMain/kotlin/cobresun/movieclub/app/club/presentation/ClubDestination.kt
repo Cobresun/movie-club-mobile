@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -99,7 +100,11 @@ fun ClubsScreen(
                     navController.navigate(Route.CreateClub)
                     coroutineScope.launch { drawerState.close() }
                 },
-                onLogout = onLogout
+                onLogout = onLogout,
+                onSettingsClick = { clubId ->
+                    navController.navigate(Route.ClubSettings(clubId))
+                    coroutineScope.launch { drawerState.close() }
+                }
             )
         },
         modifier = Modifier.background(color = MaterialTheme.colorScheme.surface),
@@ -133,6 +138,12 @@ fun ClubsScreen(
                         }
                     )
                 }
+
+                composable<Route.ClubSettings> {
+                    ClubSettingsScreenRoot(
+                        onNavigateBack = { navController.popBackStack() }
+                    )
+                }
             }
         }
     }
@@ -156,6 +167,7 @@ private fun ModalDrawerContent(
     onClubClick: (String) -> Unit,
     onCreateClubClick: () -> Unit,
     onLogout: () -> Unit,
+    onSettingsClick: (String) -> Unit
 ) {
     ModalDrawerSheet {
         Column(
@@ -230,8 +242,28 @@ private fun ModalDrawerContent(
                 }
             }
 
-            // Push logout button to bottom
+            // Push settings and logout buttons to bottom
             Spacer(modifier = Modifier.weight(1f))
+
+            // Club Settings button
+            TextButton(
+                onClick = {
+                    currentClubId?.let { clubId ->
+                        onSettingsClick(clubId)
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Club Settings")
+            }
 
             // Visual separator
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
