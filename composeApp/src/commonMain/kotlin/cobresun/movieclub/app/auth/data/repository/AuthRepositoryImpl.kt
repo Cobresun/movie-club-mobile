@@ -49,7 +49,9 @@ class AuthRepositoryImpl(
     }
 
     override suspend fun logout(): Result<Unit, DataError.Remote> {
+        // Clear both DataStore tokens and Ktor's in-memory cache
         bearerTokenStorage.updateToken(BearerTokens("", ""))
+        identityDataSource.clearTokenCache()
         return Result.Success(Unit)
     }
 }

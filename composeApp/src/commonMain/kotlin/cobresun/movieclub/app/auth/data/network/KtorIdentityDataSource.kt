@@ -74,4 +74,8 @@ class KtorIdentityDataSource(
             httpClient.get("$BASE_URL/.netlify/identity/user")
         }
     }
+
+    override fun clearTokenCache() {
+        httpClient.invalidateBearerTokens()
+    }
 }

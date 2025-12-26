@@ -15,4 +15,10 @@ interface IdentityDataSource {
     ): Result<TokenDto, DataError.Remote>
 
     suspend fun getUser(): Result<UserDto, DataError.Remote>
+
+    /**
+     * Clears the HTTP client's in-memory bearer token cache.
+     * Should be called during logout to prevent automatic re-authentication.
+     */
+    fun clearTokenCache()
 }
