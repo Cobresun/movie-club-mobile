@@ -56,10 +56,13 @@ import cobresun.movieclub.app.core.presentation.components.MovieGrid
 import cobresun.movieclub.app.core.presentation.components.SearchBar
 import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.reviews.domain.Review
+import cobresun.movieclub.app.reviews.domain.ReviewSortOption
+import cobresun.movieclub.app.reviews.domain.ReviewSortState
 import cobresun.movieclub.app.reviews.domain.Score
 import cobresun.movieclub.app.reviews.presentation.components.AverageIconVector
 import cobresun.movieclub.app.reviews.presentation.components.ReviewDetailsBottomSheetContent
 import cobresun.movieclub.app.reviews.presentation.components.ScoreChip
+import cobresun.movieclub.app.reviews.presentation.components.SortChipsRow
 import cobresun.movieclub.app.watchlist.domain.WatchListItem
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
@@ -80,6 +83,11 @@ fun ReviewsScreen(
     onShareReview: (String) -> Unit,
     isRefreshingReviews: Boolean = false,
     onRefreshReviews: () -> Unit = {},
+    sortState: ReviewSortState = ReviewSortState(),
+    clubMembers: AsyncResult<List<Member>> = AsyncResult.Loading,
+    onSortChange: (ReviewSortOption) -> Unit = {},
+    onToggleSortDirection: () -> Unit = {},
+    onClearSort: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -109,6 +117,11 @@ fun ReviewsScreen(
             onSearchQueryChange = { searchQuery = it },
             isRefreshingReviews = isRefreshingReviews,
             onRefreshReviews = onRefreshReviews,
+            sortState = sortState,
+            clubMembers = clubMembers,
+            onSortChange = onSortChange,
+            onToggleSortDirection = onToggleSortDirection,
+            onClearSort = onClearSort,
             modifier = modifier
         )
     }
@@ -216,6 +229,11 @@ private fun ScreenContent(
     onSearchQueryChange: (String) -> Unit,
     isRefreshingReviews: Boolean = false,
     onRefreshReviews: () -> Unit = {},
+    sortState: ReviewSortState,
+    clubMembers: AsyncResult<List<Member>>,
+    onSortChange: (ReviewSortOption) -> Unit,
+    onToggleSortDirection: () -> Unit,
+    onClearSort: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val gridState = rememberLazyGridState()
@@ -257,6 +275,20 @@ private fun ScreenContent(
                 modifier = Modifier.weight(1f)
             )
         }
+
+        // Sort chips row
+        AsyncResultHandler(
+            asyncResult = clubMembers,
+            onSuccess = { members ->
+                SortChipsRow(
+                    sortState = sortState,
+                    clubMembers = members,
+                    onSortChange = onSortChange,
+                    onToggleDirection = onToggleSortDirection,
+                    onClearSort = onClearSort
+                )
+            }
+        )
 
         PullToRefreshBox(
             isRefreshing = isRefreshingReviews,

@@ -140,7 +140,12 @@ fun ClubScreen(
                     },
                     onShareReview = { reviewId -> onAction(ClubAction.OnShareReview(reviewId)) },
                     isRefreshingReviews = state.isRefreshingReviews,
-                    onRefreshReviews = { onAction(ClubAction.OnRefreshReviews) }
+                    onRefreshReviews = { onAction(ClubAction.OnRefreshReviews) },
+                    sortState = state.reviewSortState,
+                    clubMembers = state.clubMembers,
+                    onSortChange = { sortOption -> onAction(ClubAction.OnSortReviews(sortOption)) },
+                    onToggleSortDirection = { onAction(ClubAction.OnToggleSortDirection) },
+                    onClearSort = { onAction(ClubAction.OnClearSort) }
                 )
             } else {
                 WatchListScreen(

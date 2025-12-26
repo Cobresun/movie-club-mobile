@@ -3,6 +3,7 @@ package cobresun.movieclub.app.club.presentation
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import cobresun.movieclub.app.club.domain.ClubRepository
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.Constants
 import cobresun.movieclub.app.core.domain.Result
@@ -13,6 +14,8 @@ import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.member.domain.MemberRepository
 import cobresun.movieclub.app.reviews.domain.NewReviewItem
 import cobresun.movieclub.app.reviews.domain.Review
+import cobresun.movieclub.app.reviews.domain.ReviewSortOption
+import cobresun.movieclub.app.reviews.domain.ReviewSortState
 import cobresun.movieclub.app.reviews.domain.ReviewsRepository
 import cobresun.movieclub.app.tmdb.domain.TmdbMovie
 import cobresun.movieclub.app.tmdb.domain.TmdbRepository
@@ -37,6 +40,7 @@ class ClubViewModel(
     private val watchListRepository: WatchListRepository,
     private val tmdbRepository: TmdbRepository,
     private val memberRepository: MemberRepository,
+    private val clubRepository: ClubRepository,
     private val clipboardManager: ClipboardManager
 ) : ViewModel() {
     private val clubId = requireNotNull(savedStateHandle.get<String>("clubId"))
@@ -59,6 +63,7 @@ class ClubViewModel(
         loadWatchList()
         loadBacklog()
         loadTrendingMovies()
+        loadClubMembers()
     }
 
     private fun loadCurrentUser() {
@@ -84,7 +89,11 @@ class ClubViewModel(
             _state.update { it.copy(reviews = AsyncResult.Loading) }
             when (val result = reviewsRepository.getReviews(clubId)) {
                 is Result.Success -> {
-                    _state.update { it.copy(reviews = AsyncResult.Success(result.data)) }
+                    val sortedReviews = applySortToReviews(
+                        result.data,
+                        _state.value.reviewSortState
+                    )
+                    _state.update { it.copy(reviews = AsyncResult.Success(sortedReviews)) }
                 }
 
                 is Result.Error -> {
@@ -139,14 +148,80 @@ class ClubViewModel(
         }
     }
 
+    private fun loadClubMembers() {
+        viewModelScope.launch {
+            _state.update { it.copy(clubMembers = AsyncResult.Loading) }
+            when (val result = clubRepository.getMembers(clubId)) {
+                is Result.Success -> {
+                    _state.update { it.copy(clubMembers = AsyncResult.Success(result.data)) }
+                }
+
+                is Result.Error -> {
+                    _state.update { it.copy(clubMembers = AsyncResult.Error()) }
+                    // Silently fail - sorting by members just won't be available
+                }
+            }
+        }
+    }
+
+    /**
+     * Applies the current sort state to a list of reviews.
+     * Returns reviews in sorted order, or original order if sort is None.
+     */
+    private fun applySortToReviews(
+        reviews: List<Review>,
+        sortState: ReviewSortState
+    ): List<Review> {
+        if (sortState.option == ReviewSortOption.None) {
+            return reviews
+        }
+
+        val comparator = when (val option = sortState.option) {
+            ReviewSortOption.None -> return reviews // Early return
+
+            ReviewSortOption.DateReviewed -> compareBy<Review> { review ->
+                // Parse ISO date string for comparison
+                review.createdDate
+            }
+
+            ReviewSortOption.AverageScore -> compareBy { review ->
+                calculateAverageScore(review)
+            }
+
+            is ReviewSortOption.MemberScore -> compareBy { review ->
+                // Get score for specific member, null if not found
+                review.scores[option.user]?.value
+            }
+        }
+
+        return if (sortState.descending) {
+            reviews.sortedWith(comparator.reversed())
+        } else {
+            reviews.sortedWith(comparator)
+        }
+    }
+
+    /**
+     * Calculates average score for a review.
+     * Returns null if no scores exist (will be pushed to end in comparisons).
+     */
+    private fun calculateAverageScore(review: Review): Double? {
+        if (review.scores.isEmpty()) return null
+        return review.scores.values.map { it.value }.average()
+    }
+
     private fun refreshReviews() {
         viewModelScope.launch {
             _state.update { it.copy(isRefreshingReviews = true) }
             when (val result = reviewsRepository.getReviews(clubId)) {
                 is Result.Success -> {
+                    val sortedReviews = applySortToReviews(
+                        result.data,
+                        _state.value.reviewSortState
+                    )
                     _state.update {
                         it.copy(
-                            reviews = AsyncResult.Success(result.data),
+                            reviews = AsyncResult.Success(sortedReviews),
                             isRefreshingReviews = false
                         )
                     }
@@ -378,6 +453,44 @@ class ClubViewModel(
                 }
             }
 
+            is ClubAction.OnSortReviews -> {
+                val newSortState = ReviewSortState(
+                    option = action.sortOption,
+                    descending = action.sortOption.defaultDescending
+                )
+                _state.update { it.copy(reviewSortState = newSortState) }
+
+                // Re-apply sort to existing reviews
+                val currentReviews = _state.value.reviews
+                if (currentReviews is AsyncResult.Success) {
+                    val sortedReviews = applySortToReviews(
+                        currentReviews.data,
+                        newSortState
+                    )
+                    _state.update { it.copy(reviews = AsyncResult.Success(sortedReviews)) }
+                }
+            }
+
+            is ClubAction.OnToggleSortDirection -> {
+                val currentSort = _state.value.reviewSortState
+                val newSortState = currentSort.copy(descending = !currentSort.descending)
+                _state.update { it.copy(reviewSortState = newSortState) }
+
+                // Re-apply sort with new direction
+                val currentReviews = _state.value.reviews
+                if (currentReviews is AsyncResult.Success) {
+                    val sortedReviews = applySortToReviews(
+                        currentReviews.data,
+                        newSortState
+                    )
+                    _state.update { it.copy(reviews = AsyncResult.Success(sortedReviews)) }
+                }
+            }
+
+            is ClubAction.OnClearSort -> {
+                onAction(ClubAction.OnSortReviews(ReviewSortOption.None))
+            }
+
             is ClubAction.OnClearError -> {
                 _errorMessage.update { null }
             }
@@ -410,6 +523,10 @@ sealed interface ClubAction {
     ) : ClubAction
     data class OnShareReview(val reviewId: String) : ClubAction
 
+    data class OnSortReviews(val sortOption: ReviewSortOption) : ClubAction
+    data object OnToggleSortDirection : ClubAction
+    data object OnClearSort : ClubAction
+
     data object OnClearError : ClubAction
     data object OnClearSuccess : ClubAction
     data object OnRefreshReviews : ClubAction
@@ -426,5 +543,7 @@ data class ClubState(
     val isRefreshingReviews: Boolean = false,
     val isRefreshingWatchList: Boolean = false,
     val isRefreshingBacklog: Boolean = false,
-    val isAddingToBacklog: Boolean = false
+    val isAddingToBacklog: Boolean = false,
+    val reviewSortState: ReviewSortState = ReviewSortState(),
+    val clubMembers: AsyncResult<List<Member>> = AsyncResult.Loading
 )
