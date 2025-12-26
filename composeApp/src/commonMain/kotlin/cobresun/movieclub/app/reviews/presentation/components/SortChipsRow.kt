@@ -53,36 +53,40 @@ fun SortChipsRow(
         )
 
         // Date reviewed chip
-        FilterChip(
-            selected = sortState.option == ReviewSortOption.DateReviewed,
-            onClick = { onSortChange(ReviewSortOption.DateReviewed) },
-            label = { Text("Date") },
-            leadingIcon = if (sortState.option == ReviewSortOption.DateReviewed) {
-                {
-                    Icon(
-                        Icons.Default.CalendarToday,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            } else null
-        )
+        if (!sortState.isActive || sortState.option == ReviewSortOption.DateReviewed) {
+            FilterChip(
+                selected = sortState.option == ReviewSortOption.DateReviewed,
+                onClick = { onSortChange(ReviewSortOption.DateReviewed) },
+                label = { Text("Date") },
+                leadingIcon = if (sortState.option == ReviewSortOption.DateReviewed) {
+                    {
+                        Icon(
+                            Icons.Default.CalendarToday,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                } else null
+            )
+        }
 
         // Average score chip
-        FilterChip(
-            selected = sortState.option == ReviewSortOption.AverageScore,
-            onClick = { onSortChange(ReviewSortOption.AverageScore) },
-            label = { Text("Average") },
-            leadingIcon = if (sortState.option == ReviewSortOption.AverageScore) {
-                {
-                    Icon(
-                        AverageIconVector,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            } else null
-        )
+        if (!sortState.isActive || sortState.option == ReviewSortOption.AverageScore) {
+            FilterChip(
+                selected = sortState.option == ReviewSortOption.AverageScore,
+                onClick = { onSortChange(ReviewSortOption.AverageScore) },
+                label = { Text("Average") },
+                leadingIcon = if (sortState.option == ReviewSortOption.AverageScore) {
+                    {
+                        Icon(
+                            AverageIconVector,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                } else null
+            )
+        }
 
         // Member score chips (dynamic based on club members)
         clubMembers.forEach { member ->
@@ -95,22 +99,24 @@ fun SortChipsRow(
             val sortOption = ReviewSortOption.MemberScore(memberUser)
             val isSelected = sortState.option == sortOption
 
-            FilterChip(
-                selected = isSelected,
-                onClick = { onSortChange(sortOption) },
-                label = { Text(member.name) },
-                leadingIcon = if (member.imageUrl != null && isSelected) {
-                    {
-                        AsyncImage(
-                            model = member.imageUrl,
-                            contentDescription = member.name,
-                            modifier = Modifier
-                                .size(18.dp)
-                                .clip(CircleShape)
-                        )
-                    }
-                } else null
-            )
+            if (!sortState.isActive || isSelected) {
+                FilterChip(
+                    selected = isSelected,
+                    onClick = { onSortChange(sortOption) },
+                    label = { Text(member.name) },
+                    leadingIcon = if (member.imageUrl != null && isSelected) {
+                        {
+                            AsyncImage(
+                                model = member.imageUrl,
+                                contentDescription = member.name,
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clip(CircleShape)
+                            )
+                        }
+                    } else null
+                )
+            }
         }
 
         // Direction toggle (only visible when sort is active)

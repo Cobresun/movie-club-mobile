@@ -253,6 +253,17 @@ private fun ScreenContent(
         previousSearchQuery = searchQuery
     }
 
+    // Scroll to top when sort state changes
+    var previousSortState by remember { mutableStateOf<ReviewSortState?>(null) }
+
+    LaunchedEffect(sortState) {
+        // Skip scroll on first composition
+        if (previousSortState != null && previousSortState != sortState) {
+            gridState.scrollToItem(0)
+        }
+        previousSortState = sortState
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()

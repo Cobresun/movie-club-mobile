@@ -89,11 +89,17 @@ class ClubViewModel(
             _state.update { it.copy(reviews = AsyncResult.Loading) }
             when (val result = reviewsRepository.getReviews(clubId)) {
                 is Result.Success -> {
+                    val originalReviews = result.data
                     val sortedReviews = applySortToReviews(
-                        result.data,
+                        originalReviews,
                         _state.value.reviewSortState
                     )
-                    _state.update { it.copy(reviews = AsyncResult.Success(sortedReviews)) }
+                    _state.update {
+                        it.copy(
+                            originalReviews = originalReviews,
+                            reviews = AsyncResult.Success(sortedReviews)
+                        )
+                    }
                 }
 
                 is Result.Error -> {
@@ -215,12 +221,14 @@ class ClubViewModel(
             _state.update { it.copy(isRefreshingReviews = true) }
             when (val result = reviewsRepository.getReviews(clubId)) {
                 is Result.Success -> {
+                    val originalReviews = result.data
                     val sortedReviews = applySortToReviews(
-                        result.data,
+                        originalReviews,
                         _state.value.reviewSortState
                     )
                     _state.update {
                         it.copy(
+                            originalReviews = originalReviews,
                             reviews = AsyncResult.Success(sortedReviews),
                             isRefreshingReviews = false
                         )
@@ -458,32 +466,42 @@ class ClubViewModel(
                     option = action.sortOption,
                     descending = action.sortOption.defaultDescending
                 )
-                _state.update { it.copy(reviewSortState = newSortState) }
 
-                // Re-apply sort to existing reviews
-                val currentReviews = _state.value.reviews
-                if (currentReviews is AsyncResult.Success) {
+                val originalReviews = _state.value.originalReviews
+                if (originalReviews != null) {
                     val sortedReviews = applySortToReviews(
-                        currentReviews.data,
+                        originalReviews,
                         newSortState
                     )
-                    _state.update { it.copy(reviews = AsyncResult.Success(sortedReviews)) }
+                    _state.update {
+                        it.copy(
+                            reviewSortState = newSortState,
+                            reviews = AsyncResult.Success(sortedReviews)
+                        )
+                    }
+                } else {
+                    _state.update { it.copy(reviewSortState = newSortState) }
                 }
             }
 
             is ClubAction.OnToggleSortDirection -> {
                 val currentSort = _state.value.reviewSortState
                 val newSortState = currentSort.copy(descending = !currentSort.descending)
-                _state.update { it.copy(reviewSortState = newSortState) }
 
-                // Re-apply sort with new direction
-                val currentReviews = _state.value.reviews
-                if (currentReviews is AsyncResult.Success) {
+                val originalReviews = _state.value.originalReviews
+                if (originalReviews != null) {
                     val sortedReviews = applySortToReviews(
-                        currentReviews.data,
+                        originalReviews,
                         newSortState
                     )
-                    _state.update { it.copy(reviews = AsyncResult.Success(sortedReviews)) }
+                    _state.update {
+                        it.copy(
+                            reviewSortState = newSortState,
+                            reviews = AsyncResult.Success(sortedReviews)
+                        )
+                    }
+                } else {
+                    _state.update { it.copy(reviewSortState = newSortState) }
                 }
             }
 
@@ -536,6 +554,7 @@ sealed interface ClubAction {
 
 data class ClubState(
     val reviews: AsyncResult<List<Review>> = AsyncResult.Loading,
+    val originalReviews: List<Review>? = null, // Stores unsorted reviews from API
     val watchList: AsyncResult<List<WatchListItem>> = AsyncResult.Loading,
     val backlog: AsyncResult<List<WatchListItem>> = AsyncResult.Loading,
     val trendingMovies: AsyncResult<List<TmdbMovie>> = AsyncResult.Loading,
