@@ -1,15 +1,12 @@
 package cobresun.movieclub.app.app
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -17,9 +14,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -28,7 +22,6 @@ import cobresun.movieclub.app.auth.presentation.AuthScreenRoot
 import cobresun.movieclub.app.auth.presentation.AuthViewModel
 import cobresun.movieclub.app.club.presentation.ClubsScreenRoot
 import cobresun.movieclub.app.core.domain.AsyncResult
-import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -111,7 +104,7 @@ private fun AppNavigation(
         startDestination = if (isAuthenticated) Route.ClubGraph else Route.LandingPage,
     ) {
         composable<Route.LandingPage> {
-            LandingPageDestination(
+            LandingPageScreen(
                 onAuthClick = {
                     navController.navigate(Route.AuthGraph)
                 }
@@ -133,41 +126,6 @@ private fun AppNavigation(
 
         composable<Route.ClubGraph> {
             ClubsScreenRoot(authViewModel = authViewModel)
-        }
-    }
-}
-
-@Composable
-fun LandingPageDestination(
-    onAuthClick: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        Text(
-            text = "Landing Page",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Button(
-            onClick = onAuthClick
-        ) {
-            Text(text = "Auth")
-        }
-    }
-}
-
-@Preview
-@Composable
-fun LandingPageDestinationPreview() {
-    AppTheme {
-        Surface {
-            LandingPageDestination(
-                onAuthClick = {}
-            )
         }
     }
 }
