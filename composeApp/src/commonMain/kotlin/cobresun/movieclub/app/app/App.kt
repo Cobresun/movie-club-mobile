@@ -1,6 +1,7 @@
 package cobresun.movieclub.app.app
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
@@ -43,7 +44,9 @@ fun AppTheme(
 @Composable
 fun App() {
     AppTheme {
-        Scaffold { paddingValues ->
+        Scaffold(
+            contentWindowInsets = WindowInsets()
+        ) { paddingValues ->
             Surface(
                 modifier = Modifier
                     .fillMaxSize()
