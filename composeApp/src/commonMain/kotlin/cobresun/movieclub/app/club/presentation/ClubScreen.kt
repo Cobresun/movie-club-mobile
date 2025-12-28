@@ -21,7 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import cobresun.movieclub.app.app.AppTheme
+import cobresun.movieclub.app.theme.AppTheme
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.WorkType
 import cobresun.movieclub.app.core.platform.HapticFeedback

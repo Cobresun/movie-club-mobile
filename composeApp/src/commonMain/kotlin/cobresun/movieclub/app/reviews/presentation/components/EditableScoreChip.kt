@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -21,7 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cobresun.movieclub.app.core.presentation.components.PlatformNumericTextField
@@ -79,7 +79,7 @@ fun EditableScoreChip(
                     Box(
                         modifier = Modifier
                             .size(size.avatarSize)
-                            .background(Color.Gray, CircleShape),
+                            .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         // Placeholder for now
@@ -99,7 +99,7 @@ fun EditableScoreChip(
                         textStyle = LocalTextStyle.current.copy(
                             fontSize = size.fontSize,
                             textAlign = TextAlign.Center,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         ),
                         singleLine = true,
                         onDone = { handleSubmit() },

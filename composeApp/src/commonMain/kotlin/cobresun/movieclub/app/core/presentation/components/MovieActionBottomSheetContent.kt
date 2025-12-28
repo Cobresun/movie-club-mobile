@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import cobresun.movieclub.app.app.AppTheme
+import cobresun.movieclub.app.theme.AppTheme
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable

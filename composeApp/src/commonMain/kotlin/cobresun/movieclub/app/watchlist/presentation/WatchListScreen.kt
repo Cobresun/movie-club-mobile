@@ -49,13 +49,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cobresun.movieclub.app.app.AppTheme
+import cobresun.movieclub.app.theme.AppTheme
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.AsyncResultHandler
 import cobresun.movieclub.app.core.domain.WorkType
 import cobresun.movieclub.app.core.platform.HapticFeedback
 import cobresun.movieclub.app.core.platform.createNoOpHapticFeedback
-import cobresun.movieclub.app.core.presentation.LIGHT_GRAY
+
 import cobresun.movieclub.app.core.presentation.components.MovieActionBottomSheetContent
 import cobresun.movieclub.app.core.presentation.components.MovieCard
 import cobresun.movieclub.app.core.presentation.components.MovieGrid
@@ -240,7 +240,7 @@ fun AddMovieBottomSheetContent(
                             .fillMaxWidth()
                             .padding(4.dp)
                             .background(
-                                color = Color(LIGHT_GRAY),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
                                 shape = RoundedCornerShape(4.dp)
                             )
                             .clickable { onSelectMovie(movie) }

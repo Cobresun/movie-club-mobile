@@ -23,6 +23,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import cobresun.movieclub.app.theme.AppTheme
 import movieclub.composeapp.generated.resources.Res
 import movieclub.composeapp.generated.resources.home_cinema
 import org.jetbrains.compose.resources.painterResource
@@ -69,7 +70,7 @@ fun LandingPageScreen(
         Text(
             text = "Rate movies, compare favorites, and find patterns.",
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 32.dp)
         )

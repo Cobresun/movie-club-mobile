@@ -8,13 +8,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -23,23 +21,8 @@ import cobresun.movieclub.app.auth.presentation.AuthScreenRoot
 import cobresun.movieclub.app.auth.presentation.AuthViewModel
 import cobresun.movieclub.app.club.presentation.ClubsScreenRoot
 import cobresun.movieclub.app.core.domain.AsyncResult
+import cobresun.movieclub.app.theme.AppTheme
 import org.koin.compose.viewmodel.koinViewModel
-
-@Composable
-fun AppTheme(
-    content: @Composable () -> Unit
-) {
-    return MaterialTheme(
-        colorScheme = darkColorScheme(
-            surface = Color(0xFF222831),
-            onSurface = Color.White,
-            primary = Color(0xFF2196F3),
-            background = Color(0xFF222831),
-            onBackground = Color.White
-        ),
-        content = content
-    )
-}
 
 @Composable
 fun App() {

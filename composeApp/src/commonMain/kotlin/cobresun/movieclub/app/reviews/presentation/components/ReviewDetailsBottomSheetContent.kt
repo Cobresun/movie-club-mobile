@@ -30,13 +30,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cobresun.movieclub.app.app.AppTheme
+import cobresun.movieclub.app.theme.AppTheme
 import cobresun.movieclub.app.core.domain.User
 import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.reviews.domain.Score
@@ -97,7 +96,7 @@ fun ReviewDetailsBottomSheetContent(
             Text(
                 text = createdDate,
                 fontSize = 14.sp,
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -197,8 +196,8 @@ fun ReviewDetailsBottomSheetContent(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Red.copy(alpha = 0.2f),
-                        contentColor = Color.Red
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.error
                     )
                 ) {
                     Icon(

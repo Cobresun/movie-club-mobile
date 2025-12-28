@@ -90,6 +90,38 @@ Uses **Koin** for DI:
 - **DataStore** for bearer token storage (platform-specific implementations via expect/actual)
 - **Wire Protocol Buffers** for bearer token serialization (see `proto/bearer_token.proto`)
 
+### Theming
+
+The app uses Material Design 3 with a complete dark color scheme.
+
+**Theme Structure:**
+- `/theme/Color.kt` - Color palette and ColorScheme definitions
+- `/theme/Theme.kt` - AppTheme composable configuration
+
+**Color Usage Guidelines:**
+- Always use `MaterialTheme.colorScheme.*` properties
+- Never use hardcoded `Color.White`, `Color.Gray`, etc.
+- Never use `Color(0x...)` hex literals in composables
+- Use semantic color roles:
+  - `primary` - Main brand color (blue)
+  - `secondary` - Accent/highlight color (gold)
+  - `error` - Destructive actions (red)
+  - `surfaceVariant` - Differentiated surfaces (chips, cards)
+  - `onSurfaceVariant` - Subdued text
+  - `outline` - Borders and dividers
+
+**Adding New Colors:**
+1. Define color value in `Color.kt` palette (e.g., `val Purple80 = Color(0xFF...)`)
+2. Add to `MovieClubDarkColorScheme` using appropriate Material 3 role
+3. Use `MaterialTheme.colorScheme.{role}` in composables
+
+**Future Enhancements:**
+- Light theme support (add `MovieClubLightColorScheme`)
+- Custom typography (add `Type.kt`)
+- Custom shapes (add `Shape.kt`)
+
+Reference: [Material Design 3 Color System](https://m3.material.io/styles/color/roles)
+
 ### Navigation
 Uses Jetpack Compose Navigation with type-safe routes defined in `app/Route.kt`:
 - `LandingPage` - Entry point

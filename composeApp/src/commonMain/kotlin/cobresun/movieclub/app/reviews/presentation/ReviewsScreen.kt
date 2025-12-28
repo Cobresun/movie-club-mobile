@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -37,7 +38,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
@@ -45,13 +45,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cobresun.movieclub.app.app.AppTheme
 import cobresun.movieclub.app.core.data.dto.TmdbExternalDataDto
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.AsyncResultHandler
 import cobresun.movieclub.app.core.domain.User
 import cobresun.movieclub.app.core.domain.extractYearFromDateString
-import cobresun.movieclub.app.core.presentation.LIGHT_GRAY
 import cobresun.movieclub.app.core.presentation.components.MovieCard
 import cobresun.movieclub.app.core.presentation.components.MovieGrid
 import cobresun.movieclub.app.core.presentation.components.SearchBar
@@ -64,6 +62,7 @@ import cobresun.movieclub.app.reviews.presentation.components.AverageIconVector
 import cobresun.movieclub.app.reviews.presentation.components.ReviewDetailsBottomSheetContent
 import cobresun.movieclub.app.reviews.presentation.components.ScoreChip
 import cobresun.movieclub.app.reviews.presentation.components.SortChipsRow
+import cobresun.movieclub.app.theme.AppTheme
 import cobresun.movieclub.app.watchlist.domain.WatchListItem
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
@@ -198,7 +197,7 @@ private fun AddMovieBottomSheetContent(
                             .fillMaxWidth()
                             .padding(4.dp)
                             .background(
-                                color = Color(LIGHT_GRAY),
+                                color = MaterialTheme.colorScheme.surfaceVariant,
                                 shape = RoundedCornerShape(4.dp)
                             )
                             .clickable { onMoveToReview(item) }
