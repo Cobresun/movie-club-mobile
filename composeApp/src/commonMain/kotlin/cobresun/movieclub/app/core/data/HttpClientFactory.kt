@@ -73,7 +73,6 @@ object HttpClientFactory {
                         bearerTokenStorage.getToken()
                     }
 
-                    // TODO: Add TMDB to this
                     sendWithoutRequest { request ->
                         request.url.host == "cobresun-movie-club.netlify.app"
                     }

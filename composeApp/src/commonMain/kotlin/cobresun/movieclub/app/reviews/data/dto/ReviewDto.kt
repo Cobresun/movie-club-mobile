@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class ReviewDto(
-    val id: String, // TODO: Value class might be smart here
+    val id: String,
     val title: String,
     val createdDate: Instant,
     val imageUrl: String,

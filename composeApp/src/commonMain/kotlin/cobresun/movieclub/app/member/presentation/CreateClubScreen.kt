@@ -54,7 +54,6 @@ fun CreateClubScreenRoot(
     // Show error message
     errorMessage?.let { message ->
         LaunchedEffect(message) {
-            // TODO: Show Snackbar when available
             viewModel.onAction(CreateClubAction.OnClearError)
         }
     }
