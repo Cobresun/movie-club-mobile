@@ -520,6 +520,48 @@ class ClubViewModel(
             is ClubAction.OnRefreshReviews -> refreshReviews()
             is ClubAction.OnRefreshWatchList -> refreshWatchList()
             is ClubAction.OnRefreshBacklog -> refreshBacklog()
+
+            is ClubAction.OnRandomizeWatchList -> {
+                viewModelScope.launch {
+                    // Validate watch list not empty
+                    val currentWatchList = (_state.value.watchList as? AsyncResult.Success)?.data
+                    if (currentWatchList.isNullOrEmpty()) {
+                        _errorMessage.update { "Watch list is empty" }
+                        return@launch
+                    }
+
+                    // Random selection
+                    val selectedMovie = currentWatchList.random()
+
+                    // Start shuffle animation
+                    _state.update {
+                        it.copy(
+                            isShufflingWatchList = true,
+                            shuffleSelectedMovie = selectedMovie
+                        )
+                    }
+
+                    // Set next watch via API
+                    watchListRepository.setNextWatch(clubId, selectedMovie.id)
+                        .onSuccess { /* Wait for animation to complete */ }
+                        .onError {
+                            _state.update {
+                                it.copy(isShufflingWatchList = false, shuffleSelectedMovie = null)
+                            }
+                            _errorMessage.update { "Failed to randomize watch list" }
+                        }
+                }
+            }
+
+            is ClubAction.OnShuffleComplete -> {
+                viewModelScope.launch {
+                    // Reset shuffle state and refresh to show gold border
+                    _state.update {
+                        it.copy(isShufflingWatchList = false, shuffleSelectedMovie = null)
+                    }
+                    refreshWatchList()
+                }
+            }
         }
     }
 
@@ -550,6 +592,8 @@ sealed interface ClubAction {
     data object OnRefreshReviews : ClubAction
     data object OnRefreshWatchList : ClubAction
     data object OnRefreshBacklog : ClubAction
+    data object OnRandomizeWatchList : ClubAction
+    data object OnShuffleComplete : ClubAction
 }
 
 data class ClubState(
@@ -564,5 +608,7 @@ data class ClubState(
     val isRefreshingBacklog: Boolean = false,
     val isAddingToBacklog: Boolean = false,
     val reviewSortState: ReviewSortState = ReviewSortState(),
-    val clubMembers: AsyncResult<List<Member>> = AsyncResult.Loading
+    val clubMembers: AsyncResult<List<Member>> = AsyncResult.Loading,
+    val isShufflingWatchList: Boolean = false,
+    val shuffleSelectedMovie: WatchListItem? = null
 )

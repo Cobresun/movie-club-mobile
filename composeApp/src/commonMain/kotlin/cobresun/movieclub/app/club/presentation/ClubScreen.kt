@@ -24,6 +24,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cobresun.movieclub.app.app.AppTheme
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.WorkType
+import cobresun.movieclub.app.core.platform.HapticFeedback
+import cobresun.movieclub.app.core.platform.createNoOpHapticFeedback
 import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.presentation.ReviewsScreen
@@ -31,6 +33,7 @@ import cobresun.movieclub.app.tmdb.domain.TmdbMovie
 import cobresun.movieclub.app.watchlist.domain.WatchListItem
 import cobresun.movieclub.app.watchlist.presentation.WatchListScreen
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -41,6 +44,7 @@ fun ClubScreenRoot(
     val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
     val successMessage by viewModel.successMessage.collectAsStateWithLifecycle()
     val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+    val hapticFeedback = koinInject<HapticFeedback>()
 
     var selectedTab by remember { mutableStateOf(0) }
     var isShowingWatchList by remember { mutableStateOf(true) }
@@ -88,6 +92,7 @@ fun ClubScreenRoot(
             onTabSelected = { selectedTab = it },
             isShowingWatchList = isShowingWatchList,
             onToggleWatchListView = { isShowingWatchList = !isShowingWatchList },
+            hapticFeedback = hapticFeedback,
             modifier = Modifier.padding(paddingValues)
         )
     }
@@ -106,6 +111,7 @@ fun ClubScreen(
     onTabSelected: (Int) -> Unit,
     isShowingWatchList: Boolean,
     onToggleWatchListView: () -> Unit,
+    hapticFeedback: HapticFeedback,
     modifier: Modifier = Modifier
 ) {
     val pagerState = rememberPagerState(initialPage = selectedTab) { 2 }
@@ -165,7 +171,12 @@ fun ClubScreen(
                     onRefreshWatchList = { onAction(ClubAction.OnRefreshWatchList) },
                     onRefreshBacklog = { onAction(ClubAction.OnRefreshBacklog) },
                     isShowingWatchList = isShowingWatchList,
-                    onToggleWatchListView = onToggleWatchListView
+                    onToggleWatchListView = onToggleWatchListView,
+                    isShufflingWatchList = state.isShufflingWatchList,
+                    shuffleSelectedMovie = state.shuffleSelectedMovie,
+                    onRandomizeWatchList = { onAction(ClubAction.OnRandomizeWatchList) },
+                    onShuffleComplete = { onAction(ClubAction.OnShuffleComplete) },
+                    hapticFeedback = hapticFeedback
                 )
             }
         }
@@ -305,7 +316,8 @@ private fun ClubScreenPreview() {
             selectedTab = 0,
             onTabSelected = {},
             isShowingWatchList = true,
-            onToggleWatchListView = {}
+            onToggleWatchListView = {},
+            hapticFeedback = createNoOpHapticFeedback()
         )
     }
 }

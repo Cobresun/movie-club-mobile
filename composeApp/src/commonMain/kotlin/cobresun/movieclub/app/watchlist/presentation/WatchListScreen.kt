@@ -20,10 +20,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.Casino
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -51,6 +53,8 @@ import cobresun.movieclub.app.app.AppTheme
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.AsyncResultHandler
 import cobresun.movieclub.app.core.domain.WorkType
+import cobresun.movieclub.app.core.platform.HapticFeedback
+import cobresun.movieclub.app.core.platform.createNoOpHapticFeedback
 import cobresun.movieclub.app.core.presentation.LIGHT_GRAY
 import cobresun.movieclub.app.core.presentation.components.MovieActionBottomSheetContent
 import cobresun.movieclub.app.core.presentation.components.MovieCard
@@ -85,6 +89,11 @@ fun WatchListScreen(
     onRefreshBacklog: () -> Unit = {},
     isShowingWatchList: Boolean = true,
     onToggleWatchListView: () -> Unit = {},
+    isShufflingWatchList: Boolean = false,
+    shuffleSelectedMovie: WatchListItem? = null,
+    onRandomizeWatchList: () -> Unit = {},
+    onShuffleComplete: () -> Unit = {},
+    hapticFeedback: HapticFeedback,
     modifier: Modifier = Modifier,
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -117,21 +126,34 @@ fun WatchListScreen(
             }
         }
     ) { contentPadding ->
-        ScreenContent(
-            isShowingWatchList = isShowingWatchList,
-            toggleIsShowingWatchList = onToggleWatchListView,
-            watchList = watchList,
-            backlog = backlog,
-            onSelectWatchListItem = {
-                openBottomSheet = WatchListBottomSheetType.WatchListItemSheet(it)
-            },
-            searchQuery = searchQuery,
-            onSearchQueryChange = { searchQuery = it },
-            isRefreshingWatchList = isRefreshingWatchList,
-            isRefreshingBacklog = isRefreshingBacklog,
-            onRefreshWatchList = onRefreshWatchList,
-            onRefreshBacklog = onRefreshBacklog,
-        )
+        Box {
+            ScreenContent(
+                isShowingWatchList = isShowingWatchList,
+                toggleIsShowingWatchList = onToggleWatchListView,
+                watchList = watchList,
+                backlog = backlog,
+                onSelectWatchListItem = {
+                    openBottomSheet = WatchListBottomSheetType.WatchListItemSheet(it)
+                },
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it },
+                isRefreshingWatchList = isRefreshingWatchList,
+                isRefreshingBacklog = isRefreshingBacklog,
+                onRefreshWatchList = onRefreshWatchList,
+                onRefreshBacklog = onRefreshBacklog,
+                isShufflingWatchList = isShufflingWatchList,
+                onRandomizeWatchList = onRandomizeWatchList
+            )
+
+            // Shuffle overlay
+            ShuffleOverlay(
+                watchList = (watchList as? AsyncResult.Success)?.data ?: emptyList(),
+                isVisible = isShufflingWatchList,
+                selectedMovie = shuffleSelectedMovie,
+                onComplete = onShuffleComplete,
+                hapticFeedback = hapticFeedback
+            )
+        }
     }
 
     openBottomSheet?.let { bottomSheetType ->
@@ -255,6 +277,8 @@ private fun ScreenContent(
     isRefreshingBacklog: Boolean = false,
     onRefreshWatchList: () -> Unit = {},
     onRefreshBacklog: () -> Unit = {},
+    isShufflingWatchList: Boolean = false,
+    onRandomizeWatchList: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -267,7 +291,9 @@ private fun ScreenContent(
             isShowingWatchList = isShowingWatchList,
             searchQuery = searchQuery,
             toggleIsShowingWatchList = toggleIsShowingWatchList,
-            onSearchQueryChange = { onSearchQueryChange(it) }
+            onSearchQueryChange = { onSearchQueryChange(it) },
+            isShufflingWatchList = isShufflingWatchList,
+            onRandomizeWatchList = onRandomizeWatchList
         )
 
         AnimatedMovieList(
@@ -289,7 +315,9 @@ private fun Header(
     isShowingWatchList: Boolean,
     searchQuery: String,
     toggleIsShowingWatchList: () -> Unit,
-    onSearchQueryChange: (String) -> Unit
+    onSearchQueryChange: (String) -> Unit,
+    isShufflingWatchList: Boolean = false,
+    onRandomizeWatchList: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier.padding(8.dp),
@@ -308,6 +336,27 @@ private fun Header(
             onValueChange = onSearchQueryChange,
             modifier = Modifier.weight(1f)
         )
+
+        // Dice button - only show on watch list tab
+        if (isShowingWatchList) {
+            IconButton(
+                onClick = {
+                    if (!isShufflingWatchList) {
+                        onRandomizeWatchList()
+                    }
+                },
+                enabled = !isShufflingWatchList
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Casino,
+                    contentDescription = "Randomize watch list",
+                    tint = if (isShufflingWatchList)
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    else
+                        MaterialTheme.colorScheme.primary
+                )
+            }
+        }
     }
 }
 
@@ -424,6 +473,7 @@ private fun WatchListScreenPreview() {
             onMoveToReview = {},
             onSetNextWatch = {},
             trendingMovies = AsyncResult.Success(emptyList()),
+            hapticFeedback = createNoOpHapticFeedback()
         )
     }
 }
@@ -456,6 +506,7 @@ private fun WatchListScreenWithDataPreview() {
             onMoveToReview = {},
             onSetNextWatch = {},
             trendingMovies = AsyncResult.Success(emptyList()),
+            hapticFeedback = createNoOpHapticFeedback()
         )
     }
 }
