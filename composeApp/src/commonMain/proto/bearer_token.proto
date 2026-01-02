@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-option java_package = "cobresun.movieclub.app.proto";
-option java_multiple_files = true;
-
-message BearerTokenData {
-  string access_token = 1;
-  string refresh_token = 2;
-}

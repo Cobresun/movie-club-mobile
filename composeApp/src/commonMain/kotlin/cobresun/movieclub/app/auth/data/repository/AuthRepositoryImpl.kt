@@ -1,30 +1,21 @@
 package cobresun.movieclub.app.auth.data.repository
 
 import cobresun.movieclub.app.auth.data.mappers.toUser
-import cobresun.movieclub.app.auth.data.network.IdentityDataSource
+import cobresun.movieclub.app.auth.data.network.BetterAuthDataSource
 import cobresun.movieclub.app.auth.domain.AuthRepository
 import cobresun.movieclub.app.auth.domain.User
-import cobresun.movieclub.app.core.data.BearerTokenStorage
+import cobresun.movieclub.app.core.data.SessionCookieStorage
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
-import cobresun.movieclub.app.core.domain.flatMap
 import cobresun.movieclub.app.core.domain.map
-import io.ktor.client.plugins.auth.providers.BearerTokens
 
 class AuthRepositoryImpl(
-    private val identityDataSource: IdentityDataSource,
-    private val bearerTokenStorage: BearerTokenStorage
+    private val betterAuthDataSource: BetterAuthDataSource,
+    private val cookieStorage: SessionCookieStorage
 ) : AuthRepository {
     override suspend fun login(email: String, password: String): Result<User, DataError.Remote> {
-        return identityDataSource.login(email, password)
-            .flatMap { tokenDto ->
-                bearerTokenStorage.updateToken(
-                    BearerTokens(tokenDto.accessToken, tokenDto.refreshToken)
-                )
-
-                identityDataSource.getUser()
-                    .map { userDto -> userDto.toUser() }
-            }
+        return betterAuthDataSource.signIn(email, password)
+            .map { userDto -> userDto.toUser() }
     }
 
     override suspend fun register(
@@ -32,26 +23,36 @@ class AuthRepositoryImpl(
         password: String,
         fullName: String
     ): Result<User, DataError.Remote> {
-        return identityDataSource.signup(email, password, fullName)
-            .flatMap { tokenDto ->
-                bearerTokenStorage.updateToken(
-                    BearerTokens(tokenDto.accessToken, tokenDto.refreshToken)
-                )
-
-                identityDataSource.getUser()
-                    .map { userDto -> userDto.toUser() }
-            }
-    }
-
-    override suspend fun getUser(): Result<User, DataError.Remote> {
-        return identityDataSource.getUser()
+        return betterAuthDataSource.signUp(email, password, fullName)
             .map { userDto -> userDto.toUser() }
     }
 
+    override suspend fun getUser(): Result<User, DataError.Remote> {
+        return when (val result = betterAuthDataSource.getSession()) {
+            is Result.Success -> {
+                val userDto = result.data
+                if (userDto != null) {
+                    Result.Success(userDto.toUser())
+                } else {
+                    // No active session - not an error, just not authenticated
+                    Result.Error(DataError.Remote.UNKNOWN)
+                }
+            }
+            is Result.Error -> result
+        }
+    }
+
     override suspend fun logout(): Result<Unit, DataError.Remote> {
-        // Clear both DataStore tokens and Ktor's in-memory cache
-        bearerTokenStorage.updateToken(BearerTokens("", ""))
-        identityDataSource.clearTokenCache()
-        return Result.Success(Unit)
+        // Sign out on server (clears server-side session)
+        val result = betterAuthDataSource.signOut()
+
+        // Clear local cookie storage
+        cookieStorage.clearAll()
+
+        return result
+    }
+
+    override suspend fun sendVerificationEmail(email: String): Result<Unit, DataError.Remote> {
+        return betterAuthDataSource.sendVerificationEmail(email)
     }
 }

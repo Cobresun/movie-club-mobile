@@ -14,8 +14,12 @@ interface AuthRepository {
     suspend fun getUser(): Result<User, DataError.Remote>
 
     /**
-     * Logs out the current user by clearing authentication tokens.
-     * This is a local operation that clears stored bearer tokens.
+     * Logs out the current user by clearing session cookies.
      */
     suspend fun logout(): EmptyResult<DataError.Remote>
+
+    /**
+     * Resends email verification link to the specified email address.
+     */
+    suspend fun sendVerificationEmail(email: String): EmptyResult<DataError.Remote>
 }

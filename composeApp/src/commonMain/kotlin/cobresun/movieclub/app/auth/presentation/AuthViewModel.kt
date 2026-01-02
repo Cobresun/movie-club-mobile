@@ -36,6 +36,7 @@ class AuthViewModel(
         is AuthAction.SignUp -> signup(action.email, action.password, action.fullName)
         is AuthAction.Logout -> logout()
         is AuthAction.ClearError -> clearError()
+        is AuthAction.ResendVerificationEmail -> resendVerificationEmail(action.email)
     }
 
     sealed interface AuthNavigationEvent {
@@ -57,7 +58,7 @@ class AuthViewModel(
     }
 
     private fun login(email: String, password: String) = viewModelScope.launch {
-        _state.update { it.copy(user = AsyncResult.Loading) }
+        _state.update { it.copy(user = AsyncResult.Loading, lastEmail = email) }
         _errorMessage.update { null }
 
         authRepository.login(email, password)
@@ -68,6 +69,8 @@ class AuthViewModel(
                 _state.update { it.copy(user = AsyncResult.Error(dataError = error)) }
                 _errorMessage.update {
                     when (error) {
+                        DataError.Remote.EMAIL_NOT_CONFIRMED ->
+                            "Please verify your email address before signing in. Check your inbox for a verification link."
                         DataError.Remote.NO_INTERNET ->
                             "No internet connection. Please check your connection and try again."
                         DataError.Remote.REQUEST_TIMEOUT ->
@@ -84,38 +87,31 @@ class AuthViewModel(
     }
 
     private fun signup(email: String, password: String, fullName: String) = viewModelScope.launch {
-        _state.update { it.copy(user = AsyncResult.Loading, confirmationMessage = null) }
+        _state.update { it.copy(user = AsyncResult.Loading, confirmationMessage = null, lastEmail = email) }
         _errorMessage.update { null }
 
         authRepository.register(email, password, fullName)
             .onSuccess { user ->
-                _state.update { it.copy(user = AsyncResult.Success(Unit)) }
+                // Better Auth requires email verification before session is created
+                _state.update {
+                    it.copy(
+                        user = AsyncResult.Error(dataError = null),
+                        confirmationMessage = "Account created! Please check your email to verify your account before signing in."
+                    )
+                }
             }
             .onError { error ->
-                when (error) {
-                    DataError.Remote.EMAIL_NOT_CONFIRMED -> {
-                        // Email confirmation required - show confirmation message
-                        _state.update {
-                            it.copy(
-                                user = AsyncResult.Error(dataError = null),
-                                confirmationMessage = "A confirmation message was sent to your email, click the link there to continue."
-                            )
-                        }
-                    }
-                    else -> {
-                        _state.update { it.copy(user = AsyncResult.Error(dataError = error)) }
-                        _errorMessage.update {
-                            when (error) {
-                                DataError.Remote.NO_INTERNET ->
-                                    "No internet connection. Please check your connection and try again."
-                                DataError.Remote.REQUEST_TIMEOUT ->
-                                    "Request timed out. Please try again."
-                                DataError.Remote.SERVER ->
-                                    "Server error. Please try again later."
-                                else ->
-                                    "Sign-up failed. Please try again or log in if you already have an account."
-                            }
-                        }
+                _state.update { it.copy(user = AsyncResult.Error(dataError = error)) }
+                _errorMessage.update {
+                    when (error) {
+                        DataError.Remote.NO_INTERNET ->
+                            "No internet connection. Please check your connection and try again."
+                        DataError.Remote.REQUEST_TIMEOUT ->
+                            "Request timed out. Please try again."
+                        DataError.Remote.SERVER ->
+                            "Server error. Please try again later."
+                        else ->
+                            "Sign-up failed. Please try again or log in if you already have an account."
                     }
                 }
             }
@@ -136,6 +132,27 @@ class AuthViewModel(
             }
     }
 
+    private fun resendVerificationEmail(email: String) = viewModelScope.launch {
+        _errorMessage.update { null }
+
+        authRepository.sendVerificationEmail(email)
+            .onSuccess {
+                _state.update {
+                    it.copy(confirmationMessage = "Verification email sent! Please check your inbox.")
+                }
+            }
+            .onError { error ->
+                _errorMessage.update {
+                    when (error) {
+                        DataError.Remote.NO_INTERNET ->
+                            "No internet connection. Please check your connection and try again."
+                        else ->
+                            "Failed to send verification email. Please try again."
+                    }
+                }
+            }
+    }
+
     private fun clearError() {
         _errorMessage.update { null }
     }
@@ -144,5 +161,6 @@ class AuthViewModel(
 data class AuthState(
     val user: AsyncResult<Unit> = AsyncResult.Loading,
     val confirmationMessage: String? = null,
-    val isLoggingOut: Boolean = false
+    val isLoggingOut: Boolean = false,
+    val lastEmail: String? = null
 )

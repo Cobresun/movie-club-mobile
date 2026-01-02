@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cobresun.movieclub.app.core.domain.AsyncResult
+import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.theme.AppTheme
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
@@ -71,7 +73,7 @@ fun AuthScreenRoot(
 
     AuthLandingScreen(
         errorMessage = errorMessage,
-        confirmationMessage = state.confirmationMessage,
+        state = state,
         isLoading = state.user is AsyncResult.Loading,
         onAction = viewModel::onAction
     )
@@ -80,7 +82,7 @@ fun AuthScreenRoot(
 @Composable
 private fun AuthLandingScreen(
     errorMessage: String?,
-    confirmationMessage: String?,
+    state: AuthState,
     isLoading: Boolean,
     onAction: (AuthAction) -> Unit
 ) {
@@ -115,7 +117,7 @@ private fun AuthLandingScreen(
         )
 
         // Confirmation Message
-        confirmationMessage?.let { message ->
+        state.confirmationMessage?.let { message ->
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.primaryContainer,
@@ -156,12 +158,31 @@ private fun AuthLandingScreen(
 
         // Error Message
         errorMessage?.let { message ->
-            Text(
-                text = message,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 8.dp)
-            )
+            Column(modifier = Modifier.padding(top = 8.dp)) {
+                Text(
+                    text = message,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+
+                // Show resend button for email verification errors
+                val isEmailNotConfirmedError = state.user is AsyncResult.Error &&
+                    state.user.dataError == DataError.Remote.EMAIL_NOT_CONFIRMED
+
+                if (isEmailNotConfirmedError &&
+                    state.confirmationMessage == null &&
+                    state.lastEmail != null) {
+                    TextButton(
+                        onClick = {
+                            onAction(AuthAction.ResendVerificationEmail(state.lastEmail))
+                        },
+                        enabled = !isLoading,
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        Text("Resend Verification Email")
+                    }
+                }
+            }
         }
     }
 }
@@ -361,7 +382,7 @@ private fun AuthLandingScreenPreview() {
     AppTheme {
         AuthLandingScreen(
             errorMessage = null,
-            confirmationMessage = null,
+            state = AuthState(),
             isLoading = false,
             onAction = {}
         )
@@ -374,7 +395,7 @@ private fun AuthLandingScreenWithErrorPreview() {
     AppTheme {
         AuthLandingScreen(
             errorMessage = "Sign-up failed. Please try again.",
-            confirmationMessage = null,
+            state = AuthState(),
             isLoading = false,
             onAction = {}
         )
@@ -387,7 +408,9 @@ private fun AuthLandingScreenWithConfirmationPreview() {
     AppTheme {
         AuthLandingScreen(
             errorMessage = null,
-            confirmationMessage = "A confirmation message was sent to your email, click the link there to continue.",
+            state = AuthState(
+                confirmationMessage = "A confirmation message was sent to your email, click the link there to continue."
+            ),
             isLoading = false,
             onAction = {}
         )

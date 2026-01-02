@@ -1,7 +1,7 @@
 package cobresun.movieclub.app.di
 
-import cobresun.movieclub.app.auth.data.network.IdentityDataSource
-import cobresun.movieclub.app.auth.data.network.KtorIdentityDataSource
+import cobresun.movieclub.app.auth.data.network.BetterAuthDataSource
+import cobresun.movieclub.app.auth.data.network.KtorBetterAuthDataSource
 import cobresun.movieclub.app.auth.data.repository.AuthRepositoryImpl
 import cobresun.movieclub.app.auth.domain.AuthRepository
 import cobresun.movieclub.app.auth.presentation.AuthViewModel
@@ -11,8 +11,9 @@ import cobresun.movieclub.app.club.data.repository.ClubRepositoryImpl
 import cobresun.movieclub.app.club.domain.ClubRepository
 import cobresun.movieclub.app.club.presentation.ClubSettingsViewModel
 import cobresun.movieclub.app.club.presentation.ClubViewModel
-import cobresun.movieclub.app.core.data.BearerTokenStorage
 import cobresun.movieclub.app.core.data.HttpClientFactory
+import cobresun.movieclub.app.core.data.SessionCookieStorage
+import cobresun.movieclub.app.core.data.SessionCookieStorageImpl
 import cobresun.movieclub.app.member.data.network.KtorMemberDataSource
 import cobresun.movieclub.app.member.data.network.MemberDataSource
 import cobresun.movieclub.app.member.data.repository.MemberRepositoryImpl
@@ -40,11 +41,14 @@ import org.koin.dsl.module
 expect val platformModule: Module
 
 val sharedModule = module {
-    single { BearerTokenStorage(get()) }
+    // Cookie storage
+    single { SessionCookieStorageImpl(get()) }.bind<SessionCookieStorage>()
+
+    // HTTP client with cookie support
     single { HttpClientFactory.create(get(), get()) }
 
     // Auth
-    single { KtorIdentityDataSource(get()) }.bind<IdentityDataSource>()
+    single { KtorBetterAuthDataSource(get()) }.bind<BetterAuthDataSource>()
     single { AuthRepositoryImpl(get(), get()) }.bind<AuthRepository>()
     viewModel<AuthViewModel> { AuthViewModel(get()) }
 

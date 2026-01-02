@@ -1,13 +1,13 @@
 package cobresun.movieclub.app.auth.data.mappers
 
-import cobresun.movieclub.app.auth.data.dto.UserDto
+import cobresun.movieclub.app.auth.data.dto.BetterAuthUserDto
 import cobresun.movieclub.app.auth.domain.User
 
-fun UserDto.toUser(): User {
+fun BetterAuthUserDto.toUser(): User {
     return User(
         id = id,
         email = email,
-        name = userMetadata.fullName,
-        avatarUrl = userMetadata.avatarUrl,
+        name = name,
+        avatarUrl = image
     )
 }

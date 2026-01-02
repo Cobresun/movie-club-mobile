@@ -1,10 +1,10 @@
 package cobresun.movieclub.app.di
 
 import androidx.datastore.core.DataStore
-import cobresun.movieclub.app.core.data.createBearerTokenDataStore
+import androidx.datastore.preferences.core.Preferences
+import cobresun.movieclub.app.core.data.createSessionCookieDataStore
 import cobresun.movieclub.app.core.platform.ClipboardManager
 import cobresun.movieclub.app.core.platform.HapticFeedback
-import cobresun.movieclub.app.proto.BearerTokenData
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.okhttp.OkHttp
 import org.koin.android.ext.koin.androidContext
@@ -14,7 +14,7 @@ import org.koin.dsl.module
 actual val platformModule: Module
     get() = module {
         single<HttpClientEngine> { OkHttp.create() }
-        single<DataStore<BearerTokenData>> { createBearerTokenDataStore(androidContext()) }
+        single<DataStore<Preferences>> { createSessionCookieDataStore(androidContext()) }
         single { ClipboardManager(androidContext()) }
         single { HapticFeedback(androidContext()) }
     }
