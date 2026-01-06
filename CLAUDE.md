@@ -67,7 +67,7 @@ Presentation cannot access Data, and Data cannot access Presentation.
 See the "Design Philosophy" section below for detailed guidance on maintaining these boundaries.
 
 ### Key Features/Modules
-- `auth/` - Netlify Identity authentication with bearer token storage
+- `auth/` - BetterAuth email/password authentication with HTTP cookie sessions
 - `club/` - Movie club management
 - `member/` - Club membership management
 - `reviews/` - Movie reviews with scoring system
@@ -83,12 +83,38 @@ Uses **Koin** for DI:
 
 ### Networking
 - **Ktor** client with platform-specific engines (OkHttp for Android, Darwin for iOS)
-- Bearer token authentication via `BearerTokenStorage`
-- Base API URL: `https://cobresun-movie-club.netlify.app`
+- Session cookie authentication automatically managed by Ktor HttpCookies plugin
+- Cookies persisted via `SessionCookieStorage` (DataStore-based)
+- Base API URL: `https://movie-club.app/api`
 
 ### Data Persistence
-- **DataStore** for bearer token storage (platform-specific implementations via expect/actual)
-- **Wire Protocol Buffers** for bearer token serialization (see `proto/bearer_token.proto`)
+- **DataStore** for session cookie persistence (platform-specific implementations via expect/actual)
+- Session cookies serialized as delimited strings (`||` separator)
+- Cookies automatically sent/received by Ktor client on all requests
+
+### Authentication Implementation
+
+The app uses **BetterAuth** for authentication with HTTP cookie-based sessions:
+
+**Backend API Endpoints:**
+- `POST /api/auth/sign-up/email` - Register new user (requires email verification)
+- `POST /api/auth/sign-in/email` - Sign in with email/password
+- `GET /api/auth/get-session` - Get current user session
+- `POST /api/auth/sign-out` - Sign out and clear session
+- `POST /api/auth/send-verification-email` - Resend verification email
+
+**Session Management:**
+- Server sets HTTP-only session cookies on successful authentication
+- Ktor HttpCookies plugin automatically includes cookies in all requests
+- `SessionCookieStorage` persists cookies to DataStore for cross-app-launch persistence
+- Platform-specific DataStore paths:
+  - Android: `androidx.datastore.preferences` with "session_cookies" name
+  - iOS: `~/Documents/session_cookies.preferences_pb`
+
+**Email Verification:**
+- Users must verify email via link before first login
+- Unverified login returns `DataError.Remote.EMAIL_NOT_CONFIRMED` error
+- UI prompts user to check email and provides resend option
 
 ### Theming
 
