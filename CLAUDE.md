@@ -16,24 +16,26 @@ The build will fail without this key.
 
 ## Common Commands
 
+**IMPORTANT:** Always use `-q` (quiet mode) for Gradle commands to minimize output and conserve tokens in Claude Code's context window.
+
 ### Building
-- `./gradlew build` - Build all targets (Android + iOS)
-- `./gradlew assembleDebug` - Build Android debug APK
-- `./gradlew assembleRelease` - Build Android release APK
+- `./gradlew -q build` - Build all targets (Android + iOS)
+- `./gradlew -q assembleDebug` - Build Android debug APK
+- `./gradlew -q assembleRelease` - Build Android release APK
 
 ### Testing
-- `./gradlew allTests` - Run all tests across all targets
-- `./gradlew testDebugUnitTest` - Run Android debug unit tests
-- `./gradlew iosSimulatorArm64Test` - Run iOS simulator tests
-- `./gradlew connectedDebugAndroidTest` - Run Android instrumentation tests on connected device
+- `./gradlew -q allTests` - Run all tests across all targets
+- `./gradlew -q testDebugUnitTest` - Run Android debug unit tests
+- `./gradlew -q iosSimulatorArm64Test` - Run iOS simulator tests
+- `./gradlew -q connectedDebugAndroidTest` - Run Android instrumentation tests on connected device
 
 ### Code Quality
-- `./gradlew check` - Run all verification checks
-- `./gradlew lint` - Run Android lint
-- `./gradlew lintFix` - Apply safe lint fixes
+- `./gradlew -q check` - Run all verification checks
+- `./gradlew -q lint` - Run Android lint
+- `./gradlew -q lintFix` - Apply safe lint fixes
 
 ### Platform-Specific
-- `./gradlew linkDebugFrameworkIosSimulatorArm64` - Link iOS framework for simulator
+- `./gradlew -q linkDebugFrameworkIosSimulatorArm64` - Link iOS framework for simulator
 
 ## Architecture
 
