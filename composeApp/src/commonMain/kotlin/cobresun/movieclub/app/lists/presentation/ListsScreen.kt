@@ -34,7 +34,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.EditNote
-import androidx.compose.material.icons.outlined.FormatListBulleted
+import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material.icons.outlined.VideoLibrary
@@ -126,7 +126,7 @@ fun ListsScreen(
                         )
                     } else if (lists.data.isEmpty()) {
                         EmptyState(
-                            icon = Icons.Outlined.FormatListBulleted,
+                            icon = Icons.AutoMirrored.Outlined.FormatListBulleted,
                             title = "No lists yet",
                             message = "Create a list to start collecting ${workType.noun}s for the club.",
                             actionLabel = "Create a list",

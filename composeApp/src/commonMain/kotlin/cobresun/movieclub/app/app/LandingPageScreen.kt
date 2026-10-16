@@ -27,7 +27,7 @@ import cobresun.movieclub.app.theme.AppTheme
 import movieclub.composeapp.generated.resources.Res
 import movieclub.composeapp.generated.resources.home_cinema
 import org.jetbrains.compose.resources.painterResource
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun LandingPageScreen(

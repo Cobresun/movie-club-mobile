@@ -90,7 +90,7 @@ class StatsComputersTest {
         assertEquals("1", r.highest.work.id)
         assertEquals("3", r.lowest.work.id)
         assertEquals("2", r.mostDivisive!!.work.id)
-        assertEquals(3.0, r.mostDivisive!!.value)
+        assertEquals(3.0, r.mostDivisive.value)
     }
 
     @Test fun distributionBinsByFloorAndIgnoresNonMembers() {
@@ -186,13 +186,13 @@ class StatsComputersTest {
             movie("3", mapOf("a" to 5.0, "b" to 5.0, "c" to 1.0)),
         )
         val all = computeTasteSimilarity(reviews, members)
-        assertEquals(setOf("a", "b"), setOf(all.mostSimilar!!.memberA.id, all.mostSimilar!!.memberB.id))
-        assertEquals(96.7, all.mostSimilar!!.similarityPercent)
+        assertEquals(setOf("a", "b"), setOf(all.mostSimilar!!.memberA.id, all.mostSimilar.memberB.id))
+        assertEquals(96.7, all.mostSimilar.similarityPercent)
         val forCat = computeTasteSimilarity(reviews, members, "c")
         assertEquals("c", forCat.mostSimilar!!.memberA.id)
         assertEquals("c", forCat.leastSimilar!!.memberA.id)
         // Scores follow the orientation.
-        assertEquals(2.0, forCat.mostSimilar!!.bestAgreements.first { it.work.id == "1" }.scoreA)
+        assertEquals(2.0, forCat.mostSimilar.bestAgreements.first { it.work.id == "1" }.scoreA)
         assertNull(computeTasteSimilarity(reviews.take(2), members).mostSimilar)
     }
 

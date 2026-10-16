@@ -20,12 +20,12 @@ The build will fail without this key.
 
 ### Building
 - `./gradlew -q build` - Build all targets (Android + iOS)
-- `./gradlew -q assembleDebug` - Build Android debug APK
-- `./gradlew -q assembleRelease` - Build Android release APK
+- `./gradlew -q :androidApp:assembleDebug` - Build Android debug APK
+- `./gradlew -q :androidApp:assembleRelease` - Build Android release APK
 
 ### Testing
 - `./gradlew -q allTests` - Run all tests across all targets
-- `./gradlew -q testDebugUnitTest` - Run Android debug unit tests
+- `./gradlew -q :composeApp:testAndroidHostTest` - Run shared tests on the JVM (Android host tests)
 - `./gradlew -q iosSimulatorArm64Test` - Run iOS simulator tests
 - `./gradlew -q connectedDebugAndroidTest` - Run Android instrumentation tests on connected device
 
@@ -40,11 +40,11 @@ The build will fail without this key.
 ## Architecture
 
 ### Module Structure
-- `/composeApp` - Shared Kotlin Multiplatform code
+- `/composeApp` - Shared Kotlin Multiplatform library (`com.android.kotlin.multiplatform.library` + iOS framework)
   - `commonMain` - Code shared across all platforms (business logic, UI, networking)
-  - `androidMain` - Android-specific implementations (Application, MainActivity, DataStore)
+  - `androidMain` - Android-specific implementations (DataStore, haptics, clipboard)
   - `iosMain` - iOS-specific implementations (MainViewController, DataStore)
-  - `nativeMain` - Shared native platform code
+- `/androidApp` - Android application module (Application, MainActivity, manifest, launcher icons, splash). AGP 9 no longer allows `com.android.application` in a KMP module.
 - `/iosApp` - iOS app entry point and Xcode project
 
 ### Code Organization (in `commonMain`)
@@ -842,7 +842,7 @@ These are known issues to address over time. They don't block development but sh
 
 ## Development Notes
 
-- **Known Issue**: There's a KSP version mismatch warning (ksp-2.0.20-1.0.24 vs kotlin-2.1.21) that appears on builds. This doesn't block compilation but should be addressed eventually.
+- Toolchain: Kotlin 2.4, Compose Multiplatform 1.12, AGP 9 (built-in Kotlin), Gradle 9.8. Android compile/target SDK 37, iOS deployment target 17.0.
 - The app currently uses a dark color scheme by default (see `AppTheme` in `app/App.kt`)
 - Protocol Buffers source files are in `composeApp/src/commonMain/proto/`
 
