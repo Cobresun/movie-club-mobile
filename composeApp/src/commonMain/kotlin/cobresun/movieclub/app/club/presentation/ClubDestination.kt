@@ -68,6 +68,8 @@ import cobresun.movieclub.app.core.domain.Club
 import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.member.presentation.CreateClubScreenRoot
 import cobresun.movieclub.app.member.presentation.JoinClubScreenRoot
+import cobresun.movieclub.app.app.DeepLink
+import cobresun.movieclub.app.app.DeepLinks
 import cobresun.movieclub.app.member.presentation.MemberViewModel
 import cobresun.movieclub.app.member.presentation.ProfileScreenRoot
 import cobresun.movieclub.app.member.presentation.components.ErrorMessage
@@ -225,6 +227,17 @@ private fun ClubNavHost(
     // Start destination is fixed at first composition; later changes navigate explicitly.
     val startDestination = remember {
         initialClubs.firstOrNull()?.let { Route.Club(it.slug) } ?: Route.EmptyClubs
+    }
+    // Invite links opened from outside the app (held while signed out, consumed once signed in).
+    val pendingLink by DeepLinks.pending.collectAsStateWithLifecycle()
+    LaunchedEffect(pendingLink) {
+        when (val link = pendingLink) {
+            is DeepLink.JoinClub -> {
+                DeepLinks.consume(link)
+                navController.navigate(Route.JoinClub(link.token))
+            }
+            null -> Unit
+        }
     }
     NavHost(navController = navController, startDestination = startDestination) {
         composable<Route.Club> {

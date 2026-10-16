@@ -9,3 +9,6 @@ fun MainViewController() = ComposeUIViewController(
 ) {
     App()
 }
+
+/** Called from Swift's `onOpenURL` for movieclub:// (and, once associated domains exist, https) links. */
+fun handleDeepLink(url: String): Boolean = cobresun.movieclub.app.app.DeepLinks.handle(url)
