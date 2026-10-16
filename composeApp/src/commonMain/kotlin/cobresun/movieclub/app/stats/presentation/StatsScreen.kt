@@ -6,6 +6,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -40,12 +45,21 @@ fun StatsScreen(
     state: StatsState,
     onAction: (StatsAction) -> Unit,
     onGoToReviews: () -> Unit,
+    onShare: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxSize()) {
-        Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 8.dp)) {
-            ClubNameLabel(state.clubName)
-            Text("Statistics", style = MaterialTheme.typography.headlineMedium)
+        Row(
+            Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                ClubNameLabel(state.clubName)
+                Text("Statistics", style = MaterialTheme.typography.headlineMedium)
+            }
+            IconButton(onClick = onShare) {
+                Icon(Icons.Outlined.Share, contentDescription = "Share statistics")
+            }
         }
         when (val data = state.data) {
             is AsyncResult.Loading -> StatsSkeleton()

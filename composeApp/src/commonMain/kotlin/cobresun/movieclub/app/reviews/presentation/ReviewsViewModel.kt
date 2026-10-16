@@ -7,7 +7,6 @@ import cobresun.movieclub.app.auth.domain.AuthRepository
 import cobresun.movieclub.app.club.domain.ClubRepository
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.ClubType
-import cobresun.movieclub.app.core.domain.Constants
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.NewWork
 import cobresun.movieclub.app.core.domain.Result
@@ -15,7 +14,7 @@ import cobresun.movieclub.app.core.domain.Work
 import cobresun.movieclub.app.core.domain.WorkDetails
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
-import cobresun.movieclub.app.core.platform.ClipboardManager
+import cobresun.movieclub.app.core.domain.ShareLinks
 import cobresun.movieclub.app.core.presentation.UiMessage
 import cobresun.movieclub.app.core.presentation.isRetryable
 import cobresun.movieclub.app.core.presentation.toUserMessage
@@ -74,6 +73,9 @@ data class ReviewDetailState(
 
 sealed interface ReviewsEvent {
     data class Message(val message: UiMessage) : ReviewsEvent
+
+    /** Open the system share sheet for a public link. */
+    data class Share(val url: String, val title: String) : ReviewsEvent
 }
 
 sealed interface ReviewsAction {
@@ -103,7 +105,6 @@ class ReviewsViewModel(
     private val memberRepository: MemberRepository,
     private val authRepository: AuthRepository,
     private val clubRepository: ClubRepository,
-    private val clipboardManager: ClipboardManager,
 ) : ViewModel() {
     private val clubSlug = requireNotNull(savedStateHandle.get<String>("clubSlug"))
 
@@ -265,12 +266,7 @@ class ReviewsViewModel(
     }
 
     private fun share(work: Work) {
-        viewModelScope.launch {
-            runCatching {
-                clipboardManager.copyToClipboard("${Constants.BASE_URL}/share/club/$clubSlug/review/${work.id}")
-            }.onSuccess { message("Share link copied") }
-                .onFailure { message("Couldn't copy the share link.") }
-        }
+        _events.tryEmit(ReviewsEvent.Share(ShareLinks.review(clubSlug, work.id), work.title))
     }
 
     private fun saveScore(workId: String, score: Double) {

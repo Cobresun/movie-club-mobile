@@ -14,6 +14,9 @@ enum class ClubTab { REVIEWS, LISTS, STATS, AWARDS }
 class ClubViewModel(
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
+    /** Slug of the club this screen shows (navigation argument). */
+    val clubSlug: String = requireNotNull(savedStateHandle.get<String>("clubSlug"))
+
     val selectedTab: StateFlow<ClubTab> = savedStateHandle.getStateFlow(KEY_TAB, ClubTab.REVIEWS)
 
     fun selectTab(tab: ClubTab) {

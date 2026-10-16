@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.SearchOff
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.Button
@@ -101,6 +102,8 @@ fun ListsScreen(
                 onShuffle = { onAction(ListsAction.Shuffle) },
                 onReorder = { onAction(ListsAction.StartReorder) },
                 onManage = { showManage = true },
+                onShare = { onAction(ListsAction.ShareList) },
+                canShare = state.selectedList != null,
             )
             when (val lists = state.lists) {
                 is AsyncResult.Loading -> GridSkeleton()
@@ -217,6 +220,8 @@ private fun ListsHeader(
     onShuffle: () -> Unit,
     onReorder: () -> Unit,
     onManage: () -> Unit,
+    onShare: () -> Unit,
+    canShare: Boolean,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 4.dp),
@@ -231,6 +236,9 @@ private fun ListsHeader(
         }
         IconButton(onClick = onReorder, enabled = canReorder) {
             Icon(Icons.Outlined.SwapVert, contentDescription = "Reorder items")
+        }
+        IconButton(onClick = onShare, enabled = canShare) {
+            Icon(Icons.Outlined.Share, contentDescription = "Share list")
         }
         IconButton(onClick = onManage) {
             Icon(Icons.Outlined.EditNote, contentDescription = "Manage lists")

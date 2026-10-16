@@ -58,6 +58,8 @@ import cobresun.movieclub.app.reviews.presentation.ReviewsViewModel
 import cobresun.movieclub.app.search.domain.WorkSearchResult
 import cobresun.movieclub.app.search.presentation.AddWorkSheet
 import kotlinx.coroutines.launch
+import cobresun.movieclub.app.core.domain.ShareLinks
+import cobresun.movieclub.app.member.presentation.platform.rememberShareSheet
 import org.koin.compose.koinInject
 import cobresun.movieclub.app.stats.presentation.StatsAction
 import cobresun.movieclub.app.stats.presentation.StatsScreen
@@ -84,6 +86,7 @@ fun ClubScreenRoot(
     val hapticFeedback = koinInject<HapticFeedback>()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val shareSheet = rememberShareSheet()
     var addTarget by remember { mutableStateOf<ClubTab?>(null) }
 
     fun show(message: UiMessage) {
@@ -103,6 +106,7 @@ fun ClubScreenRoot(
         listsViewModel.events.collect { event ->
             when (event) {
                 is ListsEvent.Message -> show(event.message)
+                is ListsEvent.Share -> shareSheet(event.url, event.title)
                 is ListsEvent.MovedToReviews -> {
                     reviewsViewModel.refreshQuietly()
                     show(
@@ -120,6 +124,7 @@ fun ClubScreenRoot(
         reviewsViewModel.events.collect { event ->
             when (event) {
                 is ReviewsEvent.Message -> show(event.message)
+                is ReviewsEvent.Share -> shareSheet(event.url, event.title)
             }
         }
     }
@@ -197,6 +202,9 @@ fun ClubScreenRoot(
                             state = statsState,
                             onAction = statsViewModel::onAction,
                             onGoToReviews = { clubViewModel.selectTab(ClubTab.REVIEWS) },
+                            onShare = {
+                                shareSheet(ShareLinks.statistics(clubViewModel.clubSlug), "${statsState.clubName} statistics")
+                            },
                         )
                     }
                     ClubTab.AWARDS -> AwardsScreen(

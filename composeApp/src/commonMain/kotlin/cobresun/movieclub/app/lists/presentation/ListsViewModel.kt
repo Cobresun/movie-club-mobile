@@ -21,6 +21,7 @@ import cobresun.movieclub.app.lists.domain.WorkList
 import cobresun.movieclub.app.member.domain.MemberRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableSharedFlow
+import cobresun.movieclub.app.core.domain.ShareLinks
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -66,6 +67,9 @@ sealed interface ListsEvent {
 
     /** A work left the lists for the reviews tab. */
     data class MovedToReviews(val title: String) : ListsEvent
+
+    /** Open the system share sheet for a public link. */
+    data class Share(val url: String, val title: String) : ListsEvent
 }
 
 sealed interface ListsAction {
@@ -91,6 +95,7 @@ sealed interface ListsAction {
     data object CancelReorder : ListsAction
 
     data object Shuffle : ListsAction
+    data object ShareList : ListsAction
     data object ShuffleFinished : ListsAction
 }
 
@@ -141,6 +146,9 @@ class ListsViewModel(
             ListsAction.SaveReorder -> saveReorder()
             ListsAction.CancelReorder -> _state.update { it.copy(reorderDraft = null) }
             ListsAction.Shuffle -> shuffle()
+            ListsAction.ShareList -> _state.value.selectedList?.let { list ->
+                _events.tryEmit(ListsEvent.Share(ShareLinks.list(clubSlug, list.id), list.title))
+            }
             ListsAction.ShuffleFinished -> finishShuffle()
         }
     }
