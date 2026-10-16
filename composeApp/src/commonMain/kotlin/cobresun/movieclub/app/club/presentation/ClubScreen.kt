@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -34,7 +36,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import cobresun.movieclub.app.awards.presentation.AwardsEvent
+import cobresun.movieclub.app.awards.presentation.AwardsScreen
+import cobresun.movieclub.app.awards.presentation.AwardsViewModel
 import cobresun.movieclub.app.core.domain.NewWork
 import cobresun.movieclub.app.core.domain.workType
 import cobresun.movieclub.app.core.platform.HapticFeedback
@@ -65,10 +71,12 @@ fun ClubScreenRoot(
     clubViewModel: ClubViewModel = koinViewModel(),
     listsViewModel: ListsViewModel = koinViewModel(),
     reviewsViewModel: ReviewsViewModel = koinViewModel(),
+    awardsViewModel: AwardsViewModel = koinViewModel(),
 ) {
     val selectedTab by clubViewModel.selectedTab.collectAsStateWithLifecycle()
     val listsState by listsViewModel.state.collectAsStateWithLifecycle()
     val reviewsState by reviewsViewModel.state.collectAsStateWithLifecycle()
+    val awardsState by awardsViewModel.state.collectAsStateWithLifecycle()
     val hapticFeedback = koinInject<HapticFeedback>()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -112,6 +120,23 @@ fun ClubScreenRoot(
         }
     }
 
+    // Awards: movie clubs with the setting on (web clubSections.ts). Re-check on
+    // resume since the setting can change in Club settings.
+    LifecycleResumeEffect(awardsViewModel) {
+        awardsViewModel.refreshAvailability()
+        onPauseOrDispose {}
+    }
+    LaunchedEffect(awardsViewModel) {
+        awardsViewModel.events.collect { event ->
+            when (event) {
+                is AwardsEvent.Message -> show(event.message)
+            }
+        }
+    }
+    LaunchedEffect(awardsState.isAvailable, selectedTab) {
+        if (!awardsState.isAvailable && selectedTab == ClubTab.AWARDS) clubViewModel.selectTab(ClubTab.REVIEWS)
+    }
+
     val stateHolder = rememberSaveableStateHolder()
 
     Scaffold(
@@ -148,6 +173,20 @@ fun ClubScreenRoot(
                     label = { Text("Lists") },
                     colors = colors,
                 )
+                if (awardsState.isAvailable) {
+                    NavigationBarItem(
+                        selected = selectedTab == ClubTab.AWARDS,
+                        onClick = { clubViewModel.selectTab(ClubTab.AWARDS) },
+                        icon = {
+                            Icon(
+                                if (selectedTab == ClubTab.AWARDS) Icons.Filled.EmojiEvents else Icons.Outlined.EmojiEvents,
+                                contentDescription = null,
+                            )
+                        },
+                        label = { Text("Awards") },
+                        colors = colors,
+                    )
+                }
             }
         },
         containerColor = MaterialTheme.colorScheme.background,
@@ -172,6 +211,11 @@ fun ClubScreenRoot(
                         onAction = listsViewModel::onAction,
                         onAddClick = { addTarget = ClubTab.LISTS },
                         hapticFeedback = hapticFeedback,
+                    )
+
+                    ClubTab.AWARDS -> AwardsScreen(
+                        state = awardsState,
+                        onAction = awardsViewModel::onAction,
                     )
                 }
               }
