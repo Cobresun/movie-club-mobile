@@ -41,6 +41,9 @@ import cobresun.movieclub.app.search.data.repository.WorkSearchRepositoryImpl
 import cobresun.movieclub.app.search.domain.WorkSearchRepository
 import cobresun.movieclub.app.search.presentation.WorkSearchViewModel
 import org.koin.core.module.Module
+import cobresun.movieclub.app.stats.data.StatsRepositoryImpl
+import cobresun.movieclub.app.stats.domain.StatsRepository
+import cobresun.movieclub.app.stats.presentation.StatsViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.bind
@@ -90,4 +93,8 @@ val sharedModule = module {
     single { KtorSearchDataSource(get()) }.bind<SearchDataSource>()
     single { WorkSearchRepositoryImpl(get()) }.bind<WorkSearchRepository>()
     viewModelOf(::WorkSearchViewModel)
+
+    // Statistics (reuses the reviews and club repositories)
+    single { StatsRepositoryImpl(get()) }.bind<StatsRepository>()
+    viewModelOf(::StatsViewModel)
 }

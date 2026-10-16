@@ -4,7 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.StateFlow
 
-enum class ClubTab { REVIEWS, LISTS }
+enum class ClubTab { REVIEWS, LISTS, STATS }
 
 /**
  * Hosts club-screen chrome state (the selected tab) so it survives
