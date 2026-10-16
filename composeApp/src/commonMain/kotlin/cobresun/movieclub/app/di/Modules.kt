@@ -24,18 +24,22 @@ import cobresun.movieclub.app.member.presentation.CreateClubViewModel
 import cobresun.movieclub.app.member.presentation.MemberViewModel
 import cobresun.movieclub.app.member.presentation.JoinClubViewModel
 import cobresun.movieclub.app.member.presentation.ProfileViewModel
+import cobresun.movieclub.app.lists.data.network.KtorListsDataSource
+import cobresun.movieclub.app.lists.data.network.ListsDataSource
+import cobresun.movieclub.app.lists.data.repository.ListsRepositoryImpl
+import cobresun.movieclub.app.lists.domain.ListsRepository
+import cobresun.movieclub.app.lists.presentation.ListsViewModel
 import cobresun.movieclub.app.reviews.data.network.KtorReviewsDataSource
 import cobresun.movieclub.app.reviews.data.network.ReviewsDataSource
 import cobresun.movieclub.app.reviews.data.repository.ReviewsRepositoryImpl
+import cobresun.movieclub.app.reviews.domain.ReviewCommentsRepository
 import cobresun.movieclub.app.reviews.domain.ReviewsRepository
-import cobresun.movieclub.app.tmdb.data.network.KtorTmdbDataSource
-import cobresun.movieclub.app.tmdb.data.network.TmdbDataSource
-import cobresun.movieclub.app.tmdb.data.repository.TmdbRepositoryImpl
-import cobresun.movieclub.app.tmdb.domain.TmdbRepository
-import cobresun.movieclub.app.watchlist.data.network.KtorWatchListDataSource
-import cobresun.movieclub.app.watchlist.data.network.WatchListDataSource
-import cobresun.movieclub.app.watchlist.data.repository.WatchListRepositoryImpl
-import cobresun.movieclub.app.watchlist.domain.WatchListRepository
+import cobresun.movieclub.app.reviews.presentation.ReviewsViewModel
+import cobresun.movieclub.app.search.data.network.KtorSearchDataSource
+import cobresun.movieclub.app.search.data.network.SearchDataSource
+import cobresun.movieclub.app.search.data.repository.WorkSearchRepositoryImpl
+import cobresun.movieclub.app.search.domain.WorkSearchRepository
+import cobresun.movieclub.app.search.presentation.WorkSearchViewModel
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
@@ -72,15 +76,18 @@ val sharedModule = module {
     viewModelOf(::ClubViewModel)
     viewModelOf(::ClubSettingsViewModel)
 
-    // Reviews
+    // Reviews (one implementation serves scores and comments)
     single { KtorReviewsDataSource(get()) }.bind<ReviewsDataSource>()
-    single { ReviewsRepositoryImpl(get(), get()) }.bind<ReviewsRepository>()
+    single { ReviewsRepositoryImpl(get()) }.binds(arrayOf(ReviewsRepository::class, ReviewCommentsRepository::class))
+    viewModelOf(::ReviewsViewModel)
 
-    // Watchlist
-    single { KtorWatchListDataSource(get()) }.bind<WatchListDataSource>()
-    single { WatchListRepositoryImpl(get()) }.bind<WatchListRepository>()
+    // Lists
+    single { KtorListsDataSource(get()) }.bind<ListsDataSource>()
+    single { ListsRepositoryImpl(get()) }.bind<ListsRepository>()
+    viewModelOf(::ListsViewModel)
 
-    // TMDB
-    single { KtorTmdbDataSource(get()) }.bind<TmdbDataSource>()
-    single { TmdbRepositoryImpl(get()) }.bind<TmdbRepository>()
+    // Search (TMDB / Google Books)
+    single { KtorSearchDataSource(get()) }.bind<SearchDataSource>()
+    single { WorkSearchRepositoryImpl(get()) }.bind<WorkSearchRepository>()
+    viewModelOf(::WorkSearchViewModel)
 }
