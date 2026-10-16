@@ -25,7 +25,7 @@ fun ReviewItemDto.toReview(timeZone: TimeZone = TimeZone.currentSystemDefault())
 
     val memberScores = scores
         .filterKeys { it != AVERAGE_KEY }
-        .mapValues { (userId, dto) -> MemberScore(id = dto.id, userId = userId, value = dto.score) }
+        .mapValues { (userId, dto) -> MemberScore(id = dto.id, userId = userId, value = dto.score, createdAt = dto.createdDate) }
 
     val average = scores[AVERAGE_KEY]?.score
         ?: memberScores.values.takeIf { it.isNotEmpty() }?.map { it.value }?.average()
