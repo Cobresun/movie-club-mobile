@@ -11,6 +11,11 @@ interface AuthRepository {
         password: String,
         fullName: String
     ): Result<User, DataError.Remote>
+    /**
+     * Signs in with a native Sign in with Apple credential, creating the account
+     * on first use. The session cookie is captured like email sign-in.
+     */
+    suspend fun loginWithApple(credential: AppleCredential): Result<User, DataError.Remote>
     suspend fun getUser(): Result<User, DataError.Remote>
 
     /**

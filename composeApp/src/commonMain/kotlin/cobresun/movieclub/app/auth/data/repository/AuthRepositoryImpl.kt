@@ -1,7 +1,9 @@
 package cobresun.movieclub.app.auth.data.repository
 
+import cobresun.movieclub.app.auth.data.mappers.toSocialSignInRequest
 import cobresun.movieclub.app.auth.data.mappers.toUser
 import cobresun.movieclub.app.auth.data.network.BetterAuthDataSource
+import cobresun.movieclub.app.auth.domain.AppleCredential
 import cobresun.movieclub.app.auth.domain.AuthRepository
 import cobresun.movieclub.app.auth.domain.User
 import cobresun.movieclub.app.core.data.SessionCookieStorage
@@ -24,6 +26,11 @@ class AuthRepositoryImpl(
         fullName: String
     ): Result<User, DataError.Remote> {
         return betterAuthDataSource.signUp(email, password, fullName)
+            .map { userDto -> userDto.toUser() }
+    }
+
+    override suspend fun loginWithApple(credential: AppleCredential): Result<User, DataError.Remote> {
+        return betterAuthDataSource.signInWithIdToken(credential.toSocialSignInRequest())
             .map { userDto -> userDto.toUser() }
     }
 
