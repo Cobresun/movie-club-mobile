@@ -125,6 +125,11 @@ buildkonfig {
         }
 
         buildConfigField(STRING, "TMDB_API_KEY", tmdbApiKey)
+
+        // Optional: Google Books works keyless at low rate limits (used by book clubs).
+        val googleBooksApiKey = gradleLocalProperties(rootDir, providers)
+            .getProperty("GOOGLE_BOOKS_API_KEY") ?: ""
+        buildConfigField(STRING, "GOOGLE_BOOKS_API_KEY", googleBooksApiKey)
     }
 }
 

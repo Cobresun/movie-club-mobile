@@ -1,323 +1,211 @@
 package cobresun.movieclub.app.club.presentation
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
+import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarOutline
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import cobresun.movieclub.app.theme.AppTheme
-import cobresun.movieclub.app.core.domain.AsyncResult
-import cobresun.movieclub.app.core.domain.WorkType
+import cobresun.movieclub.app.core.domain.NewWork
+import cobresun.movieclub.app.core.domain.workType
 import cobresun.movieclub.app.core.platform.HapticFeedback
-import cobresun.movieclub.app.core.platform.createNoOpHapticFeedback
-import cobresun.movieclub.app.member.domain.Member
-import cobresun.movieclub.app.reviews.domain.Review
+import cobresun.movieclub.app.core.presentation.UiMessage
+import cobresun.movieclub.app.core.presentation.components.AppSnackbarHost
+import cobresun.movieclub.app.core.presentation.components.LocalSnackbarHostState
+import cobresun.movieclub.app.lists.presentation.ListsAction
+import cobresun.movieclub.app.lists.presentation.ListsEvent
+import cobresun.movieclub.app.lists.presentation.ListsScreen
+import cobresun.movieclub.app.lists.presentation.ListsViewModel
+import cobresun.movieclub.app.reviews.presentation.ReviewsAction
+import cobresun.movieclub.app.reviews.presentation.ReviewsEvent
 import cobresun.movieclub.app.reviews.presentation.ReviewsScreen
-import cobresun.movieclub.app.tmdb.domain.TmdbMovie
-import cobresun.movieclub.app.watchlist.domain.WatchListItem
-import cobresun.movieclub.app.watchlist.presentation.WatchListScreen
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import cobresun.movieclub.app.reviews.presentation.ReviewsViewModel
+import cobresun.movieclub.app.search.domain.WorkSearchResult
+import cobresun.movieclub.app.search.presentation.AddWorkSheet
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
+/**
+ * A club's home: Reviews and Lists tabs with a shared snackbar and add-work
+ * sheet. Coordinates the two features (e.g. a list item moved to reviews
+ * refreshes the reviews tab) so they stay independent of each other.
+ */
 @Composable
 fun ClubScreenRoot(
-    viewModel: ClubViewModel = koinViewModel(),
+    clubViewModel: ClubViewModel = koinViewModel(),
+    listsViewModel: ListsViewModel = koinViewModel(),
+    reviewsViewModel: ReviewsViewModel = koinViewModel(),
 ) {
-    val state by viewModel.state.collectAsStateWithLifecycle()
-    val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
-    val successMessage by viewModel.successMessage.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+    val selectedTab by clubViewModel.selectedTab.collectAsStateWithLifecycle()
+    val listsState by listsViewModel.state.collectAsStateWithLifecycle()
+    val reviewsState by reviewsViewModel.state.collectAsStateWithLifecycle()
     val hapticFeedback = koinInject<HapticFeedback>()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    var addTarget by remember { mutableStateOf<ClubTab?>(null) }
 
-    var selectedTab by remember { mutableStateOf(0) }
-    var isShowingWatchList by remember { mutableStateOf(true) }
+    fun show(message: UiMessage) {
+        scope.launch {
+            snackbarHostState.currentSnackbarData?.dismiss()
+            val result = snackbarHostState.showSnackbar(
+                message = message.text,
+                actionLabel = message.actionLabel,
+                withDismissAction = message.actionLabel == null,
+                duration = if (message.actionLabel != null) SnackbarDuration.Long else SnackbarDuration.Short,
+            )
+            if (result == SnackbarResult.ActionPerformed) message.onAction?.invoke()
+        }
+    }
 
-    LaunchedEffect(Unit) {
-        viewModel.navigationEvents.collect { event ->
+    LaunchedEffect(listsViewModel) {
+        listsViewModel.events.collect { event ->
             when (event) {
-                ClubNavigationEvent.NavigateToReviewsTab -> {
-                    selectedTab = 0
-                }
-                ClubNavigationEvent.NavigateToWatchListTab -> {
-                    selectedTab = 1
-                    isShowingWatchList = true
+                is ListsEvent.Message -> show(event.message)
+                is ListsEvent.MovedToReviews -> {
+                    reviewsViewModel.refreshQuietly()
+                    show(
+                        UiMessage(
+                            text = "Moved ${event.title} to Reviews",
+                            actionLabel = "View",
+                            onAction = { clubViewModel.selectTab(ClubTab.REVIEWS) },
+                        )
+                    )
                 }
             }
         }
     }
-
-    LaunchedEffect(errorMessage) {
-        errorMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
-            viewModel.onAction(ClubAction.OnClearError)
+    LaunchedEffect(reviewsViewModel) {
+        reviewsViewModel.events.collect { event ->
+            when (event) {
+                is ReviewsEvent.Message -> show(event.message)
+            }
         }
     }
 
-    LaunchedEffect(successMessage) {
-        successMessage?.let { message ->
-            snackbarHostState.showSnackbar(message)
-            viewModel.onAction(ClubAction.OnClearSuccess)
-        }
-    }
+    val stateHolder = rememberSaveableStateHolder()
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { paddingValues ->
-        ClubScreen(
-            reviews = state.reviews,
-            watchList = state.watchList,
-            backlog = state.backlog,
-            trendingMovies = state.trendingMovies,
-            currentUser = state.currentUser,
-            state = state,
-            onAction = viewModel::onAction,
-            selectedTab = selectedTab,
-            onTabSelected = { selectedTab = it },
-            isShowingWatchList = isShowingWatchList,
-            onToggleWatchListView = { isShowingWatchList = !isShowingWatchList },
-            hapticFeedback = hapticFeedback,
-            modifier = Modifier.padding(paddingValues)
-        )
-    }
-}
-
-@Composable
-fun ClubScreen(
-    reviews: AsyncResult<List<Review>>,
-    watchList: AsyncResult<List<WatchListItem>>,
-    backlog: AsyncResult<List<WatchListItem>>,
-    trendingMovies: AsyncResult<List<TmdbMovie>>,
-    currentUser: Member?,
-    state: ClubState,
-    onAction: (ClubAction) -> Unit,
-    selectedTab: Int,
-    onTabSelected: (Int) -> Unit,
-    isShowingWatchList: Boolean,
-    onToggleWatchListView: () -> Unit,
-    hapticFeedback: HapticFeedback,
-    modifier: Modifier = Modifier
-) {
-    val pagerState = rememberPagerState(initialPage = selectedTab) { 2 }
-
-    LaunchedEffect(selectedTab) {
-        if (pagerState.currentPage != selectedTab) {
-            pagerState.animateScrollToPage(selectedTab)
-        }
-    }
-
-    LaunchedEffect(pagerState.currentPage) {
-        if (pagerState.currentPage != selectedTab) {
-            onTabSelected(pagerState.currentPage)
-        }
-    }
-
-    Column {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.weight(1f),
-            userScrollEnabled = false // Must be turned off so allow the user to swipe to open ModalDrawer
-        ) { index ->
-            if (index == 0) {
-                ReviewsScreen(
-                    reviews = reviews,
-                    watchList = watchList,
-                    currentUser = currentUser,
-                    onDeleteReview = { reviewId -> onAction(ClubAction.OnDeleteReview(reviewId)) },
-                    onMoveToReview = { item -> onAction(ClubAction.OnMoveToReview(item)) },
-                    onSubmitScore = { reviewWorkId, scoreId, scoreValue ->
-                        onAction(ClubAction.OnSubmitScore(reviewWorkId, scoreId, scoreValue))
-                    },
-                    onShareReview = { reviewId -> onAction(ClubAction.OnShareReview(reviewId)) },
-                    isRefreshingReviews = state.isRefreshingReviews,
-                    onRefreshReviews = { onAction(ClubAction.OnRefreshReviews) },
-                    sortState = state.reviewSortState,
-                    clubMembers = state.clubMembers,
-                    onSortChange = { sortOption -> onAction(ClubAction.OnSortReviews(sortOption)) },
-                    onToggleSortDirection = { onAction(ClubAction.OnToggleSortDirection) },
-                    onClearSort = { onAction(ClubAction.OnClearSort) }
+        snackbarHost = { AppSnackbarHost(snackbarHostState) },
+        bottomBar = {
+            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
+                val colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.onSecondary,
+                    indicatorColor = MaterialTheme.colorScheme.secondary,
+                    selectedTextColor = MaterialTheme.colorScheme.secondary,
                 )
-            } else {
-                WatchListScreen(
-                    watchList = watchList,
-                    backlog = backlog,
-                    addMovieToWatchList = { movie -> onAction(ClubAction.OnAddMovieToWatchList(movie)) },
-                    addMovieToBacklog = { movie -> onAction(ClubAction.OnAddMovieToBacklog(movie)) },
-                    onDeleteWatchListItem = { item -> onAction(ClubAction.OnDeleteWatchListItem(item)) },
-                    onDeleteBacklogItem = { item -> onAction(ClubAction.OnDeleteBacklogItem(item)) },
-                    onMoveToWatchList = { item -> onAction(ClubAction.OnMoveToWatchList(item)) },
-                    onMoveToReview = { item -> onAction(ClubAction.OnMoveToReview(item)) },
-                    onSetNextWatch = { item -> onAction(ClubAction.OnSetNextWatch(item)) },
-                    trendingMovies = trendingMovies,
-                    isRefreshingWatchList = state.isRefreshingWatchList,
-                    isRefreshingBacklog = state.isRefreshingBacklog,
-                    isAddingToBacklog = state.isAddingToBacklog,
-                    onRefreshWatchList = { onAction(ClubAction.OnRefreshWatchList) },
-                    onRefreshBacklog = { onAction(ClubAction.OnRefreshBacklog) },
-                    isShowingWatchList = isShowingWatchList,
-                    onToggleWatchListView = onToggleWatchListView,
-                    isShufflingWatchList = state.isShufflingWatchList,
-                    shuffleSelectedMovie = state.shuffleSelectedMovie,
-                    onRandomizeWatchList = { onAction(ClubAction.OnRandomizeWatchList) },
-                    onShuffleComplete = { onAction(ClubAction.OnShuffleComplete) },
-                    hapticFeedback = hapticFeedback
+                NavigationBarItem(
+                    selected = selectedTab == ClubTab.REVIEWS,
+                    onClick = { clubViewModel.selectTab(ClubTab.REVIEWS) },
+                    icon = {
+                        Icon(
+                            if (selectedTab == ClubTab.REVIEWS) Icons.Filled.Star else Icons.Outlined.StarOutline,
+                            contentDescription = null,
+                        )
+                    },
+                    label = { Text("Reviews") },
+                    colors = colors,
+                )
+                NavigationBarItem(
+                    selected = selectedTab == ClubTab.LISTS,
+                    onClick = { clubViewModel.selectTab(ClubTab.LISTS) },
+                    icon = {
+                        Icon(
+                            if (selectedTab == ClubTab.LISTS) Icons.AutoMirrored.Filled.FormatListBulleted
+                            else Icons.AutoMirrored.Outlined.FormatListBulleted,
+                            contentDescription = null,
+                        )
+                    },
+                    label = { Text("Lists") },
+                    colors = colors,
                 )
             }
-        }
-
-        Box(
-            modifier = Modifier.background(color = MaterialTheme.colorScheme.surface)
-        ) {
-            TabRow(
-                selectedTabIndex = selectedTab,
-                modifier = Modifier.navigationBarsPadding(),
-                indicator = {},
-                divider = {},
-                tabs = {
-                    Tab(
-                        selected = selectedTab == 0,
-                        onClick = { onTabSelected(0) },
-                        text = { Text(text = "Reviews") }
+        },
+        containerColor = MaterialTheme.colorScheme.background,
+    ) { padding ->
+        AnimatedContent(
+            targetState = selectedTab,
+            transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(160)) },
+            modifier = Modifier.fillMaxSize().padding(padding),
+            label = "club-tab",
+        ) { tab ->
+            stateHolder.SaveableStateProvider(tab.name) {
+              CompositionLocalProvider(LocalSnackbarHostState provides snackbarHostState) {
+                when (tab) {
+                    ClubTab.REVIEWS -> ReviewsScreen(
+                        state = reviewsState,
+                        onAction = reviewsViewModel::onAction,
+                        onAddClick = { addTarget = ClubTab.REVIEWS },
                     )
 
-                    Tab(
-                        selected = selectedTab == 1,
-                        onClick = { onTabSelected(1) },
-                        text = { Text(text = "Watch List") }
+                    ClubTab.LISTS -> ListsScreen(
+                        state = listsState,
+                        onAction = listsViewModel::onAction,
+                        onAddClick = { addTarget = ClubTab.LISTS },
+                        hapticFeedback = hapticFeedback,
                     )
                 }
-            )
+              }
+            }
         }
     }
-}
 
-@Composable
-@Preview
-private fun ClubScreenPreview() {
-    AppTheme {
-        ClubScreen(
-            reviews = AsyncResult.Success(
-                listOf(
-                    Review(
-                        id = "1",
-                        title = "The Shawshank Redemption",
-                        imageUrl = "https://image.tmdb.org/t/p/w500/q6y0oRbfh6IUxXp9C9AZ2UeFz5x.jpg",
-                        createdDate = "2023-01-15",
-                        scores = emptyMap()
-                    ),
-                    Review(
-                        id = "2",
-                        title = "The Godfather",
-                        imageUrl = "https://image.tmdb.org/t/p/w500/3bhkrj58Vtu7enYsRolD1fZdja1.jpg",
-                        createdDate = "2023-02-20",
-                        scores = emptyMap()
-                    )
-                )
-            ),
-            watchList = AsyncResult.Success(
-                listOf(
-                    WatchListItem(
-                        id = "1",
-                        type = WorkType.MOVIE,
-                        title = "Pulp Fiction",
-                        createdDate = "2023-03-10",
-                        externalId = "680",
-                        imageUrl = "https://image.tmdb.org/t/p/w500/d5iIlFn5s0ImszBLlWP9PHTdsgJ.jpg",
-                        externalDataDto = null,
-                        isNextMovie = false
-                    ),
-                    WatchListItem(
-                        id = "2",
-                        type = WorkType.MOVIE,
-                        title = "The Dark Knight",
-                        createdDate = "2023-04-05",
-                        externalId = "155",
-                        imageUrl = "https://image.tmdb.org/t/p/w500/qJ2tW6WMUD9CkiRZI9A6UzmiQNx.jpg",
-                        externalDataDto = null,
-                        isNextMovie = false
-                    )
-                )
-            ),
-            backlog = AsyncResult.Success(
-                listOf(
-                    WatchListItem(
-                        id = "3",
-                        type = WorkType.MOVIE,
-                        title = "Forrest Gump",
-                        createdDate = "2023-05-01",
-                        externalId = "13",
-                        imageUrl = "https://image.tmdb.org/t/p/w500/arw2FuxgC2LzJgR2g222z222z222z222.jpg",
-                        externalDataDto = null,
-                        isNextMovie = false
-                    ),
-                    WatchListItem(
-                        id = "4",
-                        type = WorkType.MOVIE,
-                        title = "Inception",
-                        createdDate = "2023-06-12",
-                        externalId = "27205",
-                        imageUrl = "https://image.tmdb.org/t/p/w500/s3TBrRGB1EO7Wk0i222z222z222z222.jpg",
-                        externalDataDto = null,
-                        isNextMovie = false
-                    )
-                )
-            ),
-            trendingMovies = AsyncResult.Success(
-                listOf(
-                    TmdbMovie(
-                        id = 1,
-                        title = "Dune: Part Two",
-                        releaseYear = "2024",
-                        imageUrl = "/czQnC1tXz222z222z222z222z222z222.jpg",
-                        popularity = 123.45
-                    ),
-                    TmdbMovie(
-                        id = 2,
-                        title = "Godzilla x Kong: The New Empire",
-                        releaseYear = "2024",
-                        imageUrl = "/gKkl3z222z222z222z222z222z222z222.jpg",
-                        popularity = 98.76
-                    )
-                )
-            ),
-            currentUser = Member(
-                id = "1",
-                name = "John Doe",
-                imageUrl = "https://image.tmdb.org/t/p/w500/q6y0oR",
-                email = "john.mclean@examplepetstore.com"
-            ),
-            state = ClubState(
-                reviews = AsyncResult.Success(emptyList()),
-                watchList = AsyncResult.Success(emptyList()),
-                backlog = AsyncResult.Success(emptyList()),
-                trendingMovies = AsyncResult.Success(emptyList()),
-                currentUser = null,
-                isRefreshingReviews = false,
-                isRefreshingWatchList = false,
-                isRefreshingBacklog = false
-            ),
-            onAction = {},
-            selectedTab = 0,
-            onTabSelected = {},
-            isShowingWatchList = true,
-            onToggleWatchListView = {},
-            hapticFeedback = createNoOpHapticFeedback()
+    addTarget?.let { target ->
+        val toLists = target == ClubTab.LISTS
+        val workType = (if (toLists) listsState.clubType else reviewsState.clubType).workType
+        val existing = if (toLists) {
+            (listsState.selectedItems as? cobresun.movieclub.app.core.domain.AsyncResult.Success)
+                ?.data.orEmpty().mapNotNull { it.externalId }.toSet()
+        } else {
+            reviewsState.reviewedExternalIds
+        }
+        AddWorkSheet(
+            title = if (toLists) "Add to ${listsState.selectedList?.title ?: "list"}" else "Add a review",
+            workType = workType,
+            existingExternalIds = existing,
+            onPick = { result ->
+                val work = result.toNewWork()
+                if (toLists) listsViewModel.onAction(ListsAction.AddWork(work))
+                else reviewsViewModel.onAction(ReviewsAction.AddReview(work))
+                addTarget = null
+            },
+            onDismiss = { addTarget = null },
         )
     }
 }
+
+private fun WorkSearchResult.toNewWork() = NewWork(
+    type = type,
+    title = title,
+    externalId = externalId,
+    imageUrl = imageUrl,
+)

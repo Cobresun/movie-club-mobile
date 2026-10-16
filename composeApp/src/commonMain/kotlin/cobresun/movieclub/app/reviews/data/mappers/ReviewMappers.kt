@@ -1,57 +1,50 @@
-@file:OptIn(kotlin.time.ExperimentalTime::class)
 package cobresun.movieclub.app.reviews.data.mappers
 
-import cobresun.movieclub.app.club.data.dto.MemberDto
-import cobresun.movieclub.app.core.domain.User
-import cobresun.movieclub.app.reviews.data.dto.NewReviewItemDto
-import cobresun.movieclub.app.reviews.data.dto.ReviewDto
-import cobresun.movieclub.app.reviews.data.dto.ScoreDto
-import cobresun.movieclub.app.reviews.domain.NewReviewItem
+import cobresun.movieclub.app.core.data.dto.WorkListItemDto
+import cobresun.movieclub.app.core.data.mappers.parseLocalDate
+import cobresun.movieclub.app.core.data.mappers.toWork
+import cobresun.movieclub.app.reviews.data.dto.CommentDto
+import cobresun.movieclub.app.reviews.data.dto.ReviewItemDto
+import cobresun.movieclub.app.reviews.domain.MemberScore
 import cobresun.movieclub.app.reviews.domain.Review
-import cobresun.movieclub.app.reviews.domain.Score
+import cobresun.movieclub.app.reviews.domain.ReviewComment
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 
-fun ReviewDto.toReview(memberDtos: List<MemberDto>): Review {
-    return Review(
+private const val AVERAGE_KEY = "average"
+
+fun ReviewItemDto.toReview(timeZone: TimeZone = TimeZone.currentSystemDefault()): Review {
+    val work = WorkListItemDto(
         id = id,
-        title = title,
-        createdDate = createdDate
-            .toLocalDateTime(TimeZone.currentSystemDefault())
-            .date
-            .toString(),
-        imageUrl = imageUrl,
-        scores = scores.toScores(memberDtos)
-    )
-}
-
-fun Map<String, ScoreDto>.toScores(memberDtos: List<MemberDto>): Map<User, Score> {
-    return this
-        .filter { (memberId, _) -> memberId != "average" && memberDtos.any { it.id == memberId } }
-        .map { (memberId, scoreDto) ->
-            val memberDto = requireNotNull(memberDtos.find { it.id == memberId })
-
-            val user = User(
-                id = memberDto.id,
-                name = memberDto.name,
-                imageUrl = memberDto.image,
-                email = memberDto.email
-            )
-
-            val score = Score(
-                id = scoreDto.id,
-                value = scoreDto.score
-            )
-
-            user to score
-        }.toMap()
-}
-
-fun NewReviewItem.toNewReviewItemDto(): NewReviewItemDto {
-    return NewReviewItemDto(
         type = type,
         title = title,
+        createdDate = createdDate,
+        imageUrl = imageUrl,
         externalId = externalId,
-        imageUrl = imageUrl
+        externalData = externalData,
+    ).toWork(timeZone)
+
+    val memberScores = scores
+        .filterKeys { it != AVERAGE_KEY }
+        .mapValues { (userId, dto) -> MemberScore(id = dto.id, userId = userId, value = dto.score) }
+
+    val average = scores[AVERAGE_KEY]?.score
+        ?: memberScores.values.takeIf { it.isNotEmpty() }?.map { it.value }?.average()
+
+    return Review(
+        work = work,
+        scores = memberScores,
+        average = average?.takeIf { memberScores.isNotEmpty() },
     )
 }
+
+fun CommentDto.toReviewComment(timeZone: TimeZone = TimeZone.currentSystemDefault()): ReviewComment =
+    ReviewComment(
+        id = id,
+        workId = workId,
+        userId = userId,
+        userName = userName,
+        userImageUrl = userImage,
+        content = content,
+        createdDate = parseLocalDate(createdDate, timeZone),
+        spoiler = spoiler,
+    )
