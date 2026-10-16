@@ -43,6 +43,8 @@ sealed interface WorkDetails {
         val backdropUrl: String?,
         /** Full cast with characters; only present from the per-work details endpoint. */
         val cast: List<CastMember> = emptyList(),
+        /** Server-filtered major cast (top-billed or popular), used for "Familiar face" facts. */
+        val majorCastNames: List<String> = emptyList(),
     ) : WorkDetails
 
     data class Book(

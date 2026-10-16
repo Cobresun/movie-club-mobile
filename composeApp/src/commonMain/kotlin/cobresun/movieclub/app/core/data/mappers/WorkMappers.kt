@@ -68,6 +68,7 @@ fun JsonElement?.toWorkDetails(): WorkDetails? {
             genres = obj.stringList("genres"),
             directors = obj.objectList("directors").mapNotNull { it.string("name") },
             castNames = obj.stringList("castNames"),
+            majorCastNames = obj.stringList("majorCastNames"),
             voteAverage = obj.double("vote_average"),
             backdropUrl = tmdbImageUrl(obj.string("backdrop_path"), "w780"),
             cast = obj.objectList("actors").mapNotNull { actor ->
