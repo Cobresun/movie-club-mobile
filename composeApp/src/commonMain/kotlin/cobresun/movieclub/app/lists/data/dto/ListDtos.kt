@@ -1,6 +1,7 @@
 package cobresun.movieclub.app.lists.data.dto
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 @Serializable
 data class WorkListDto(
@@ -28,6 +29,21 @@ data class ListInsertDto(
     val title: String,
     val externalId: String,
     val imageUrl: String? = null,
+)
+
+/** One entry of `GET list/all-items`: a list item tagged with the user list it's on. */
+@Serializable
+data class SourcedListItemDto(
+    val id: String,
+    val type: String = "movie",
+    val title: String,
+    val createdDate: String,
+    val imageUrl: String? = null,
+    val externalId: String? = null,
+    val addedBy: String? = null,
+    val externalData: JsonElement? = null,
+    val sourceListId: String,
+    val sourceListTitle: String,
 )
 
 @Serializable

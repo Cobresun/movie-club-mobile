@@ -5,6 +5,14 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.material.icons.automirrored.outlined.DriveFileMove
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -65,6 +73,7 @@ import org.koin.compose.viewmodel.koinViewModel
  *
  * @param title e.g. "Add to Watch List"
  * @param existingExternalIds works already at the destination (shown as added)
+ * @param fromLists works already on the club's lists to offer before search results
  * @param onPick called with the chosen result; the caller performs the add and dismisses
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,6 +84,8 @@ fun AddWorkSheet(
     existingExternalIds: Set<String>,
     onPick: (WorkSearchResult) -> Unit,
     onDismiss: () -> Unit,
+    /** Optional "From your lists" picks shown above search (Add review). */
+    fromLists: ListPickSection? = null,
     viewModel: WorkSearchViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -99,7 +110,7 @@ fun AddWorkSheet(
             TextField(
                 value = state.query,
                 onValueChange = viewModel::onQueryChange,
-                placeholder = { Text("Search for a ${workType.noun}") },
+                placeholder = { Text(if (fromLists != null) "Filter your lists or search" else "Search for a ${workType.noun}") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
                     if (state.query.isNotEmpty()) {
@@ -127,42 +138,104 @@ fun AddWorkSheet(
 
             val showingSuggestions = state.results == null
             val content = state.results ?: state.suggestions
-            AnimatedContent(
-                targetState = showingSuggestions to content,
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
-                contentKey = { (suggest, result) -> suggest to (result::class) },
-                modifier = Modifier.weight(1f),
-            ) { (suggest, result) ->
-                when (result) {
-                    is AsyncResult.Loading -> SearchSkeleton()
-                    is AsyncResult.Error -> ErrorState(
-                        message = state.errorMessage ?: "Search is unavailable right now.",
-                        onRetry = viewModel::retry,
-                    )
+            val lists = fromLists
+            var listFilter by remember { mutableStateOf<String?>(null) }
+            var showAllPicks by remember { mutableStateOf(false) }
+            val listItems = (lists?.items as? AsyncResult.Success)?.data.orEmpty()
+            val listTitles = remember(listItems) { listItems.map { it.listTitle }.distinct() }
+            // Like the web prompt: the search text also filters the list picks by title.
+            val matchingPicks = listItems.filter {
+                (listFilter == null || it.listTitle == listFilter) &&
+                    it.title.contains(state.query.trim(), ignoreCase = true)
+            }
+            val visiblePicks = if (showAllPicks || state.query.isNotBlank()) matchingPicks else matchingPicks.take(COLLAPSED_PICKS)
 
-                    is AsyncResult.Success -> if (result.data.isEmpty()) {
-                        EmptyState(
-                            icon = Icons.Outlined.SearchOff,
-                            title = "No matches",
-                            message = "Try a different spelling or fewer words.",
+            LazyColumn(
+                contentPadding = PaddingValues(bottom = 32.dp),
+                modifier = Modifier.weight(1f),
+            ) {
+                if (lists != null) {
+                    when (lists.items) {
+                        is AsyncResult.Loading -> item(key = "lists-loading") {
+                            Column {
+                                SectionLabel(FROM_LISTS, Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
+                                SearchSkeleton(rows = 2)
+                                Spacer(Modifier.height(16.dp))
+                            }
+                        }
+                        is AsyncResult.Error -> Unit // Search still works; lists are a shortcut.
+                        is AsyncResult.Success -> if (matchingPicks.isNotEmpty() || (listFilter != null && state.query.isBlank())) {
+                            item(key = "lists-header") {
+                                Column(Modifier.animateItem()) {
+                                    SectionLabel(FROM_LISTS, Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
+                                    if (listTitles.size > 1) {
+                                        LazyRow(
+                                            contentPadding = PaddingValues(horizontal = 20.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        ) {
+                                            item {
+                                                FilterChip(selected = listFilter == null, onClick = { listFilter = null }, label = { Text("All") })
+                                            }
+                                            items(listTitles) { title ->
+                                                FilterChip(
+                                                    selected = listFilter == title,
+                                                    onClick = { listFilter = if (listFilter == title) null else title },
+                                                    label = { Text(title) },
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            items(visiblePicks, key = { "pick-" + it.key }) { pick ->
+                                ListPickRow(pick, Modifier.animateItem()) { lists.onPick(pick) }
+                            }
+                            if (visiblePicks.size < matchingPicks.size) {
+                                item(key = "lists-more") {
+                                    TextButton(
+                                        onClick = { showAllPicks = true },
+                                        modifier = Modifier.padding(horizontal = 8.dp).animateItem(),
+                                    ) { Text("Show all ${matchingPicks.size}") }
+                                }
+                            }
+                            item(key = "lists-gap") { Spacer(Modifier.height(16.dp)) }
+                        }
+                    }
+                }
+
+                when (content) {
+                    is AsyncResult.Loading -> item(key = "search-loading") { SearchSkeleton() }
+                    is AsyncResult.Error -> item(key = "search-error") {
+                        ErrorState(
+                            message = state.errorMessage ?: "Search is unavailable right now.",
+                            onRetry = viewModel::retry,
                         )
+                    }
+
+                    is AsyncResult.Success -> if (content.data.isEmpty()) {
+                        if (matchingPicks.isEmpty()) item(key = "search-empty") {
+                            EmptyState(
+                                icon = Icons.Outlined.SearchOff,
+                                title = "No matches",
+                                message = "Try a different spelling or fewer words.",
+                            )
+                        }
                     } else {
-                        LazyColumn(contentPadding = PaddingValues(bottom = 32.dp)) {
-                            item {
-                                SectionLabel(
-                                    if (!suggest) "Results"
-                                    else if (workType == WorkType.MOVIE) "Trending this week"
-                                    else "Popular picks",
-                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
-                                )
-                            }
-                            items(result.data, key = { it.externalId }) { item ->
-                                SearchResultRow(
-                                    result = item,
-                                    alreadyAdded = item.externalId in existingExternalIds,
-                                    onClick = { onPick(item) },
-                                )
-                            }
+                        item(key = "search-header-$showingSuggestions") {
+                            SectionLabel(
+                                if (!showingSuggestions) "Search results"
+                                else if (workType == WorkType.MOVIE) "Trending this week"
+                                else "Popular picks",
+                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp).animateItem(),
+                            )
+                        }
+                        items(content.data, key = { "search-" + it.externalId }) { item ->
+                            SearchResultRow(
+                                result = item,
+                                alreadyAdded = item.externalId in existingExternalIds,
+                                onClick = { onPick(item) },
+                                modifier = Modifier.animateItem(),
+                            )
                         }
                     }
                 }
@@ -171,14 +244,71 @@ fun AddWorkSheet(
     }
 }
 
+private const val FROM_LISTS = "From your lists"
+private const val COLLAPSED_PICKS = 5
+
+/** A work already on one of the club's lists, offered in the Add review sheet. */
+data class ListPick(
+    val key: String,
+    val title: String,
+    val subtitle: String?,
+    val imageUrl: String?,
+    val listTitle: String,
+    val isUpNext: Boolean,
+)
+
+/** The "From your lists" section: [items] to offer and what picking one does. */
+class ListPickSection(
+    val items: AsyncResult<List<ListPick>>,
+    val onPick: (ListPick) -> Unit,
+)
+
+@Composable
+private fun ListPickRow(pick: ListPick, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClickLabel = "Move to reviews", onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Poster(imageUrl = pick.imageUrl, title = pick.title, modifier = Modifier.width(52.dp), shape = MaterialTheme.shapes.extraSmall)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(pick.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            pick.subtitle?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Text(
+                if (pick.isUpNext) "Up Next · ${pick.listTitle}" else pick.listTitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (pick.isUpNext) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .clip(MaterialTheme.shapes.extraSmall)
+                    .background(
+                        (if (pick.isUpNext) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary).copy(alpha = 0.12f)
+                    )
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+            )
+        }
+        Icon(
+            Icons.AutoMirrored.Outlined.DriveFileMove,
+            contentDescription = "Move ${pick.title} to reviews",
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(26.dp),
+        )
+    }
+}
+
 @Composable
 private fun SearchResultRow(
     result: WorkSearchResult,
     alreadyAdded: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(enabled = !alreadyAdded, onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 8.dp),
@@ -201,9 +331,9 @@ private fun SearchResultRow(
 }
 
 @Composable
-private fun SearchSkeleton() {
-    Column(Modifier.padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        repeat(6) {
+private fun SearchSkeleton(rows: Int = 6) {
+    Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        repeat(rows) {
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
                 ShimmerBox(Modifier.width(52.dp).height(78.dp), MaterialTheme.shapes.extraSmall)
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

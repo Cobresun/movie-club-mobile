@@ -12,6 +12,13 @@ data class WorkList(
     val itemCount: Int,
 )
 
+/** A work on one of the club's user lists, tagged with that list. */
+data class ListedWork(
+    val work: Work,
+    val listId: String,
+    val listTitle: String,
+)
+
 /**
  * Club lists, their items and the club-wide "Up Next" pointer.
  * All operations address the club by slug.
@@ -28,6 +35,9 @@ interface ListsRepository {
     suspend fun renameList(clubSlug: String, listId: String, title: String): Result<Unit, DataError.Remote>
     suspend fun deleteList(clubSlug: String, listId: String): Result<Unit, DataError.Remote>
     suspend fun reorderLists(clubSlug: String, listIds: List<String>): Result<Unit, DataError.Remote>
+
+    /** Items across every user list (reviews excluded), in list display order then item order. */
+    suspend fun getAllItems(clubSlug: String): Result<List<ListedWork>, DataError.Remote>
 
     /** Adds a work to a list. Fails if it's already on that list. */
     suspend fun addItem(clubSlug: String, listId: String, work: NewWork): Result<Unit, DataError.Remote>

@@ -16,6 +16,8 @@ import cobresun.movieclub.app.lists.data.network.ListsDataSource
 import cobresun.movieclub.app.lists.domain.ListsRepository
 import cobresun.movieclub.app.core.domain.NewWork
 import cobresun.movieclub.app.lists.domain.WorkList
+import cobresun.movieclub.app.lists.domain.ListedWork
+import cobresun.movieclub.app.lists.data.mappers.toListedWork
 
 class ListsRepositoryImpl(
     private val dataSource: ListsDataSource,
@@ -29,6 +31,9 @@ class ListsRepositoryImpl(
 
     override suspend fun getItems(clubSlug: String, listId: String): Result<List<Work>, DataError.Remote> =
         dataSource.getItems(clubSlug, listId).map { items -> items.map { it.toWork() } }
+
+    override suspend fun getAllItems(clubSlug: String): Result<List<ListedWork>, DataError.Remote> =
+        dataSource.getAllItems(clubSlug).map { items -> items.map { it.toListedWork() } }
 
     override suspend fun createList(clubSlug: String, title: String): Result<WorkList, DataError.Remote> =
         dataSource.createList(clubSlug, ListTitleDto(title.trim())).map { it.toWorkList() }

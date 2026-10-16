@@ -60,6 +60,9 @@ import cobresun.movieclub.app.reviews.presentation.ReviewsScreen
 import cobresun.movieclub.app.reviews.presentation.ReviewsViewModel
 import cobresun.movieclub.app.search.domain.WorkSearchResult
 import cobresun.movieclub.app.search.presentation.AddWorkSheet
+import cobresun.movieclub.app.search.presentation.ListPick
+import cobresun.movieclub.app.search.presentation.ListPickSection
+import cobresun.movieclub.app.core.presentation.posterSubtitle
 import kotlinx.coroutines.launch
 import cobresun.movieclub.app.core.domain.ShareLinks
 import cobresun.movieclub.app.member.presentation.platform.rememberShareSheet
@@ -236,6 +239,7 @@ fun ClubScreenRoot(
         } else {
             reviewsState.reviewedExternalIds
         }
+        if (!toLists) LaunchedEffect(Unit) { listsViewModel.onAction(ListsAction.LoadAllItems) }
         AddWorkSheet(
             title = if (toLists) "Add to ${listsState.selectedList?.title ?: "list"}" else "Add a review",
             workType = workType,
@@ -247,8 +251,39 @@ fun ClubScreenRoot(
                 addTarget = null
             },
             onDismiss = { addTarget = null },
+            fromLists = if (toLists) null else {
+                val listed = listsState.pickableItems
+                ListPickSection(
+                    items = listsState.allItems.mapSuccess {
+                        listed.map { item ->
+                            ListPick(
+                                key = item.work.id,
+                                title = item.work.title,
+                                subtitle = item.work.posterSubtitle(),
+                                imageUrl = item.work.imageUrl,
+                                listTitle = item.listTitle,
+                                isUpNext = item.work.id == listsState.upNextWorkId,
+                            )
+                        }
+                    },
+                    onPick = { pick ->
+                        listed.firstOrNull { it.work.id == pick.key }?.let { item ->
+                            listsViewModel.onAction(ListsAction.MoveToReviews(item.work, item.listId))
+                        }
+                        addTarget = null
+                    },
+                )
+            },
         )
     }
+}
+
+private inline fun <T, R> cobresun.movieclub.app.core.domain.AsyncResult<T>.mapSuccess(
+    transform: (T) -> R,
+): cobresun.movieclub.app.core.domain.AsyncResult<R> = when (this) {
+    is cobresun.movieclub.app.core.domain.AsyncResult.Success -> cobresun.movieclub.app.core.domain.AsyncResult.Success(transform(data))
+    is cobresun.movieclub.app.core.domain.AsyncResult.Loading -> cobresun.movieclub.app.core.domain.AsyncResult.Loading
+    is cobresun.movieclub.app.core.domain.AsyncResult.Error -> this
 }
 
 private fun WorkSearchResult.toNewWork() = NewWork(

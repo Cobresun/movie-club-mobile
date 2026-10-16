@@ -18,6 +18,7 @@ import cobresun.movieclub.app.core.presentation.isRetryable
 import cobresun.movieclub.app.core.presentation.toUserMessage
 import cobresun.movieclub.app.lists.domain.ListsRepository
 import cobresun.movieclub.app.lists.domain.WorkList
+import cobresun.movieclub.app.lists.domain.ListedWork
 import cobresun.movieclub.app.member.domain.MemberRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -43,7 +44,14 @@ data class ListsState(
     val shuffle: ShuffleState? = null,
     /** Non-null while reordering the selected list. */
     val reorderDraft: List<Work>? = null,
+    /** Every item across the user lists, for picking a review in the Add review sheet. */
+    val allItems: AsyncResult<List<ListedWork>> = AsyncResult.Loading,
 ) {
+    /** [allItems] with the Up Next work first, then list order. */
+    val pickableItems: List<ListedWork>
+        get() = (allItems as? AsyncResult.Success)?.data.orEmpty()
+            .sortedByDescending { it.work.id == upNextWorkId }
+
     val selectedList: WorkList?
         get() = (lists as? AsyncResult.Success)?.data?.firstOrNull { it.id == selectedListId }
 
@@ -87,7 +95,11 @@ sealed interface ListsAction {
     data class SetUpNext(val work: Work) : ListsAction
     data object ClearUpNext : ListsAction
     data class MoveWork(val work: Work, val destinationListId: String) : ListsAction
-    data class MoveToReviews(val work: Work) : ListsAction
+    /** Moves [work] from [fromListId] (default: the selected list) into reviews. */
+    data class MoveToReviews(val work: Work, val fromListId: String? = null) : ListsAction
+
+    /** (Re)loads [ListsState.allItems] for the Add review sheet. */
+    data object LoadAllItems : ListsAction
 
     data object StartReorder : ListsAction
     data class MoveItem(val from: Int, val to: Int) : ListsAction
@@ -132,7 +144,8 @@ class ListsViewModel(
             is ListsAction.SetUpNext -> setUpNext(action.work.id, "${action.work.title} is up next")
             ListsAction.ClearUpNext -> setUpNext(null, "Up Next cleared")
             is ListsAction.MoveWork -> moveWork(action.work, action.destinationListId)
-            is ListsAction.MoveToReviews -> moveToReviews(action.work)
+            is ListsAction.MoveToReviews -> moveToReviews(action.work, action.fromListId)
+            ListsAction.LoadAllItems -> loadAllItems()
             ListsAction.StartReorder -> _state.update {
                 it.copy(reorderDraft = (it.selectedItems as? AsyncResult.Success)?.data)
             }
@@ -380,15 +393,41 @@ class ListsViewModel(
         }
     }
 
-    private fun moveToReviews(work: Work) {
-        val listId = _state.value.selectedListId ?: return
-        val before = (_state.value.itemsByList[listId] as? AsyncResult.Success)?.data ?: return
-        setItems(listId, before.filter { it.id != work.id })
+    private fun loadAllItems() {
+        viewModelScope.launch {
+            if (_state.value.allItems !is AsyncResult.Success) _state.update { it.copy(allItems = AsyncResult.Loading) }
+            when (val result = listsRepository.getAllItems(clubSlug)) {
+                is Result.Success -> _state.update { it.copy(allItems = AsyncResult.Success(result.data)) }
+                is Result.Error -> if (_state.value.allItems !is AsyncResult.Success) {
+                    _state.update { it.copy(allItems = AsyncResult.Error(dataError = result.error)) }
+                }
+            }
+        }
+    }
+
+    /**
+     * Same move the web's "queue review" does: `POST list/:from/items/:id/move` into
+     * the reviews list, so the work leaves its list instead of being duplicated.
+     */
+    private fun moveToReviews(work: Work, fromListId: String?) {
+        val listId = fromListId ?: _state.value.selectedListId ?: return
+        val before = (_state.value.itemsByList[listId] as? AsyncResult.Success)?.data
+        val allBefore = _state.value.allItems
+        before?.let { setItems(listId, it.filter { item -> item.id != work.id }) }
+        _state.update { s ->
+            s.copy(allItems = (s.allItems as? AsyncResult.Success)?.let { all ->
+                AsyncResult.Success(all.data.filter { it.work.id != work.id })
+            } ?: s.allItems)
+        }
+        fun rollback() {
+            before?.let { setItems(listId, it) }
+            _state.update { it.copy(allItems = allBefore) }
+        }
         viewModelScope.launch {
             val reviewsListId = when (val r = listsRepository.getReviewsListId(clubSlug)) {
                 is Result.Success -> r.data
                 is Result.Error -> {
-                    setItems(listId, before)
+                    rollback()
                     emitError(r.error, "move ${work.title} to reviews")
                     return@launch
                 }
@@ -396,10 +435,18 @@ class ListsViewModel(
             listsRepository.moveItem(clubSlug, listId, work.id, reviewsListId)
                 .onSuccess {
                     if (_state.value.upNextWorkId == work.id) _state.update { it.copy(upNextWorkId = null) }
+                    if (before == null) {
+                        // Not loaded locally; keep the list's item count honest.
+                        _state.update { s ->
+                            s.copy(lists = s.lists.mapLists { lists ->
+                                lists.map { if (it.id == listId) it.copy(itemCount = (it.itemCount - 1).coerceAtLeast(0)) else it }
+                            })
+                        }
+                    }
                     _events.emit(ListsEvent.MovedToReviews(work.title))
                 }
                 .onError { error ->
-                    setItems(listId, before)
+                    rollback()
                     emitError(error, "move ${work.title} to reviews")
                 }
         }

@@ -11,6 +11,7 @@ import cobresun.movieclub.app.lists.data.dto.ListTitleDto
 import cobresun.movieclub.app.lists.data.dto.MoveItemDto
 import cobresun.movieclub.app.lists.data.dto.NextWorkDto
 import cobresun.movieclub.app.lists.data.dto.ReorderItemsDto
+import cobresun.movieclub.app.lists.data.dto.SourcedListItemDto
 import cobresun.movieclub.app.lists.data.dto.ReorderListsDto
 import cobresun.movieclub.app.lists.data.dto.WorkListDto
 import io.ktor.client.HttpClient
@@ -27,6 +28,8 @@ interface ListsDataSource {
     suspend fun deleteList(clubSlug: String, listId: String): Result<Unit, DataError.Remote>
     suspend fun reorderLists(clubSlug: String, body: ReorderListsDto): Result<Unit, DataError.Remote>
     suspend fun getItems(clubSlug: String, listId: String): Result<List<WorkListItemDto>, DataError.Remote>
+    /** Every item on the club's user lists (reviews excluded), in list then item order. */
+    suspend fun getAllItems(clubSlug: String): Result<List<SourcedListItemDto>, DataError.Remote>
     suspend fun addItem(clubSlug: String, listId: String, body: ListInsertDto): Result<Unit, DataError.Remote>
     suspend fun removeItem(clubSlug: String, listId: String, workId: String): Result<Unit, DataError.Remote>
     suspend fun reorderItems(clubSlug: String, listId: String, body: ReorderItemsDto): Result<Unit, DataError.Remote>
@@ -57,6 +60,9 @@ class KtorListsDataSource(
 
     override suspend fun reorderLists(clubSlug: String, body: ReorderListsDto): Result<Unit, DataError.Remote> =
         safeCall { httpClient.put("${list(clubSlug)}/reorder") { setBody(body) } }
+
+    override suspend fun getAllItems(clubSlug: String): Result<List<SourcedListItemDto>, DataError.Remote> =
+        safeCall { httpClient.get("${list(clubSlug)}/all-items") }
 
     override suspend fun getItems(clubSlug: String, listId: String): Result<List<WorkListItemDto>, DataError.Remote> =
         safeCall { httpClient.get("${list(clubSlug)}/$listId") }
