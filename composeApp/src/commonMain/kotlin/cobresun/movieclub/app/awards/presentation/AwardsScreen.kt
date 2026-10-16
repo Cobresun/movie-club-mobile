@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.awards.presentation
 
+import cobresun.movieclub.app.core.presentation.components.LocalTabBarInset
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -106,7 +107,7 @@ fun AwardsScreen(
             visible = season?.step?.manualNext != null,
             enter = fadeIn() + slideInVertically { it / 2 },
             exit = fadeOut() + slideOutVertically { it / 2 },
-            modifier = Modifier.align(Alignment.BottomCenter),
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = LocalTabBarInset.current),
         ) {
             if (season != null) AdvanceBar(state, season, onAction)
         }
@@ -179,7 +180,7 @@ private fun SeasonContent(
         modifier = Modifier.fillMaxSize(),
     ) {
         LazyColumn(
-            contentPadding = PaddingValues(top = 4.dp, bottom = if (season.step.manualNext != null) 140.dp else 32.dp),
+            contentPadding = PaddingValues(top = 4.dp, bottom = (if (season.step.manualNext != null) 140.dp else 32.dp) + LocalTabBarInset.current),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxSize(),
         ) {

@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.stats.presentation
 
+import cobresun.movieclub.app.core.presentation.components.LocalTabBarInset
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -99,7 +100,7 @@ private fun StatsContent(state: StatsState, data: StatsData, onGoToReviews: () -
     }
     val summary = remember(reviews) { computeSummary(reviews) }
     LazyColumn(
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 32.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 32.dp + LocalTabBarInset.current),
         modifier = Modifier.fillMaxSize(),
     ) {
         if (reviews.size < FEW_REVIEWS) item("hint") { Box(Modifier.padding(bottom = 14.dp)) { FewReviewsHint(reviews.size, type) } }

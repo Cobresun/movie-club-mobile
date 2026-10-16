@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 
 /**
  * One destination in a [PlatformTabBar].
@@ -40,3 +41,16 @@ expect fun PlatformTabBar(
  * they would otherwise draw on top of it.
  */
 val LocalNativeChromeVisible = compositionLocalOf { true }
+
+/**
+ * True where the tab bar is translucent and content should scroll underneath it
+ * (the iOS Liquid Glass `UITabBar`). False on Android, where the Material bar is opaque
+ * and content is simply laid out above it.
+ */
+expect val tabBarOverlaysContent: Boolean
+
+/**
+ * Height of the tab bar that content scrolls beneath, or 0.dp where it doesn't overlay.
+ * Tab screens add it to their scrollable content padding and bottom-anchored controls (FABs).
+ */
+val LocalTabBarInset = compositionLocalOf { 0.dp }

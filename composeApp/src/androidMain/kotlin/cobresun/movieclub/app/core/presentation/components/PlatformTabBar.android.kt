@@ -37,3 +37,5 @@ actual fun PlatformTabBar(
         }
     }
 }
+
+actual val tabBarOverlaysContent: Boolean = false

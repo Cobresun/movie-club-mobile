@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.lists.presentation
 
+import cobresun.movieclub.app.core.presentation.components.LocalTabBarInset
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.fadeIn
@@ -158,7 +159,7 @@ fun ListsScreen(
             visible = state.reorderDraft == null && state.selectedList != null,
             enter = fadeIn(),
             exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
+            modifier = Modifier.align(Alignment.BottomEnd).padding(bottom = LocalTabBarInset.current).padding(20.dp),
         ) {
             ExtendedFloatingActionButton(
                 onClick = onAddClick,
@@ -328,7 +329,7 @@ private fun ListContent(
                 val items = state.visibleItems
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 104.dp),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 112.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 112.dp + LocalTabBarInset.current),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(18.dp),
                     modifier = Modifier.fillMaxSize(),
@@ -453,7 +454,7 @@ private fun ReorderList(
             Button(onClick = onSave) { Text("Save") }
         }
         LazyColumn(
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp + LocalTabBarInset.current),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             itemsIndexed(items, key = { _, w -> w.id }) { index, work ->

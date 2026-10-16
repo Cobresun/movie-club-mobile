@@ -88,6 +88,8 @@ actual fun PlatformTabBar(
     }
 }
 
+actual val tabBarOverlaysContent: Boolean = true
+
 private class TabBarDelegate(
     private val onSelect: (String) -> Unit,
 ) : NSObject(), UITabBarDelegateProtocol {

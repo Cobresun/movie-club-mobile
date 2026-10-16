@@ -1,5 +1,8 @@
 package cobresun.movieclub.app.club.presentation
 
+import cobresun.movieclub.app.core.presentation.components.LocalTabBarInset
+import cobresun.movieclub.app.core.presentation.components.tabBarOverlaysContent
+import androidx.compose.ui.unit.dp
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -176,11 +179,18 @@ fun ClubScreenRoot(
         AnimatedContent(
             targetState = selectedTab,
             transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(160)) },
-            modifier = Modifier.fillMaxSize().padding(padding),
+            // iOS: let content run under the translucent glass bar; screens pad by LocalTabBarInset.
+            modifier = Modifier.fillMaxSize().then(
+                if (tabBarOverlaysContent) Modifier.padding(top = padding.calculateTopPadding())
+                else Modifier.padding(padding)
+            ),
             label = "club-tab",
         ) { tab ->
             stateHolder.SaveableStateProvider(tab.name) {
-              CompositionLocalProvider(LocalSnackbarHostState provides snackbarHostState) {
+              CompositionLocalProvider(
+                LocalSnackbarHostState provides snackbarHostState,
+                LocalTabBarInset provides if (tabBarOverlaysContent) padding.calculateBottomPadding() else 0.dp,
+              ) {
                 when (tab) {
                     ClubTab.REVIEWS -> ReviewsScreen(
                         state = reviewsState,

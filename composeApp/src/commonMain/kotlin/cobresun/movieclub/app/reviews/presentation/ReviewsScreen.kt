@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.reviews.presentation
 
+import cobresun.movieclub.app.core.presentation.components.LocalTabBarInset
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.fadeIn
@@ -104,7 +105,7 @@ fun ReviewsScreen(
                         val visible = state.visibleReviews
                         LazyVerticalGrid(
                             columns = GridCells.Adaptive(minSize = 150.dp),
-                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 112.dp),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 112.dp + LocalTabBarInset.current),
                             horizontalArrangement = Arrangement.spacedBy(14.dp),
                             verticalArrangement = Arrangement.spacedBy(20.dp),
                             modifier = Modifier.fillMaxSize(),
@@ -147,7 +148,7 @@ fun ReviewsScreen(
             visible = state.reviews is AsyncResult.Success,
             enter = fadeIn(),
             exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
+            modifier = Modifier.align(Alignment.BottomEnd).padding(bottom = LocalTabBarInset.current).padding(20.dp),
         ) {
             ExtendedFloatingActionButton(
                 onClick = onAddClick,
