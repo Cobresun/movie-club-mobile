@@ -1,5 +1,7 @@
 package cobresun.movieclub.app.reviews.presentation
 
+import androidx.compose.runtime.remember
+
 import cobresun.movieclub.app.core.presentation.components.LocalTabBarInset
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -169,6 +171,7 @@ fun ReviewsScreen(
                 currentUserId = state.currentUserId,
                 discussionQuestionsEnabled = state.discussionQuestionsEnabled,
                 scoredWorks = state.myScoredWorks,
+                fact = remember(review, state.reviews, state.currentUserId) { state.spotlightFact(review) },
                 onAction = onAction,
                 onDismiss = { onAction(ReviewsAction.CloseDetail) },
             )

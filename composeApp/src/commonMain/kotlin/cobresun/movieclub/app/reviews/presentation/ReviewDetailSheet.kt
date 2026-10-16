@@ -67,6 +67,10 @@ import cobresun.movieclub.app.providers.presentation.WatchProvidersSection
 import cobresun.movieclub.app.core.presentation.formatShort
 import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.reviews.domain.Review
+import cobresun.movieclub.app.reviews.domain.ReviewFact
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
 import cobresun.movieclub.app.reviews.domain.ScoreScale
 import cobresun.movieclub.app.reviews.domain.ScoreAssist
 import cobresun.movieclub.app.reviews.domain.ScoredWork
@@ -81,6 +85,8 @@ fun ReviewDetailSheet(
     currentUserId: String?,
     discussionQuestionsEnabled: Boolean,
     scoredWorks: List<ScoredWork>,
+    /** Spotlight fact; the caller passes null until the club's scores are revealed. */
+    fact: ReviewFact?,
     onAction: (ReviewsAction) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -135,6 +141,12 @@ fun ReviewDetailSheet(
                 )
 
                 ClubScores(review = review, members = members, currentUserId = currentUserId)
+
+                // Like the web drawer: the fact sits between the verdict and the reference
+                // material, fading in after the sheet opens.
+                AnimatedVisibility(visible = fact != null, enter = fadeIn() + expandVertically()) {
+                    fact?.let { ReviewFactCard(it) }
+                }
             }
 
             if (work.type == cobresun.movieclub.app.core.domain.WorkType.MOVIE) {

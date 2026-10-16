@@ -24,6 +24,8 @@ import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.member.domain.MemberRepository
 import cobresun.movieclub.app.reviews.domain.MemberScore
 import cobresun.movieclub.app.reviews.domain.Review
+import cobresun.movieclub.app.reviews.domain.ReviewFact
+import cobresun.movieclub.app.reviews.domain.ReviewFacts
 import cobresun.movieclub.app.reviews.domain.ReviewComment
 import cobresun.movieclub.app.reviews.domain.ReviewCommentsRepository
 import cobresun.movieclub.app.reviews.domain.ReviewSortOption
@@ -61,6 +63,16 @@ data class ReviewsState(
 
     val reviewedExternalIds: Set<String>
         get() = (reviews as? AsyncResult.Success)?.data.orEmpty().mapNotNull { it.work.externalId }.toSet()
+
+    /**
+     * Spotlight fact for [review], or null while its club scores are still hidden.
+     * Web reveals (and shows facts) once you've scored the work yourself; the app
+     * has no manual reveal toggle, so scoring it is the reveal.
+     */
+    fun spotlightFact(review: Review): ReviewFact? {
+        if (review.scoreOf(currentUserId) == null) return null
+        return ReviewFacts.compute((reviews as? AsyncResult.Success)?.data.orEmpty(), review.work.id)
+    }
 
     fun review(workId: String): Review? = (reviews as? AsyncResult.Success)?.data?.firstOrNull { it.work.id == workId }
 }
