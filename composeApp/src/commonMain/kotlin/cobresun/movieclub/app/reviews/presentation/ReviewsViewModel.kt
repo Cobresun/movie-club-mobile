@@ -31,6 +31,7 @@ import cobresun.movieclub.app.reviews.domain.ReviewCommentsRepository
 import cobresun.movieclub.app.reviews.domain.ReviewSortOption
 import cobresun.movieclub.app.reviews.domain.ReviewSortState
 import cobresun.movieclub.app.reviews.domain.ReviewsRepository
+import cobresun.movieclub.app.reviews.domain.ScoreReveal
 import cobresun.movieclub.app.reviews.domain.ScoreScale
 import cobresun.movieclub.app.reviews.domain.filterReviews
 import cobresun.movieclub.app.reviews.domain.sortReviews
@@ -54,7 +55,13 @@ data class ReviewsState(
     val detail: ReviewDetailState? = null,
     /** The user's scores across all clubs, for Score Assist. */
     val myScoredWorks: List<ScoredWork> = emptyList(),
+    /** Works whose club scores were revealed by hand this visit (web keeps these in memory too). */
+    val revealedWorkIds: Set<String> = emptySet(),
 ) {
+    fun isRevealed(review: Review): Boolean = ScoreReveal.isRevealed(review, currentUserId, revealedWorkIds)
+
+    fun canReveal(review: Review): Boolean = ScoreReveal.canReveal(review, currentUserId, revealedWorkIds)
+
     val visibleReviews: List<Review>
         get() = sortReviews(
             filterReviews((reviews as? AsyncResult.Success)?.data.orEmpty(), query),
@@ -65,12 +72,11 @@ data class ReviewsState(
         get() = (reviews as? AsyncResult.Success)?.data.orEmpty().mapNotNull { it.work.externalId }.toSet()
 
     /**
-     * Spotlight fact for [review], or null while its club scores are still hidden.
-     * Web reveals (and shows facts) once you've scored the work yourself; the app
-     * has no manual reveal toggle, so scoring it is the reveal.
+     * Spotlight fact for [review], or null while its club scores are still hidden:
+     * like web, every fact is derived from the scores, so it shares their reveal.
      */
     fun spotlightFact(review: Review): ReviewFact? {
-        if (review.scoreOf(currentUserId) == null) return null
+        if (!isRevealed(review)) return null
         return ReviewFacts.compute((reviews as? AsyncResult.Success)?.data.orEmpty(), review.work.id)
     }
 
@@ -109,6 +115,7 @@ sealed interface ReviewsAction {
     data class SaveScore(val workId: String, val score: Double) : ReviewsAction
     data class SetReviewedDate(val workId: String, val date: LocalDate) : ReviewsAction
     data class DeleteScore(val workId: String) : ReviewsAction
+    data class RevealScores(val workId: String) : ReviewsAction
     data class AddComment(val content: String, val spoiler: Boolean) : ReviewsAction
     data class EditComment(val commentId: String, val content: String, val spoiler: Boolean) : ReviewsAction
     data class DeleteComment(val commentId: String) : ReviewsAction
@@ -165,6 +172,7 @@ class ReviewsViewModel(
             is ReviewsAction.SaveScore -> saveScore(action.workId, action.score)
             is ReviewsAction.SetReviewedDate -> setReviewedDate(action.workId, action.date)
             is ReviewsAction.DeleteScore -> deleteScore(action.workId)
+            is ReviewsAction.RevealScores -> _state.update { it.copy(revealedWorkIds = it.revealedWorkIds + action.workId) }
             is ReviewsAction.AddComment -> addComment(action.content, action.spoiler)
             is ReviewsAction.EditComment -> editComment(action.commentId, action.content, action.spoiler)
             is ReviewsAction.DeleteComment -> deleteComment(action.commentId)

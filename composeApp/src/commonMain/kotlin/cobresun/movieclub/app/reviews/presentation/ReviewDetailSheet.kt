@@ -71,6 +71,10 @@ import cobresun.movieclub.app.reviews.domain.ReviewFact
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.material.icons.outlined.Visibility
+import cobresun.movieclub.app.reviews.domain.ScoreReveal
 import cobresun.movieclub.app.reviews.domain.ScoreScale
 import cobresun.movieclub.app.reviews.domain.ScoreAssist
 import cobresun.movieclub.app.reviews.domain.ScoredWork
@@ -85,6 +89,10 @@ fun ReviewDetailSheet(
     currentUserId: String?,
     discussionQuestionsEnabled: Boolean,
     scoredWorks: List<ScoredWork>,
+    /** False hides everyone else's scores and the average until you score or reveal. */
+    revealed: Boolean,
+    /** Offer "Reveal club scores": hidden, with something to hide. */
+    canReveal: Boolean,
     /** Spotlight fact; the caller passes null until the club's scores are revealed. */
     fact: ReviewFact?,
     onAction: (ReviewsAction) -> Unit,
@@ -140,7 +148,14 @@ fun ReviewDetailSheet(
                     },
                 )
 
-                ClubScores(review = review, members = members, currentUserId = currentUserId)
+                ClubScores(
+                    review = review,
+                    members = members,
+                    currentUserId = currentUserId,
+                    revealed = revealed,
+                    canReveal = canReveal,
+                    onReveal = { onAction(ReviewsAction.RevealScores(work.id)) },
+                )
 
                 // Like the web drawer: the fact sits between the verdict and the reference
                 // material, fading in after the sheet opens.
@@ -229,21 +244,44 @@ fun ReviewDetailSheet(
 
 /** Club average plus a bar per member, highest first; unscored members trail. */
 @Composable
-private fun ClubScores(review: Review, members: List<Member>, currentUserId: String?) {
+private fun ClubScores(
+    review: Review,
+    members: List<Member>,
+    currentUserId: String?,
+    revealed: Boolean,
+    canReveal: Boolean,
+    onReveal: () -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             SectionLabel("Club scores", Modifier.weight(1f))
-            review.average?.let { ScoreBadge(it, large = false) }
+            review.average?.let {
+                ScoreBadge(it.takeUnless { ScoreReveal.isHidden(null, currentUserId, revealed) }, large = false)
+            }
+        }
+        // Like web's reveal pill: collapses away once scores are revealed (or you score).
+        AnimatedVisibility(visible = canReveal, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                FilledTonalButton(onClick = onReveal) {
+                    Icon(Icons.Outlined.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Reveal club scores")
+                }
+            }
         }
         val known = members.associateBy { it.id }
-        val rows = (members.map { it.id } + review.scores.keys).distinct()
+        val memberOrder = (members.map { it.id } + review.scores.keys).distinct()
             .map { id -> Triple(id, known[id], review.scores[id]?.value) }
-            .sortedWith(compareByDescending<Triple<String, Member?, Double?>> { it.third != null }.thenByDescending { it.third })
+        // Ranking by score would give hidden scores away, so keep club order until revealed.
+        val rows = if (!revealed) memberOrder.sortedByDescending { it.third != null }
+        else memberOrder.sortedWith(compareByDescending<Triple<String, Member?, Double?>> { it.third != null }.thenByDescending { it.third })
         if (rows.isEmpty()) {
             Text("No scores yet.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        rows.forEach { (id, member, value) ->
+        rows.forEach { (id, member, score) ->
             val name = member?.name ?: "Former member"
+            val hidden = score != null && ScoreReveal.isHidden(id, currentUserId, revealed)
+            val value = score.takeUnless { hidden }
             val fraction by animateFloatAsState(((value ?: 0.0) / ScoreScale.MAX).toFloat())
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Avatar(name, member?.imageUrl, size = 28.dp)
@@ -271,13 +309,19 @@ private fun ClubScores(review: Review, members: List<Member>, currentUserId: Str
                         )
                     }
                 }
-                Text(
-                    value?.let(ScoreScale::format) ?: "—",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (value == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.width(44.dp),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.End,
-                )
+                if (hidden) {
+                    Box(Modifier.width(44.dp), contentAlignment = Alignment.CenterEnd) {
+                        HiddenScoreIcon(Modifier.size(20.dp))
+                    }
+                } else {
+                    Text(
+                        value?.let(ScoreScale::format) ?: "—",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (value == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.width(44.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                    )
+                }
             }
         }
     }

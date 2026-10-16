@@ -37,6 +37,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.RateReview
 import androidx.compose.material.icons.outlined.SearchOff
+import androidx.compose.material.icons.outlined.VisibilityOff
+import cobresun.movieclub.app.reviews.domain.ScoreReveal
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
@@ -136,6 +138,7 @@ fun ReviewsScreen(
                                     review = review,
                                     members = state.members,
                                     currentUserId = state.currentUserId,
+                                    revealed = state.isRevealed(review),
                                     onClick = { onAction(ReviewsAction.OpenDetail(review.work.id)) },
                                     modifier = Modifier.animateItem(),
                                 )
@@ -171,7 +174,9 @@ fun ReviewsScreen(
                 currentUserId = state.currentUserId,
                 discussionQuestionsEnabled = state.discussionQuestionsEnabled,
                 scoredWorks = state.myScoredWorks,
-                fact = remember(review, state.reviews, state.currentUserId) { state.spotlightFact(review) },
+                revealed = state.isRevealed(review),
+                canReveal = state.canReveal(review),
+                fact = remember(review, state.reviews, state.currentUserId, state.revealedWorkIds) { state.spotlightFact(review) },
                 onAction = onAction,
                 onDismiss = { onAction(ReviewsAction.CloseDetail) },
             )
@@ -273,6 +278,8 @@ private fun ReviewCard(
     review: Review,
     members: List<Member>,
     currentUserId: String?,
+    /** False hides everyone else's scores and the average (see ScoreReveal). */
+    revealed: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -286,8 +293,9 @@ private fun ReviewCard(
         Box {
             Poster(work.imageUrl, work.title, Modifier.fillMaxWidth())
             review.average?.let { avg ->
+                // Cards never reveal on tap (same as web): that's the detail sheet's job.
                 ScoreBadge(
-                    value = avg,
+                    value = avg.takeUnless { ScoreReveal.isHidden(null, currentUserId, revealed) },
                     modifier = Modifier.align(Alignment.BottomStart).padding(8.dp),
                 )
             }
@@ -319,7 +327,11 @@ private fun ReviewCard(
             Spacer(Modifier.height(6.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 scored.forEach { (member, value) ->
-                    MemberScoreChip(member, value, isMe = member.id == currentUserId)
+                    MemberScoreChip(
+                        member,
+                        value.takeUnless { ScoreReveal.isHidden(member.id, currentUserId, revealed) },
+                        isMe = member.id == currentUserId,
+                    )
                 }
             }
         }
@@ -327,7 +339,7 @@ private fun ReviewCard(
 }
 
 @Composable
-fun MemberScoreChip(member: Member, value: Double, isMe: Boolean, modifier: Modifier = Modifier) {
+fun MemberScoreChip(member: Member, value: Double?, isMe: Boolean, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .clip(MaterialTheme.shapes.extraLarge)
@@ -337,17 +349,32 @@ fun MemberScoreChip(member: Member, value: Double, isMe: Boolean, modifier: Modi
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Avatar(member.name, member.imageUrl, size = 18.dp)
-        Text(
-            ScoreScale.format(value),
-            style = MaterialTheme.typography.labelMedium,
-            color = if (isMe) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface,
-        )
+        if (value == null) {
+            HiddenScoreIcon(Modifier.size(14.dp))
+        } else {
+            Text(
+                ScoreScale.format(value),
+                style = MaterialTheme.typography.labelMedium,
+                color = if (isMe) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface,
+            )
+        }
     }
 }
 
-/** Gold star + club average, legible over any poster. */
+/** Placeholder for a score kept hidden until you score the work or reveal it. */
 @Composable
-fun ScoreBadge(value: Double, modifier: Modifier = Modifier, large: Boolean = false) {
+fun HiddenScoreIcon(modifier: Modifier = Modifier) {
+    Icon(
+        Icons.Outlined.VisibilityOff,
+        contentDescription = "Hidden score",
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier,
+    )
+}
+
+/** Gold star + club average (null while hidden), legible over any poster. */
+@Composable
+fun ScoreBadge(value: Double?, modifier: Modifier = Modifier, large: Boolean = false) {
     Row(
         modifier = modifier
             .clip(MaterialTheme.shapes.extraSmall)
@@ -362,10 +389,14 @@ fun ScoreBadge(value: Double, modifier: Modifier = Modifier, large: Boolean = fa
             tint = MaterialTheme.colorScheme.tertiary,
             modifier = Modifier.size(if (large) 20.dp else 14.dp),
         )
-        Text(
-            ScoreScale.format(value),
-            style = if (large) MaterialTheme.typography.titleLarge else MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+        if (value == null) {
+            HiddenScoreIcon(Modifier.size(if (large) 20.dp else 14.dp))
+        } else {
+            Text(
+                ScoreScale.format(value),
+                style = if (large) MaterialTheme.typography.titleLarge else MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
     }
 }
