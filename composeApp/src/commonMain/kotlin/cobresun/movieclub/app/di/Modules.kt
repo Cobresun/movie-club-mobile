@@ -18,6 +18,7 @@ import cobresun.movieclub.app.member.data.network.KtorMemberDataSource
 import cobresun.movieclub.app.member.data.network.MemberDataSource
 import cobresun.movieclub.app.member.data.repository.MemberRepositoryImpl
 import cobresun.movieclub.app.member.domain.MemberRepository
+import cobresun.movieclub.app.member.domain.AccountRepository
 import cobresun.movieclub.app.member.presentation.CreateClubViewModel
 import cobresun.movieclub.app.member.presentation.MemberViewModel
 import cobresun.movieclub.app.reviews.data.network.KtorReviewsDataSource
@@ -36,6 +37,7 @@ import org.koin.core.module.Module
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.bind
+import org.koin.dsl.binds
 import org.koin.dsl.module
 
 expect val platformModule: Module
@@ -54,7 +56,7 @@ val sharedModule = module {
 
     // Member
     single { KtorMemberDataSource(get()) }.bind<MemberDataSource>()
-    single { MemberRepositoryImpl(get()) }.bind<MemberRepository>()
+    single { MemberRepositoryImpl(get()) } binds arrayOf(MemberRepository::class, AccountRepository::class)
     viewModel { MemberViewModel(get()) }
     viewModel { CreateClubViewModel(get()) }
 

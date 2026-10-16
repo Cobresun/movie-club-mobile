@@ -8,4 +8,5 @@ data class MemberDto(
     val email: String,
     val name: String,
     val image: String? = null,
+    val role: String? = null,
 )

@@ -73,6 +73,10 @@ kotlin {
             api(libs.datastore.preferences)
         }
 
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
+
         nativeMain.dependencies {
             implementation(libs.ktor.client.darwin)
         }

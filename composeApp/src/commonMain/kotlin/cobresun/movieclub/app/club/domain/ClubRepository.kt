@@ -5,20 +5,30 @@ import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.member.domain.Member
 
 interface ClubRepository {
-    /**
-     * Gets members for a club from the network.
-     * Returns error if network request fails.
-     */
     suspend fun getMembers(clubSlug: String): Result<List<Member>, DataError.Remote>
 
-    /**
-     * Generates an invite token for the club.
-     * Token should be appended to base URL as /join-club/{token}
-     */
+    /** Generates an invite token; see [ClubValidation.inviteLink]. */
     suspend fun generateInviteToken(clubSlug: String): Result<String, DataError.Remote>
 
-    /**
-     * Removes the current user from the club.
-     */
+    /** Removes the current user from the club. */
     suspend fun leaveClub(clubSlug: String): Result<Unit, DataError.Remote>
+
+    suspend fun removeMember(clubSlug: String, memberId: String): Result<Unit, DataError.Remote>
+
+    suspend fun updateName(clubSlug: String, name: String): Result<Unit, ApiError>
+
+    /** Returns the new slug on success; server message on invalid/taken slugs. */
+    suspend fun updateSlug(clubSlug: String, newSlug: String): Result<String, ApiError>
+
+    suspend fun getFeatures(clubSlug: String): Result<ClubFeatures, DataError.Remote>
+
+    suspend fun updateFeatures(
+        clubSlug: String,
+        awards: Boolean? = null,
+        discussionQuestions: Boolean? = null,
+    ): Result<ClubFeatures, DataError.Remote>
+
+    suspend fun getInviteInfo(token: String): Result<InviteInfo, ApiError>
+
+    suspend fun joinClub(token: String): Result<Unit, ApiError>
 }
