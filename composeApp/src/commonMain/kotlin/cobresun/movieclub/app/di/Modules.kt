@@ -6,6 +6,11 @@ import cobresun.movieclub.app.auth.data.repository.AuthRepositoryImpl
 import cobresun.movieclub.app.auth.domain.AuthRepository
 import cobresun.movieclub.app.auth.presentation.AuthViewModel
 import cobresun.movieclub.app.auth.presentation.ForgotPasswordViewModel
+import cobresun.movieclub.app.awards.data.network.AwardsDataSource
+import cobresun.movieclub.app.awards.data.network.KtorAwardsDataSource
+import cobresun.movieclub.app.awards.data.repository.AwardsRepositoryImpl
+import cobresun.movieclub.app.awards.domain.AwardsRepository
+import cobresun.movieclub.app.awards.presentation.AwardsViewModel
 import cobresun.movieclub.app.club.data.network.ClubDataSource
 import cobresun.movieclub.app.club.data.network.KtorClubDataSource
 import cobresun.movieclub.app.club.data.repository.ClubRepositoryImpl
@@ -85,6 +90,11 @@ val sharedModule = module {
     single { KtorListsDataSource(get()) }.bind<ListsDataSource>()
     single { ListsRepositoryImpl(get()) }.bind<ListsRepository>()
     viewModelOf(::ListsViewModel)
+
+    // Awards
+    single { KtorAwardsDataSource(get()) }.bind<AwardsDataSource>()
+    single { AwardsRepositoryImpl(get()) }.bind<AwardsRepository>()
+    viewModelOf(::AwardsViewModel)
 
     // Search (TMDB / Google Books)
     single { KtorSearchDataSource(get()) }.bind<SearchDataSource>()
