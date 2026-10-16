@@ -32,11 +32,11 @@ fun Work.posterSubtitle(): String? {
 }
 
 /** Facts row in detail sheets: year, runtime/pages, genres. */
-fun Work.metaFacts(): List<String> = when (val d = details) {
+fun Work.metaFacts(includeTmdbRating: Boolean = true): List<String> = when (val d = details) {
     is WorkDetails.Movie -> listOfNotNull(
         year?.toString(),
         d.runtimeMinutes?.let(::formatRuntime),
-        d.voteAverage?.takeIf { it > 0 }?.let { "TMDB " + (kotlin.math.round(it * 10) / 10).toString() },
+        d.voteAverage?.takeIf { it > 0 && includeTmdbRating }?.let { "TMDB " + (kotlin.math.round(it * 10) / 10).toString() },
     )
 
     is WorkDetails.Book -> listOfNotNull(

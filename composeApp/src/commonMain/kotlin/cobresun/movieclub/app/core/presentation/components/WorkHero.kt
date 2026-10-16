@@ -39,6 +39,10 @@ import cobresun.movieclub.app.core.domain.Work
 import cobresun.movieclub.app.core.domain.WorkDetails
 import cobresun.movieclub.app.core.presentation.metaFacts
 import coil3.compose.AsyncImage
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material3.Icon
 
 /**
  * Cinematic header for a work's detail sheet: backdrop (or a dimmed poster)
@@ -48,6 +52,8 @@ import coil3.compose.AsyncImage
 fun WorkHero(
     work: Work,
     modifier: Modifier = Modifier,
+    /** When set, the TMDB rating shows as a tap-to-reveal placeholder (reviews only, like web). */
+    onRevealTmdbRating: (() -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     val backdrop = (work.details as? WorkDetails.Movie)?.backdropUrl ?: work.imageUrl
@@ -88,13 +94,32 @@ fun WorkHero(
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                 )
-                val facts = work.metaFacts()
+                val facts = work.metaFacts(includeTmdbRating = onRevealTmdbRating == null)
+                val hasTmdbRating = ((work.details as? WorkDetails.Movie)?.voteAverage ?: 0.0) > 0
                 if (facts.isNotEmpty()) {
                     Text(
                         text = facts.joinToString("  •  "),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+                if (onRevealTmdbRating != null && hasTmdbRating) {
+                    Row(
+                        modifier = Modifier
+                            .clip(MaterialTheme.shapes.extraSmall)
+                            .clickable(onClickLabel = "Reveal TMDB rating", onClick = onRevealTmdbRating)
+                            .padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text("TMDB", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(
+                            Icons.Outlined.VisibilityOff,
+                            contentDescription = "Hidden TMDB rating, tap to reveal",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
                 }
                 trailing?.invoke()
             }

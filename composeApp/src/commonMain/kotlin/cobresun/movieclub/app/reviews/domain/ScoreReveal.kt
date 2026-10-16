@@ -22,6 +22,14 @@ object ScoreReveal {
     fun isHidden(memberId: String?, currentUserId: String?, revealed: Boolean): Boolean =
         !revealed && isOthersScore(memberId, currentUserId)
 
+    /**
+     * Web's TMDB-rating blur in the review details: hidden until you've scored
+     * the work or tapped the rating (a per-sheet reveal, separate from the
+     * club-score reveal). Lists never hide it.
+     */
+    fun isTmdbRatingHidden(review: Review, currentUserId: String?, tappedToReveal: Boolean): Boolean =
+        review.scoreOf(currentUserId) == null && !tappedToReveal
+
     /** Whether to offer "Reveal club scores": still hidden and something to hide. */
     fun canReveal(review: Review, currentUserId: String?, revealedWorkIds: Set<String>): Boolean =
         !isRevealed(review, currentUserId, revealedWorkIds) &&

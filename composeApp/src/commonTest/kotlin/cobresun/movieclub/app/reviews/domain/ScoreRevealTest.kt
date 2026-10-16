@@ -60,3 +60,22 @@ class ScoreRevealTest {
         assertFalse(ScoreReveal.canReveal(review("c", emptyMap()), "me", emptySet()))
     }
 }
+
+class TmdbRatingRevealTest {
+    private fun review(scores: Map<String, Double>) = Review(
+        work = Work(
+            id = "w", type = WorkType.MOVIE, title = "w", addedAt = "2024-01-01T00:00:00Z", addedDate = null,
+            imageUrl = null, externalId = "w", addedByUserId = null, details = null,
+        ),
+        scores = scores.mapValues { (u, v) -> MemberScore("s-$u", u, v) },
+        average = scores.values.takeIf { it.isNotEmpty() }?.average(),
+    )
+
+    @Test
+    fun hiddenUntilScoredOrTapped() {
+        assertTrue(ScoreReveal.isTmdbRatingHidden(review(mapOf("u2" to 5.0)), "me", tappedToReveal = false))
+        assertFalse(ScoreReveal.isTmdbRatingHidden(review(mapOf("u2" to 5.0)), "me", tappedToReveal = true))
+        assertFalse(ScoreReveal.isTmdbRatingHidden(review(mapOf("me" to 5.0)), "me", tappedToReveal = false))
+        assertTrue(ScoreReveal.isTmdbRatingHidden(review(emptyMap()), null, tappedToReveal = false))
+    }
+}

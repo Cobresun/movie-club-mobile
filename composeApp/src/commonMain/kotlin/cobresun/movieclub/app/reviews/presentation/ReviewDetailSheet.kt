@@ -120,7 +120,13 @@ fun ReviewDetailSheet(
                 .navigationBarsPadding()
                 .padding(bottom = 24.dp),
         ) {
-            WorkHero(work) {
+            var tmdbTapped by remember(work.id) { mutableStateOf(false) }
+            WorkHero(
+                work,
+                onRevealTmdbRating = if (ScoreReveal.isTmdbRatingHidden(review, currentUserId, tmdbTapped)) {
+                    { tmdbTapped = true }
+                } else null,
+            ) {
                 work.addedDate?.let { date ->
                     ReviewedDate(date) { onAction(ReviewsAction.SetReviewedDate(work.id, it)) }
                 }
