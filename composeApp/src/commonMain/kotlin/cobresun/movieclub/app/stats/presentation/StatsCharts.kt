@@ -69,11 +69,11 @@ private fun chartColors() = ChartColors(
     label = MaterialTheme.colorScheme.onSurfaceVariant,
 )
 
-private fun niceMax(value: Double): Double = when {
-    value <= 4 -> 4.0
-    value <= 10 -> ceil(value / 2) * 2
-    else -> ceil(value / 5) * 5
-}
+/** Whole-number steps when the range is small (e.g. 6..10), else quarters. */
+internal fun gridSteps(lo: Double, hi: Double): Int = (hi - lo).toInt().takeIf { it in 2..6 && (hi - lo) % 1.0 == 0.0 } ?: 4
+
+/** Smallest multiple of 4 ≥ [value] (min 4), so the 4 gridline steps land on whole numbers. */
+internal fun niceMax(value: Double): Double = max(1.0, ceil(value / 4)) * 4
 
 private fun DrawScope.yGrid(
     measurer: TextMeasurer,
@@ -206,7 +206,7 @@ fun TimeLines(
         val bottom = size.height - BOTTOM_GUTTER.toPx()
         val top = 6.dp.toPx()
         val right = size.width - 4.dp.toPx()
-        yGrid(measurer, colors, lo, hi, 4, left, bottom, top, format)
+        yGrid(measurer, colors, lo, hi, gridSteps(lo, hi), left, bottom, top, format)
         fun px(p: TimePoint) = Offset(
             left + (right - left) * ((p.epochMillis - minX).toFloat() / (maxX - minX)),
             (bottom - (bottom - top) * ((p.value - lo) / (hi - lo)).coerceIn(0.0, 1.0)).toFloat(),
@@ -220,8 +220,12 @@ fun TimeLines(
                     for (i in 1 until offsets.size) {
                         val p0 = offsets[i - 1]
                         val p1 = offsets[i]
-                        val mx = (p0.x + p1.x) / 2
-                        cubicTo(mx, p0.y, mx, p1.y, p1.x, p1.y)
+                        // Same-day points would make the curve loop; draw those straight.
+                        if (p1.x - p0.x < 4f) lineTo(p1.x, p1.y)
+                        else {
+                            val mx = (p0.x + p1.x) / 2
+                            cubicTo(mx, p0.y, mx, p1.y, p1.x, p1.y)
+                        }
                     }
                 }
                 if (series.size == 1) {

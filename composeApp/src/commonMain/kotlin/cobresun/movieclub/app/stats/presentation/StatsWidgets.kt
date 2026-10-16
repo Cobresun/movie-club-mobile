@@ -101,12 +101,15 @@ fun SummaryTiles(summary: StatsSummary, clubType: ClubType) {
             modifier = Modifier.weight(1f),
         )
         when {
-            isMovie && summary.runtimeMinutes > 0 -> SummaryTile(
-                icon = Icons.Outlined.Schedule,
-                value = if (summary.runtimeMinutes >= 6000) "${summary.runtimeMinutes / 60}h" else formatRuntime(summary.runtimeMinutes),
-                label = (summary.runtimeMinutes / 60 / 24).takeIf { it > 0 }?.let { "watch time · ${plural(it, "day")}" } ?: "watch time",
-                modifier = Modifier.weight(1f),
-            )
+            isMovie && summary.runtimeMinutes > 0 -> {
+                val hours = summary.runtimeMinutes / 60
+                SummaryTile(
+                    icon = Icons.Outlined.Schedule,
+                    value = if (hours >= 24) "${hours}h" else formatRuntime(summary.runtimeMinutes),
+                    label = if (hours >= 48) "${(hours + 12) / 24} days" else "watch time",
+                    modifier = Modifier.weight(1f),
+                )
+            }
             !isMovie && summary.pageCount > 0 -> SummaryTile(
                 icon = Icons.AutoMirrored.Outlined.MenuBook,
                 value = formatThousands(summary.pageCount),
@@ -182,7 +185,7 @@ fun ScoresCard(reviews: List<Review>, members: List<Member>) {
     val trend = remember(reviews, members) { computeScoreTrend(reviews, members) }
     val spread = remember(reviews) { computeScoreSpreadTrend(reviews) }
     val options = buildList {
-        add(ScoreMode.DISTRIBUTION to "Spread")
+        add(ScoreMode.DISTRIBUTION to "Distribution")
         if (trend.isNotEmpty()) add(ScoreMode.TREND to "Trend")
         if (spread.isNotEmpty()) add(ScoreMode.AGREEMENT to "Agreement")
     }
@@ -428,17 +431,18 @@ fun TasteSimilarityCard(reviews: List<Review>, members: List<Member>, currentUse
         if (most == null) {
             CardHint("Not enough shared reviews yet for this member.")
         } else {
-            PairRow("Most alike", most, goodColor())
+            PairRow("Most alike", most, goodColor(), currentUserId)
             if (least != null && least != most) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                PairRow("Least alike", least, badColor())
+                PairRow("Least alike", least, badColor(), currentUserId)
             }
         }
     }
 }
 
 @Composable
-private fun PairRow(label: String, pair: PairSimilarity, color: Color) {
+private fun PairRow(label: String, pair: PairSimilarity, color: Color, currentUserId: String?) {
+    fun Member.short() = if (id == currentUserId) "You" else firstName()
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         SectionLabel(label, color)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -448,7 +452,7 @@ private fun PairRow(label: String, pair: PairSimilarity, color: Color) {
             }
             Column(Modifier.weight(1f)) {
                 Text(
-                    "${pair.memberA.firstName()} & ${pair.memberB.firstName()}",
+                    "${pair.memberA.short()} & ${pair.memberB.short()}",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
@@ -464,7 +468,7 @@ private fun PairRow(label: String, pair: PairSimilarity, color: Color) {
         }
         val examples = if (color == goodColor()) pair.bestAgreements.take(2) else pair.worstAgreements.take(2)
         examples.forEach { a ->
-            WorkStatRow(a.work, "${pair.memberA.firstName()} ${fmt(a.scoreA)} · ${pair.memberB.firstName()} ${fmt(a.scoreB)}")
+            WorkStatRow(a.work, "${pair.memberA.short()} ${fmt(a.scoreA)} · ${pair.memberB.short()} ${fmt(a.scoreB)}")
         }
     }
 }
@@ -490,8 +494,8 @@ fun MemberOutliersCard(reviews: List<Review>, members: List<Member>, clubType: C
     val noun = if (clubType == ClubType.MOVIE) "movies" else "books"
     StatCard(
         if (mode == OutlierMode.GUILTY) "Guilty Pleasures" else "Club Curmudgeons",
-        subtitle = if (mode == OutlierMode.GUILTY) "$noun one member alone loved, 2+ above the club"
-        else "$noun one member alone disliked, 2+ below the club",
+        subtitle = if (mode == OutlierMode.GUILTY) "${noun.replaceFirstChar { it.uppercase() }} one member alone loved, 2+ above the club"
+        else "${noun.replaceFirstChar { it.uppercase() }} one member alone disliked, 2+ below the club",
         controls = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 SegmentedToggle(options, mode, { picked = it }, Modifier.fillMaxWidth())
