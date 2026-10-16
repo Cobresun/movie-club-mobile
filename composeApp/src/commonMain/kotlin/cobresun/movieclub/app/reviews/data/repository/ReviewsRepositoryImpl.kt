@@ -8,6 +8,10 @@ import cobresun.movieclub.app.core.domain.WorkDetails
 import cobresun.movieclub.app.core.domain.flatMap
 import cobresun.movieclub.app.core.domain.map
 import cobresun.movieclub.app.reviews.data.dto.CommentBodyDto
+import cobresun.movieclub.app.reviews.data.dto.AddedDateBodyDto
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
 import cobresun.movieclub.app.reviews.data.dto.ListInsertBodyDto
 import cobresun.movieclub.app.reviews.data.dto.ScoreCreateDto
 import cobresun.movieclub.app.reviews.data.dto.ScoreUpdateDto
@@ -59,6 +63,13 @@ class ReviewsRepositoryImpl(
 
     override suspend fun removeReview(clubSlug: String, workId: String): Result<Unit, DataError.Remote> =
         reviewsListId(clubSlug).flatMap { listId -> dataSource.removeFromList(clubSlug, listId, workId) }
+
+    override suspend fun updateReviewedDate(clubSlug: String, workId: String, date: LocalDate): Result<Unit, DataError.Remote> =
+        reviewsListId(clubSlug).flatMap { listId ->
+            // Start of the local day, like the web's date editor.
+            val iso = date.atStartOfDayIn(TimeZone.currentSystemDefault()).toString()
+            dataSource.updateAddedDate(clubSlug, listId, workId, AddedDateBodyDto(iso))
+        }
 
     override suspend fun saveScore(
         clubSlug: String,

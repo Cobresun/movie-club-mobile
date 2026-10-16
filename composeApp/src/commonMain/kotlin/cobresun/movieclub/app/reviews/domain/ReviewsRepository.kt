@@ -4,6 +4,7 @@ import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.NewWork
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.WorkDetails
+import kotlinx.datetime.LocalDate
 
 /**
  * Reviewed works, member scores, comments and discussion prompts for a club.
@@ -18,6 +19,9 @@ interface ReviewsRepository {
 
     /** Removes a work from reviews for the whole club. */
     suspend fun removeReview(clubSlug: String, workId: String): Result<Unit, DataError.Remote>
+
+    /** Changes the date a work was reviewed (its added date on the reviews list). */
+    suspend fun updateReviewedDate(clubSlug: String, workId: String, date: LocalDate): Result<Unit, DataError.Remote>
 
     /** Creates (when [existingScoreId] is null) or updates the signed-in member's score (0–10). */
     suspend fun saveScore(

@@ -16,6 +16,7 @@ import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.core.domain.ShareLinks
 import cobresun.movieclub.app.reviews.domain.ScoredWork
+import kotlinx.datetime.LocalDate
 import cobresun.movieclub.app.core.presentation.UiMessage
 import cobresun.movieclub.app.core.presentation.isRetryable
 import cobresun.movieclub.app.core.presentation.toUserMessage
@@ -94,6 +95,7 @@ sealed interface ReviewsAction {
     data class OpenDetail(val workId: String) : ReviewsAction
     data object CloseDetail : ReviewsAction
     data class SaveScore(val workId: String, val score: Double) : ReviewsAction
+    data class SetReviewedDate(val workId: String, val date: LocalDate) : ReviewsAction
     data class DeleteScore(val workId: String) : ReviewsAction
     data class AddComment(val content: String, val spoiler: Boolean) : ReviewsAction
     data class EditComment(val commentId: String, val content: String, val spoiler: Boolean) : ReviewsAction
@@ -149,6 +151,7 @@ class ReviewsViewModel(
 
             ReviewsAction.CloseDetail -> _state.update { it.copy(detail = null) }
             is ReviewsAction.SaveScore -> saveScore(action.workId, action.score)
+            is ReviewsAction.SetReviewedDate -> setReviewedDate(action.workId, action.date)
             is ReviewsAction.DeleteScore -> deleteScore(action.workId)
             is ReviewsAction.AddComment -> addComment(action.content, action.spoiler)
             is ReviewsAction.EditComment -> editComment(action.commentId, action.content, action.spoiler)
@@ -304,6 +307,21 @@ class ReviewsViewModel(
                 }
             updateDetail(workId) { it.copy(isSavingScore = false) }
             loadReviews(initial = false) // pick up the server's score id & average
+        }
+    }
+
+    private fun setReviewedDate(workId: String, date: LocalDate) {
+        val review = _state.value.review(workId) ?: return
+        if (review.work.addedDate == date) return
+        updateReview(workId) { it.copy(work = it.work.copy(addedDate = date)) }
+        viewModelScope.launch {
+            reviewsRepository.updateReviewedDate(clubSlug, workId, date)
+                .onSuccess { message("Reviewed date updated") }
+                .onError { error ->
+                    updateReview(workId) { review }
+                    emitError(error, "change the date")
+                }
+            loadReviews(initial = false)
         }
     }
 

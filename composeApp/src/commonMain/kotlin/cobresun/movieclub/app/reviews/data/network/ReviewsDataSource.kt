@@ -9,6 +9,7 @@ import cobresun.movieclub.app.reviews.data.dto.CommentBodyDto
 import cobresun.movieclub.app.reviews.data.dto.CommentDto
 import cobresun.movieclub.app.reviews.data.dto.DiscussionQuestionsDto
 import cobresun.movieclub.app.reviews.data.dto.ListInsertBodyDto
+import cobresun.movieclub.app.reviews.data.dto.AddedDateBodyDto
 import cobresun.movieclub.app.reviews.data.dto.MemberScoredWorkDto
 import cobresun.movieclub.app.reviews.data.dto.ReviewItemDto
 import cobresun.movieclub.app.reviews.data.dto.ReviewsListIdDto
@@ -24,6 +25,7 @@ import kotlinx.serialization.json.JsonElement
 
 interface ReviewsDataSource {
     suspend fun getReviews(clubSlug: String): Result<List<ReviewItemDto>, DataError.Remote>
+    suspend fun updateAddedDate(clubSlug: String, listId: String, workId: String, body: AddedDateBodyDto): Result<Unit, DataError.Remote>
     suspend fun getMyScores(): Result<List<MemberScoredWorkDto>, DataError.Remote>
     suspend fun getReviewsListId(clubSlug: String): Result<ReviewsListIdDto, DataError.Remote>
     suspend fun addToList(clubSlug: String, listId: String, body: ListInsertBodyDto): Result<Unit, DataError.Remote>
@@ -48,6 +50,9 @@ class KtorReviewsDataSource(
 
     override suspend fun getReviews(clubSlug: String): Result<List<ReviewItemDto>, DataError.Remote> =
         safeCall { httpClient.get("${club(clubSlug)}/list/reviews") }
+
+    override suspend fun updateAddedDate(clubSlug: String, listId: String, workId: String, body: AddedDateBodyDto): Result<Unit, DataError.Remote> =
+        safeCall { httpClient.put("${club(clubSlug)}/list/$listId/items/$workId/added-date") { setBody(body) } }
 
     override suspend fun getMyScores(): Result<List<MemberScoredWorkDto>, DataError.Remote> =
         safeCall { httpClient.get("$BASE_URL/api/member/scores") }

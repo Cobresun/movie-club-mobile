@@ -65,6 +65,9 @@ data class ClubFeaturesDto(val discussionQuestions: Boolean = false)
 @Serializable
 data class DiscussionQuestionsDto(val questions: List<String> = emptyList())
 
+@Serializable
+data class AddedDateBodyDto(val addedDate: String)
+
 /** One work the signed-in member has scored, in any of their clubs (`GET /api/member/scores`). */
 @Serializable
 data class MemberScoredWorkDto(

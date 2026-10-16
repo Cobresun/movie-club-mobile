@@ -1,5 +1,15 @@
 package cobresun.movieclub.app.reviews.presentation
 
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.toLocalDateTime
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -97,12 +107,8 @@ fun ReviewDetailSheet(
                 .padding(bottom = 24.dp),
         ) {
             WorkHero(work) {
-                work.addedDate?.let {
-                    Text(
-                        "Reviewed ${it.formatShort()}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.secondary,
-                    )
+                work.addedDate?.let { date ->
+                    ReviewedDate(date) { onAction(ReviewsAction.SetReviewedDate(work.id, it)) }
                 }
             }
 
@@ -296,6 +302,52 @@ private fun DiscussionQuestions(questions: AsyncResult<List<String>>?, onGenerat
                 }
                 TextButton(onClick = onGenerate) { Text("Regenerate") }
             }
+        }
+    }
+}
+
+/** "Reviewed <date>" with a pencil; tapping opens a date picker to correct it. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReviewedDate(date: LocalDate, onChange: (LocalDate) -> Unit) {
+    var picking by remember { mutableStateOf(false) }
+    Row(
+        Modifier
+            .clip(MaterialTheme.shapes.small)
+            .clickable(onClickLabel = "Change reviewed date") { picking = true }
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            "Reviewed ${date.formatShort()}",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.secondary,
+        )
+        Icon(
+            Icons.Outlined.Edit,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.secondary,
+            modifier = Modifier.size(14.dp),
+        )
+    }
+    if (picking) {
+        val pickerState = rememberDatePickerState(
+            initialSelectedDateMillis = date.atStartOfDayIn(TimeZone.UTC).toEpochMilliseconds(),
+        )
+        DatePickerDialog(
+            onDismissRequest = { picking = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    picking = false
+                    pickerState.selectedDateMillis?.let { ms ->
+                        onChange(kotlin.time.Instant.fromEpochMilliseconds(ms).toLocalDateTime(TimeZone.UTC).date)
+                    }
+                }) { Text("Save") }
+            },
+            dismissButton = { TextButton(onClick = { picking = false }) { Text("Cancel") } },
+        ) {
+            DatePicker(state = pickerState, title = { Text("Reviewed on", Modifier.padding(start = 24.dp, top = 16.dp)) })
         }
     }
 }
