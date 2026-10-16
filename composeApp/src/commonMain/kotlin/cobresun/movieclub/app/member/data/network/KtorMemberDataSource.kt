@@ -28,8 +28,12 @@ class KtorMemberDataSource(
     private val httpClient: HttpClient
 ) : MemberDataSource {
     override suspend fun getMember(): Result<MemberDto, DataError.Remote> {
-        return safeCall<MemberDto> {
-            httpClient.get("$BASE_URL/api/member")
+        // The signed-in member is BetterAuth's session user; there is no /api/member.
+        return when (val result = safeCall<SessionUserDto> { httpClient.get("$BASE_URL/api/auth/get-session") }) {
+            is Result.Success -> result.data.user
+                ?.let { Result.Success(MemberDto(it.id, it.email, it.name, it.image)) }
+                ?: Result.Error(DataError.Remote.UNKNOWN)
+            is Result.Error -> result
         }
     }
 
@@ -96,3 +100,6 @@ class KtorMemberDataSource(
             }
         }
 }
+
+@kotlinx.serialization.Serializable
+private data class SessionUserDto(val user: MemberDto? = null)
