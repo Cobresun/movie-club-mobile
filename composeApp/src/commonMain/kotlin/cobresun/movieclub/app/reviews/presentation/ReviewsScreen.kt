@@ -56,6 +56,7 @@ import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.workType
 import cobresun.movieclub.app.core.presentation.components.Avatar
+import cobresun.movieclub.app.core.presentation.components.ClubNameLabel
 import cobresun.movieclub.app.core.presentation.components.EmptyState
 import cobresun.movieclub.app.core.presentation.components.ErrorState
 import cobresun.movieclub.app.core.presentation.components.GridSkeleton
@@ -81,11 +82,10 @@ fun ReviewsScreen(
     val workType = state.clubType.workType
     Box(modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            Text(
-                "Reviews",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 8.dp),
-            )
+            Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 8.dp)) {
+                ClubNameLabel(state.clubName)
+                Text("Reviews", style = MaterialTheme.typography.headlineMedium)
+            }
             when (val reviews = state.reviews) {
                 is AsyncResult.Loading -> GridSkeleton(minCellWidth = 150.dp)
                 is AsyncResult.Error -> ErrorState(

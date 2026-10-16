@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import cobresun.movieclub.app.core.presentation.components.SheetSnackbarHost
 import cobresun.movieclub.app.core.domain.Work
 import cobresun.movieclub.app.core.presentation.components.ConfirmDialog
 import cobresun.movieclub.app.core.presentation.components.WorkAbout
@@ -80,6 +81,7 @@ fun ListItemDetailSheet(
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         dragHandle = null,
     ) {
+        Box {
         Column(
             Modifier
                 .fillMaxWidth()
@@ -157,6 +159,8 @@ fun ListItemDetailSheet(
                     Text("Remove from $listName")
                 }
             }
+        }
+        SheetSnackbarHost()
         }
     }
 

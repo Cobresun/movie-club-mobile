@@ -25,6 +25,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +39,8 @@ import cobresun.movieclub.app.core.domain.NewWork
 import cobresun.movieclub.app.core.domain.workType
 import cobresun.movieclub.app.core.platform.HapticFeedback
 import cobresun.movieclub.app.core.presentation.UiMessage
+import cobresun.movieclub.app.core.presentation.components.AppSnackbarHost
+import cobresun.movieclub.app.core.presentation.components.LocalSnackbarHostState
 import cobresun.movieclub.app.lists.presentation.ListsAction
 import cobresun.movieclub.app.lists.presentation.ListsEvent
 import cobresun.movieclub.app.lists.presentation.ListsScreen
@@ -112,17 +115,7 @@ fun ClubScreenRoot(
     val stateHolder = rememberSaveableStateHolder()
 
     Scaffold(
-        snackbarHost = {
-            SnackbarHost(snackbarHostState) { data ->
-                Snackbar(
-                    snackbarData = data,
-                    shape = MaterialTheme.shapes.small,
-                    containerColor = MaterialTheme.colorScheme.inverseSurface,
-                    contentColor = MaterialTheme.colorScheme.inverseOnSurface,
-                    actionColor = MaterialTheme.colorScheme.primary,
-                )
-            }
-        },
+        snackbarHost = { AppSnackbarHost(snackbarHostState) },
         bottomBar = {
             NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
                 val colors = NavigationBarItemDefaults.colors(
@@ -166,6 +159,7 @@ fun ClubScreenRoot(
             label = "club-tab",
         ) { tab ->
             stateHolder.SaveableStateProvider(tab.name) {
+              CompositionLocalProvider(LocalSnackbarHostState provides snackbarHostState) {
                 when (tab) {
                     ClubTab.REVIEWS -> ReviewsScreen(
                         state = reviewsState,
@@ -180,6 +174,7 @@ fun ClubScreenRoot(
                         hapticFeedback = hapticFeedback,
                     )
                 }
+              }
             }
         }
     }

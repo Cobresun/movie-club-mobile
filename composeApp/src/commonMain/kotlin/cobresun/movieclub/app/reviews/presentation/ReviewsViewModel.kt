@@ -3,6 +3,7 @@ package cobresun.movieclub.app.reviews.presentation
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import cobresun.movieclub.app.auth.domain.AuthRepository
 import cobresun.movieclub.app.club.domain.ClubRepository
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.ClubType
@@ -39,6 +40,7 @@ import kotlinx.coroutines.launch
 
 data class ReviewsState(
     val clubType: ClubType = ClubType.MOVIE,
+    val clubName: String = "",
     val reviews: AsyncResult<List<Review>> = AsyncResult.Loading,
     val isRefreshing: Boolean = false,
     val query: String = "",
@@ -99,6 +101,7 @@ class ReviewsViewModel(
     private val reviewsRepository: ReviewsRepository,
     private val commentsRepository: ReviewCommentsRepository,
     private val memberRepository: MemberRepository,
+    private val authRepository: AuthRepository,
     private val clubRepository: ClubRepository,
     private val clipboardManager: ClipboardManager,
 ) : ViewModel() {
@@ -156,11 +159,12 @@ class ReviewsViewModel(
     private fun loadContext() {
         viewModelScope.launch {
             memberRepository.getClubs().onSuccess { clubs ->
-                clubs.firstOrNull { it.slug == clubSlug }?.let { club -> _state.update { it.copy(clubType = club.type) } }
+                clubs.firstOrNull { it.slug == clubSlug }?.let { club -> _state.update { it.copy(clubType = club.type, clubName = club.name) } }
             }
         }
         viewModelScope.launch {
-            memberRepository.getMember().onSuccess { me -> _state.update { it.copy(currentUserId = me.id) } }
+            // `/api/member` no longer exists; the BetterAuth session identifies the signed-in user.
+            authRepository.getUser().onSuccess { me -> _state.update { it.copy(currentUserId = me.id) } }
         }
         viewModelScope.launch {
             clubRepository.getMembers(clubSlug).onSuccess { members -> _state.update { it.copy(members = members) } }

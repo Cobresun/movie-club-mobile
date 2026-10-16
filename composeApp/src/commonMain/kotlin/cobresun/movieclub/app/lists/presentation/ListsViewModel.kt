@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 
 data class ListsState(
     val clubType: ClubType = ClubType.MOVIE,
+    val clubName: String = "",
     val lists: AsyncResult<List<WorkList>> = AsyncResult.Loading,
     val selectedListId: String? = null,
     val itemsByList: Map<String, AsyncResult<List<Work>>> = emptyMap(),
@@ -150,7 +151,7 @@ class ListsViewModel(
         viewModelScope.launch {
             memberRepository.getClubs().onSuccess { clubs ->
                 clubs.firstOrNull { it.slug == clubSlug }?.let { club ->
-                    _state.update { it.copy(clubType = club.type) }
+                    _state.update { it.copy(clubType = club.type, clubName = club.name) }
                 }
             }
         }

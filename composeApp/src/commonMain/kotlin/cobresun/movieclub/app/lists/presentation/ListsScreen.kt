@@ -67,6 +67,7 @@ import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.Work
 import cobresun.movieclub.app.core.domain.workType
 import cobresun.movieclub.app.core.platform.HapticFeedback
+import cobresun.movieclub.app.core.presentation.components.ClubNameLabel
 import cobresun.movieclub.app.core.presentation.components.EmptyState
 import cobresun.movieclub.app.core.presentation.components.ErrorState
 import cobresun.movieclub.app.core.presentation.components.Poster
@@ -94,6 +95,7 @@ fun ListsScreen(
     Box(modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             ListsHeader(
+                clubName = state.clubName,
                 canShuffle = (state.selectedItems as? AsyncResult.Success)?.data?.isNotEmpty() == true,
                 canReorder = ((state.selectedItems as? AsyncResult.Success)?.data?.size ?: 0) > 1,
                 onShuffle = { onAction(ListsAction.Shuffle) },
@@ -209,6 +211,7 @@ fun ListsScreen(
 
 @Composable
 private fun ListsHeader(
+    clubName: String,
     canShuffle: Boolean,
     canReorder: Boolean,
     onShuffle: () -> Unit,
@@ -219,7 +222,10 @@ private fun ListsHeader(
         modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("Lists", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
+        Column(Modifier.weight(1f)) {
+            ClubNameLabel(clubName)
+            Text("Lists", style = MaterialTheme.typography.headlineMedium)
+        }
         IconButton(onClick = onShuffle, enabled = canShuffle) {
             Icon(Icons.Default.Casino, contentDescription = "Pick at random")
         }

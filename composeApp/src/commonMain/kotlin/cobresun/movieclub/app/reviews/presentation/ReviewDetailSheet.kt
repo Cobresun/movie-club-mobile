@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import cobresun.movieclub.app.core.presentation.components.SheetSnackbarHost
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.WorkDetails
 import cobresun.movieclub.app.core.presentation.components.Avatar
@@ -81,6 +82,7 @@ fun ReviewDetailSheet(
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         dragHandle = null,
     ) {
+        Box {
         Column(
             Modifier
                 .fillMaxWidth()
@@ -172,6 +174,8 @@ fun ReviewDetailSheet(
                     }
                 }
             }
+        }
+        SheetSnackbarHost()
         }
     }
 
