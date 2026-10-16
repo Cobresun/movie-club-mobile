@@ -290,7 +290,7 @@ class ReviewsViewModel(
         }
         val review = _state.value.review(workId) ?: return
         val existing = review.scoreOf(userId)
-        updateReview(workId) { it.withScore(userId, MemberScore(existing?.id ?: "pending", userId, score)) }
+        updateReview(workId) { it.withScore(userId, MemberScore(existing?.id ?: PENDING_SCORE_ID, userId, score)) }
         updateDetail(workId) { it.copy(isSavingScore = true) }
         viewModelScope.launch {
             reviewsRepository.saveScore(clubSlug, workId, existing?.id, score)
@@ -311,6 +311,11 @@ class ReviewsViewModel(
         val userId = _state.value.currentUserId ?: return
         val review = _state.value.review(workId) ?: return
         val existing = review.scoreOf(userId) ?: return
+        if (existing.id == PENDING_SCORE_ID) {
+            // Optimistic score from a save still in flight; there's no server id to delete yet.
+            message("Still saving your score. Try again in a moment.")
+            return
+        }
         updateReview(workId) { it.withScore(userId, null) }
         viewModelScope.launch {
             reviewsRepository.deleteScore(clubSlug, existing.id)
@@ -390,3 +395,5 @@ class ReviewsViewModel(
         )
     }
 }
+
+private const val PENDING_SCORE_ID = "pending"
