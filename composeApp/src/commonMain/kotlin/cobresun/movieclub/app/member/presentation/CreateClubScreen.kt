@@ -45,7 +45,7 @@ fun CreateClubScreenRoot(
             when (event) {
                 is CreateClubNavigationEvent.NavigateToClub -> {
                     memberViewModel.refresh()
-                    onNavigateToClub(event.clubId)
+                    onNavigateToClub(event.clubSlug)
                 }
             }
         }

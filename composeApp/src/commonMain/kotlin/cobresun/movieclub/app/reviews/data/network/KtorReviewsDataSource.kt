@@ -18,46 +18,46 @@ import io.ktor.client.request.setBody
 class KtorReviewsDataSource(
     private val httpClient: HttpClient
 ) : ReviewsDataSource {
-    override suspend fun getReviews(clubId: String): Result<List<ReviewDto>, DataError.Remote> {
+    override suspend fun getReviews(clubSlug: String): Result<List<ReviewDto>, DataError.Remote> {
         return safeCall<List<ReviewDto>> {
             httpClient.get(
-                urlString = "$BASE_URL/api/club/$clubId/list/reviews"
+                urlString = "$BASE_URL/api/club/$clubSlug/list/reviews"
             )
         }
     }
 
-    override suspend fun postReview(clubId: String, review: NewReviewItemDto): Result<Unit, DataError.Remote> {
+    override suspend fun postReview(clubSlug: String, review: NewReviewItemDto): Result<Unit, DataError.Remote> {
         return safeCall {
             httpClient.post(
-                urlString = "$BASE_URL/api/club/$clubId/list/reviews"
+                urlString = "$BASE_URL/api/club/$clubSlug/list/reviews"
             ) {
                 setBody(review)
             }
         }
     }
 
-    override suspend fun deleteReview(clubId: String, reviewId: String): Result<Unit, DataError.Remote> {
+    override suspend fun deleteReview(clubSlug: String, reviewId: String): Result<Unit, DataError.Remote> {
         return safeCall {
             httpClient.delete(
-                urlString = "$BASE_URL/api/club/$clubId/list/reviews/$reviewId"
+                urlString = "$BASE_URL/api/club/$clubSlug/list/reviews/$reviewId"
             )
         }
     }
 
-    override suspend fun submitScore(clubId: String, workId: String, score: Double): Result<Unit, DataError.Remote> {
+    override suspend fun submitScore(clubSlug: String, workId: String, score: Double): Result<Unit, DataError.Remote> {
         return safeCall {
             httpClient.post(
-                urlString = "$BASE_URL/api/club/$clubId/reviews"
+                urlString = "$BASE_URL/api/club/$clubSlug/reviews"
             ) {
                 setBody(ScoreSubmissionDto(workId = workId, score = score))
             }
         }
     }
 
-    override suspend fun updateScore(clubId: String, reviewId: String, score: Double): Result<Unit, DataError.Remote> {
+    override suspend fun updateScore(clubSlug: String, reviewId: String, score: Double): Result<Unit, DataError.Remote> {
         return safeCall {
             httpClient.put(
-                urlString = "$BASE_URL/api/club/$clubId/reviews/$reviewId"
+                urlString = "$BASE_URL/api/club/$clubSlug/reviews/$reviewId"
             ) {
                 setBody(ScoreUpdateDto(score = score))
             }

@@ -6,4 +6,6 @@ import kotlinx.serialization.Serializable
 data class ClubDto(
     val clubId: String,
     val clubName: String,
+    val slug: String,
+    val type: String? = null,
 )

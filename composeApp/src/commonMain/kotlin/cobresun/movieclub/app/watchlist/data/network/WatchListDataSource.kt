@@ -8,35 +8,35 @@ import cobresun.movieclub.app.watchlist.data.dto.PostWatchListItemDto
 import cobresun.movieclub.app.watchlist.data.dto.WatchListItemDto
 
 interface WatchListDataSource {
-    suspend fun getNextWork(clubId: String): Result<NextWorkDto, DataError.Remote>
+    suspend fun getNextWork(clubSlug: String): Result<NextWorkDto, DataError.Remote>
 
-    suspend fun setNextWork(clubId: String, workId: String): Result<Unit, DataError.Remote>
+    suspend fun setNextWork(clubSlug: String, workId: String): Result<Unit, DataError.Remote>
 
     suspend fun getWatchList(
-        clubId: String
+        clubSlug: String
     ): Result<List<WatchListItemDto>, DataError.Remote>
 
     suspend fun postWatchList(
-        clubId: String,
+        clubSlug: String,
         postWatchListItemDto: PostWatchListItemDto
     ): Result<Unit, DataError.Remote>
 
     suspend fun deleteWatchList(
-        clubId: String,
+        clubSlug: String,
         watchListItemId: String
     ): Result<Unit, DataError.Remote>
 
     suspend fun getBacklog(
-        clubId: String
+        clubSlug: String
     ): Result<List<WatchListItemDto>, DataError.Remote>
 
     suspend fun postBacklog(
-        clubId: String,
+        clubSlug: String,
         backlogPostDto: BacklogPostDto
     ): Result<Unit, DataError.Remote>
 
     suspend fun deleteBacklog(
-        clubId: String,
+        clubSlug: String,
         watchListItemId: String
     ): Result<Unit, DataError.Remote>
 }

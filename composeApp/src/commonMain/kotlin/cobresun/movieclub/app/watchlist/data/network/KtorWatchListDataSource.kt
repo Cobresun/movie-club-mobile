@@ -18,28 +18,28 @@ import io.ktor.client.request.setBody
 class KtorWatchListDataSource(
     private val httpClient: HttpClient
 ) : WatchListDataSource {
-    override suspend fun getNextWork(clubId: String): Result<NextWorkDto, DataError.Remote> {
+    override suspend fun getNextWork(clubSlug: String): Result<NextWorkDto, DataError.Remote> {
         return safeCall<NextWorkDto> {
             httpClient.get(
-                urlString = "$BASE_URL/api/club/$clubId/nextWork"
+                urlString = "$BASE_URL/api/club/$clubSlug/nextWork"
             )
         }
     }
 
-    override suspend fun setNextWork(clubId: String, workId: String): Result<Unit, DataError.Remote> {
+    override suspend fun setNextWork(clubSlug: String, workId: String): Result<Unit, DataError.Remote> {
         return safeCall {
             httpClient.put(
-                urlString = "$BASE_URL/api/club/$clubId/nextWork"
+                urlString = "$BASE_URL/api/club/$clubSlug/nextWork"
             ) {
                 setBody(mapOf("workId" to workId))
             }
         }
     }
 
-    override suspend fun getWatchList(clubId: String): Result<List<WatchListItemDto>, DataError.Remote> {
+    override suspend fun getWatchList(clubSlug: String): Result<List<WatchListItemDto>, DataError.Remote> {
         return safeCall<List<WatchListItemDto>> {
             httpClient.get(
-                urlString = "$BASE_URL/api/club/$clubId/list/watchlist"
+                urlString = "$BASE_URL/api/club/$clubSlug/list/watchlist"
             )
         }
     }
@@ -47,12 +47,12 @@ class KtorWatchListDataSource(
 
 
     override suspend fun postWatchList(
-        clubId: String,
+        clubSlug: String,
         postWatchListItemDto: PostWatchListItemDto
     ): Result<Unit, DataError.Remote> {
         return safeCall {
             httpClient.post(
-                urlString = "$BASE_URL/api/club/$clubId/list/watchlist"
+                urlString = "$BASE_URL/api/club/$clubSlug/list/watchlist"
             ) {
                 setBody(postWatchListItemDto)
             }
@@ -60,31 +60,31 @@ class KtorWatchListDataSource(
     }
 
     override suspend fun deleteWatchList(
-        clubId: String,
+        clubSlug: String,
         watchListItemId: String
     ): Result<Unit, DataError.Remote> {
         return safeCall {
             httpClient.delete(
-                urlString = "$BASE_URL/api/club/$clubId/list/watchlist/$watchListItemId"
+                urlString = "$BASE_URL/api/club/$clubSlug/list/watchlist/$watchListItemId"
             )
         }
     }
 
-    override suspend fun getBacklog(clubId: String): Result<List<WatchListItemDto>, DataError.Remote> {
+    override suspend fun getBacklog(clubSlug: String): Result<List<WatchListItemDto>, DataError.Remote> {
         return safeCall<List<WatchListItemDto>> {
             httpClient.get(
-                urlString = "$BASE_URL/api/club/$clubId/list/backlog"
+                urlString = "$BASE_URL/api/club/$clubSlug/list/backlog"
             )
         }
     }
 
     override suspend fun postBacklog(
-        clubId: String,
+        clubSlug: String,
         backlogPostDto: BacklogPostDto
     ): Result<Unit, DataError.Remote> {
         return safeCall {
             httpClient.post(
-                urlString = "$BASE_URL/api/club/$clubId/list/backlog"
+                urlString = "$BASE_URL/api/club/$clubSlug/list/backlog"
             ) {
                 setBody(backlogPostDto)
             }
@@ -92,12 +92,12 @@ class KtorWatchListDataSource(
     }
 
     override suspend fun deleteBacklog(
-        clubId: String,
+        clubSlug: String,
         watchListItemId: String
     ): Result<Unit, DataError.Remote> {
         return safeCall {
             httpClient.delete(
-                urlString = "$BASE_URL/api/club/$clubId/list/backlog/$watchListItemId"
+                urlString = "$BASE_URL/api/club/$clubSlug/list/backlog/$watchListItemId"
             )
         }
     }

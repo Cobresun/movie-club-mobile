@@ -32,6 +32,6 @@ class MemberRepositoryImpl(
             members = listOf(memberEmail)
         )
         return memberDataSource.createClub(request)
-            .map { response -> response.clubId }
+            .map { response -> response.slug }
     }
 }

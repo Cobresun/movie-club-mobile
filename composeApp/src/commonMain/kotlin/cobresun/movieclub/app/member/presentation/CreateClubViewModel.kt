@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 sealed interface CreateClubNavigationEvent {
-    data class NavigateToClub(val clubId: String) : CreateClubNavigationEvent
+    data class NavigateToClub(val clubSlug: String) : CreateClubNavigationEvent
 }
 
 class CreateClubViewModel(
@@ -78,9 +78,9 @@ class CreateClubViewModel(
                 name = currentState.clubName,
                 memberEmail = currentState.currentUserEmail
             )
-                .onSuccess { clubId ->
+                .onSuccess { clubSlug ->
                     _state.update { it.copy(isCreating = false) }
-                    _navigationEvents.emit(CreateClubNavigationEvent.NavigateToClub(clubId))
+                    _navigationEvents.emit(CreateClubNavigationEvent.NavigateToClub(clubSlug))
                 }
                 .onError {
                     _state.update { it.copy(isCreating = false) }

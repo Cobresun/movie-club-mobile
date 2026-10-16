@@ -14,7 +14,7 @@ sealed interface Route {
 
     @Serializable
     data class Club(
-        val clubId: String
+        val clubSlug: String
     ) : Route
 
     @Serializable
@@ -25,6 +25,6 @@ sealed interface Route {
 
     @Serializable
     data class ClubSettings(
-        val clubId: String
+        val clubSlug: String
     ) : Route
 }

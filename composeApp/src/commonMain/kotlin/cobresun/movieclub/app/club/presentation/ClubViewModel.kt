@@ -43,7 +43,7 @@ class ClubViewModel(
     private val clubRepository: ClubRepository,
     private val clipboardManager: ClipboardManager
 ) : ViewModel() {
-    private val clubId = requireNotNull(savedStateHandle.get<String>("clubId"))
+    private val clubSlug = requireNotNull(savedStateHandle.get<String>("clubSlug"))
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage = _errorMessage.asStateFlow()
@@ -87,7 +87,7 @@ class ClubViewModel(
     private fun loadReviews() {
         viewModelScope.launch {
             _state.update { it.copy(reviews = AsyncResult.Loading) }
-            when (val result = reviewsRepository.getReviews(clubId)) {
+            when (val result = reviewsRepository.getReviews(clubSlug)) {
                 is Result.Success -> {
                     val originalReviews = result.data
                     val sortedReviews = applySortToReviews(
@@ -112,7 +112,7 @@ class ClubViewModel(
     private fun loadWatchList() {
         viewModelScope.launch {
             _state.update { it.copy(watchList = AsyncResult.Loading) }
-            when (val result = watchListRepository.getWatchList(clubId)) {
+            when (val result = watchListRepository.getWatchList(clubSlug)) {
                 is Result.Success -> {
                     _state.update { it.copy(watchList = AsyncResult.Success(result.data)) }
                 }
@@ -127,7 +127,7 @@ class ClubViewModel(
     private fun loadBacklog() {
         viewModelScope.launch {
             _state.update { it.copy(backlog = AsyncResult.Loading) }
-            when (val result = watchListRepository.getBacklog(clubId)) {
+            when (val result = watchListRepository.getBacklog(clubSlug)) {
                 is Result.Success -> {
                     _state.update { it.copy(backlog = AsyncResult.Success(result.data)) }
                 }
@@ -157,7 +157,7 @@ class ClubViewModel(
     private fun loadClubMembers() {
         viewModelScope.launch {
             _state.update { it.copy(clubMembers = AsyncResult.Loading) }
-            when (val result = clubRepository.getMembers(clubId)) {
+            when (val result = clubRepository.getMembers(clubSlug)) {
                 is Result.Success -> {
                     _state.update { it.copy(clubMembers = AsyncResult.Success(result.data)) }
                 }
@@ -219,7 +219,7 @@ class ClubViewModel(
     private fun refreshReviews() {
         viewModelScope.launch {
             _state.update { it.copy(isRefreshingReviews = true) }
-            when (val result = reviewsRepository.getReviews(clubId)) {
+            when (val result = reviewsRepository.getReviews(clubSlug)) {
                 is Result.Success -> {
                     val originalReviews = result.data
                     val sortedReviews = applySortToReviews(
@@ -246,7 +246,7 @@ class ClubViewModel(
     private fun refreshWatchList() {
         viewModelScope.launch {
             _state.update { it.copy(isRefreshingWatchList = true) }
-            when (val result = watchListRepository.getWatchList(clubId)) {
+            when (val result = watchListRepository.getWatchList(clubSlug)) {
                 is Result.Success -> {
                     _state.update {
                         it.copy(
@@ -267,7 +267,7 @@ class ClubViewModel(
     private fun refreshBacklog() {
         viewModelScope.launch {
             _state.update { it.copy(isRefreshingBacklog = true) }
-            when (val result = watchListRepository.getBacklog(clubId)) {
+            when (val result = watchListRepository.getBacklog(clubSlug)) {
                 is Result.Success -> {
                     _state.update {
                         it.copy(
@@ -287,7 +287,7 @@ class ClubViewModel(
 
     private fun refreshBacklogAfterAdd() {
         viewModelScope.launch {
-            when (val result = watchListRepository.getBacklog(clubId)) {
+            when (val result = watchListRepository.getBacklog(clubSlug)) {
                 is Result.Success -> {
                     _state.update {
                         it.copy(
@@ -311,7 +311,7 @@ class ClubViewModel(
             is ClubAction.OnAddMovieToWatchList -> {
                 viewModelScope.launch {
                     _state.update { it.copy(isAddingToBacklog = true) }
-                    watchListRepository.postWatchListFromMovie(clubId, action.movie)
+                    watchListRepository.postWatchListFromMovie(clubSlug, action.movie)
                         .onSuccess {
                             refreshBacklogAfterAdd()
                         }
@@ -325,7 +325,7 @@ class ClubViewModel(
             is ClubAction.OnAddMovieToBacklog -> {
                 viewModelScope.launch {
                     _state.update { it.copy(isAddingToBacklog = true) }
-                    watchListRepository.postBacklog(clubId, action.movie)
+                    watchListRepository.postBacklog(clubSlug, action.movie)
                         .onSuccess {
                             refreshBacklogAfterAdd()
                         }
@@ -338,7 +338,7 @@ class ClubViewModel(
 
             is ClubAction.OnDeleteBacklogItem -> {
                 viewModelScope.launch {
-                    watchListRepository.deleteBacklog(clubId, action.item.id)
+                    watchListRepository.deleteBacklog(clubSlug, action.item.id)
                         .onSuccess {
                             refreshBacklog()
                         }
@@ -350,7 +350,7 @@ class ClubViewModel(
 
             is ClubAction.OnDeleteWatchListItem -> {
                 viewModelScope.launch {
-                    watchListRepository.deleteWatchList(clubId, action.item.id)
+                    watchListRepository.deleteWatchList(clubSlug, action.item.id)
                         .onSuccess {
                             refreshWatchList()
                         }
@@ -363,9 +363,9 @@ class ClubViewModel(
             is ClubAction.OnMoveToWatchList -> {
                 viewModelScope.launch {
                     _navigationEvents.emit(ClubNavigationEvent.NavigateToWatchListTab)
-                    watchListRepository.postWatchList(clubId, action.watchListItem)
+                    watchListRepository.postWatchList(clubSlug, action.watchListItem)
                         .onSuccess {
-                            watchListRepository.deleteBacklog(clubId, action.watchListItem.id)
+                            watchListRepository.deleteBacklog(clubSlug, action.watchListItem.id)
                                 .onSuccess {
                                     refreshWatchList()
                                     refreshBacklog()
@@ -383,7 +383,7 @@ class ClubViewModel(
             is ClubAction.OnMoveToReview -> {
                 viewModelScope.launch {
                     reviewsRepository.postReview(
-                        clubId,
+                        clubSlug,
                         NewReviewItem(
                             type = action.watchListItem.type.value,
                             title = action.watchListItem.title,
@@ -392,7 +392,7 @@ class ClubViewModel(
                         )
                     )
                         .onSuccess {
-                            watchListRepository.deleteWatchList(clubId, action.watchListItem.id)
+                            watchListRepository.deleteWatchList(clubSlug, action.watchListItem.id)
                                 .onSuccess {
                                     refreshReviews()
                                     refreshWatchList()
@@ -410,7 +410,7 @@ class ClubViewModel(
 
             is ClubAction.OnSetNextWatch -> {
                 viewModelScope.launch {
-                    watchListRepository.setNextWatch(clubId, action.watchListItem.id)
+                    watchListRepository.setNextWatch(clubSlug, action.watchListItem.id)
                         .onSuccess {
                             refreshWatchList()
                         }
@@ -422,7 +422,7 @@ class ClubViewModel(
 
             is ClubAction.OnDeleteReview -> {
                 viewModelScope.launch {
-                    reviewsRepository.deleteReview(clubId, action.reviewId)
+                    reviewsRepository.deleteReview(clubSlug, action.reviewId)
                         .onSuccess {
                             refreshReviews()
                         }
@@ -435,7 +435,7 @@ class ClubViewModel(
             is ClubAction.OnSubmitScore -> {
                 viewModelScope.launch {
                     reviewsRepository.submitScore(
-                        clubId = clubId,
+                        clubSlug = clubSlug,
                         reviewWorkId = action.reviewWorkId,
                         scoreId = action.scoreId,
                         score = action.scoreValue
@@ -452,7 +452,7 @@ class ClubViewModel(
             is ClubAction.OnShareReview -> {
                 viewModelScope.launch {
                     try {
-                        val shareUrl = "${Constants.BASE_URL}/share/club/$clubId/review/${action.reviewId}"
+                        val shareUrl = "${Constants.BASE_URL}/share/club/$clubSlug/review/${action.reviewId}"
                         clipboardManager.copyToClipboard(shareUrl)
                         _successMessage.update { "Link copied to clipboard" }
                     } catch (e: Exception) {
@@ -542,7 +542,7 @@ class ClubViewModel(
                     }
 
                     // Set next watch via API
-                    watchListRepository.setNextWatch(clubId, selectedMovie.id)
+                    watchListRepository.setNextWatch(clubSlug, selectedMovie.id)
                         .onSuccess { /* Wait for animation to complete */ }
                         .onError {
                             _state.update {

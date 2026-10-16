@@ -46,7 +46,7 @@ class ClubSettingsViewModel(
     private val clubRepository: ClubRepository,
     private val clipboardManager: ClipboardManager
 ) : ViewModel() {
-    private val clubId = requireNotNull(savedStateHandle.get<String>("clubId"))
+    private val clubSlug = requireNotNull(savedStateHandle.get<String>("clubSlug"))
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage = _errorMessage.asStateFlow()
@@ -68,7 +68,7 @@ class ClubSettingsViewModel(
     private fun loadMembers() {
         viewModelScope.launch {
             _state.update { it.copy(members = AsyncResult.Loading) }
-            when (val result = clubRepository.getMembers(clubId)) {
+            when (val result = clubRepository.getMembers(clubSlug)) {
                 is Result.Success -> {
                     _state.update { it.copy(members = AsyncResult.Success(result.data)) }
                 }
@@ -82,7 +82,7 @@ class ClubSettingsViewModel(
 
     private fun loadInviteLink() {
         viewModelScope.launch {
-            when (val result = clubRepository.generateInviteToken(clubId)) {
+            when (val result = clubRepository.generateInviteToken(clubSlug)) {
                 is Result.Success -> {
                     val inviteLink = "$BASE_URL/join-club/${result.data}"
                     _state.update { it.copy(inviteLink = inviteLink) }
@@ -124,7 +124,7 @@ class ClubSettingsViewModel(
                         )
                     }
 
-                    clubRepository.leaveClub(clubId)
+                    clubRepository.leaveClub(clubSlug)
                         .onSuccess {
                             _state.update { it.copy(isLeavingClub = false) }
                             _navigationEvents.emit(ClubSettingsNavigationEvent.NavigateAfterLeave)

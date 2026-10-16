@@ -4,5 +4,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class CreateClubResponseDto(
-    val clubId: String
+    val clubId: String,
+    val slug: String,
 )

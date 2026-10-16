@@ -14,26 +14,26 @@ import io.ktor.client.request.post
 class KtorClubDataSource(
     private val httpClient: HttpClient
 ) : ClubDataSource {
-    override suspend fun getMembers(clubId: String): Result<List<MemberDto>, DataError.Remote> {
+    override suspend fun getMembers(clubSlug: String): Result<List<MemberDto>, DataError.Remote> {
         return safeCall<List<MemberDto>> {
             httpClient.get(
-                urlString = "$BASE_URL/api/club/$clubId/members"
+                urlString = "$BASE_URL/api/club/$clubSlug/members"
             )
         }
     }
 
-    override suspend fun generateInviteToken(clubId: String): Result<InviteTokenDto, DataError.Remote> {
+    override suspend fun generateInviteToken(clubSlug: String): Result<InviteTokenDto, DataError.Remote> {
         return safeCall<InviteTokenDto> {
             httpClient.post(
-                urlString = "$BASE_URL/api/club/$clubId/invite"
+                urlString = "$BASE_URL/api/club/$clubSlug/invite"
             )
         }
     }
 
-    override suspend fun leaveClub(clubId: String): Result<Unit, DataError.Remote> {
+    override suspend fun leaveClub(clubSlug: String): Result<Unit, DataError.Remote> {
         return safeCall<Unit> {
             httpClient.delete(
-                urlString = "$BASE_URL/api/club/$clubId/members/self"
+                urlString = "$BASE_URL/api/club/$clubSlug/members/self"
             )
         }
     }

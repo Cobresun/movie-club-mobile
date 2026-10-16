@@ -82,24 +82,24 @@ fun ClubsScreen(
     val coroutineScope = rememberCoroutineScope()
 
     // Track the current club ID from navigation
-    var currentClubId by remember { mutableStateOf<String?>(null) }
+    var currentClubSlug by remember { mutableStateOf<String?>(null) }
 
-    // Update currentClubId when clubs change
+    // Update currentClubSlug when clubs change
     LaunchedEffect(clubs) {
         if (clubs is AsyncResult.Success && clubs.data.isNotEmpty()) {
-            val clubIds = clubs.data.map { it.id }
+            val clubSlugs = clubs.data.map { it.slug }
 
             // If no club selected, select the first one
-            if (currentClubId == null) {
-                currentClubId = clubs.data.first().id
+            if (currentClubSlug == null) {
+                currentClubSlug = clubs.data.first().slug
             }
             // If current club was removed, switch to another club
-            else if (currentClubId !in clubIds) {
-                val newClubId = clubs.data.first().id
-                currentClubId = newClubId
+            else if (currentClubSlug !in clubSlugs) {
+                val newClubSlug = clubs.data.first().slug
+                currentClubSlug = newClubSlug
 
                 // Navigate to the new club
-                navController.navigate(Route.Club(newClubId)) {
+                navController.navigate(Route.Club(newClubSlug)) {
                     // Clear back stack to prevent going back to the removed club
                     popUpTo<Route.Club> { inclusive = true }
                 }
@@ -111,10 +111,10 @@ fun ClubsScreen(
         drawerContent = {
             ModalDrawerContent(
                 clubs = clubs,
-                currentClubId = currentClubId,
-                onClubClick = { clubId ->
-                    currentClubId = clubId
-                    navController.navigate(Route.Club(clubId)) {
+                currentClubSlug = currentClubSlug,
+                onClubClick = { clubSlug ->
+                    currentClubSlug = clubSlug
+                    navController.navigate(Route.Club(clubSlug)) {
                         popUpTo<Route.Club> { inclusive = true }
                     }
                     coroutineScope.launch { drawerState.close() }
@@ -124,8 +124,8 @@ fun ClubsScreen(
                     coroutineScope.launch { drawerState.close() }
                 },
                 onLogout = onLogout,
-                onSettingsClick = { clubId ->
-                    navController.navigate(Route.ClubSettings(clubId))
+                onSettingsClick = { clubSlug ->
+                    navController.navigate(Route.ClubSettings(clubSlug))
                     coroutineScope.launch { drawerState.close() }
                 },
                 isLoggingOut = isLoggingOut
@@ -140,7 +140,7 @@ fun ClubsScreen(
                 startDestination = if (it.isEmpty()) {
                     Route.EmptyClubs
                 } else {
-                    Route.Club(it.first().id)
+                    Route.Club(it.first().slug)
                 },
             ) {
                 composable<Route.Club> {
@@ -155,9 +155,9 @@ fun ClubsScreen(
                     CreateClubScreenRoot(
                         memberViewModel = memberViewModel,
                         onNavigateBack = { navController.popBackStack() },
-                        onNavigateToClub = { clubId ->
-                            currentClubId = clubId
-                            navController.navigate(Route.Club(clubId)) {
+                        onNavigateToClub = { clubSlug ->
+                            currentClubSlug = clubSlug
+                            navController.navigate(Route.Club(clubSlug)) {
                                 popUpTo<Route.CreateClub> { inclusive = true }
                             }
                         }
@@ -200,7 +200,7 @@ private fun EmptyClubsScreen() {
 @Composable
 private fun ModalDrawerContent(
     clubs: AsyncResult<List<Club>>,
-    currentClubId: String?,
+    currentClubSlug: String?,
     onClubClick: (String) -> Unit,
     onCreateClubClick: () -> Unit,
     onLogout: () -> Unit,
@@ -228,7 +228,7 @@ private fun ModalDrawerContent(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .background(
-                                        color = if (club.id == currentClubId)
+                                        color = if (club.id == currentClubSlug)
                                             MaterialTheme.colorScheme.primaryContainer
                                         else Color.Transparent
                                     )
@@ -239,11 +239,11 @@ private fun ModalDrawerContent(
                             ) {
                                 Text(
                                     text = club.name,
-                                    color = if (club.id == currentClubId)
+                                    color = if (club.id == currentClubSlug)
                                         MaterialTheme.colorScheme.onPrimaryContainer
                                     else MaterialTheme.colorScheme.onSurface
                                 )
-                                if (club.id == currentClubId) {
+                                if (club.id == currentClubSlug) {
                                     Icon(
                                         imageVector = Icons.Default.Check,
                                         contentDescription = "Selected",
@@ -286,8 +286,8 @@ private fun ModalDrawerContent(
             // Club Settings button
             TextButton(
                 onClick = {
-                    currentClubId?.let { clubId ->
-                        onSettingsClick(clubId)
+                    currentClubSlug?.let { clubSlug ->
+                        onSettingsClick(clubSlug)
                     }
                 },
                 modifier = Modifier

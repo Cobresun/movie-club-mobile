@@ -14,9 +14,9 @@ class ReviewsRepositoryImpl(
     private val clubDataSource: ClubDataSource,
     private val reviewsDataSource: ReviewsDataSource
 ) : ReviewsRepository {
-    override suspend fun getReviews(clubId: String): Result<List<Review>, DataError.Remote> {
-        val membersResult = clubDataSource.getMembers(clubId)
-        val reviewsResult = reviewsDataSource.getReviews(clubId)
+    override suspend fun getReviews(clubSlug: String): Result<List<Review>, DataError.Remote> {
+        val membersResult = clubDataSource.getMembers(clubSlug)
+        val reviewsResult = reviewsDataSource.getReviews(clubSlug)
 
         return when (membersResult) {
             is Result.Success if reviewsResult is Result.Success -> {
@@ -29,29 +29,29 @@ class ReviewsRepositoryImpl(
     }
 
     override suspend fun postReview(
-        clubId: String,
+        clubSlug: String,
         review: NewReviewItem
     ): Result<Unit, DataError.Remote> {
-        return reviewsDataSource.postReview(clubId, review.toNewReviewItemDto())
+        return reviewsDataSource.postReview(clubSlug, review.toNewReviewItemDto())
     }
 
     override suspend fun deleteReview(
-        clubId: String,
+        clubSlug: String,
         reviewId: String
     ): Result<Unit, DataError.Remote> {
-        return reviewsDataSource.deleteReview(clubId, reviewId)
+        return reviewsDataSource.deleteReview(clubSlug, reviewId)
     }
 
     override suspend fun submitScore(
-        clubId: String,
+        clubSlug: String,
         reviewWorkId: String,
         scoreId: String?,
         score: Double
     ): Result<Unit, DataError.Remote> {
         return if (scoreId == null) {
-            reviewsDataSource.submitScore(clubId, reviewWorkId, score)
+            reviewsDataSource.submitScore(clubSlug, reviewWorkId, score)
         } else {
-            reviewsDataSource.updateScore(clubId, scoreId, score)
+            reviewsDataSource.updateScore(clubSlug, scoreId, score)
         }
     }
 }
