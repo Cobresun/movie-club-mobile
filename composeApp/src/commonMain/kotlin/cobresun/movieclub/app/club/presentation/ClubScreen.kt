@@ -16,11 +16,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.StarOutline
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
@@ -48,6 +44,8 @@ import cobresun.movieclub.app.core.domain.workType
 import cobresun.movieclub.app.core.platform.HapticFeedback
 import cobresun.movieclub.app.core.presentation.UiMessage
 import cobresun.movieclub.app.core.presentation.components.AppSnackbarHost
+import cobresun.movieclub.app.core.presentation.components.PlatformTab
+import cobresun.movieclub.app.core.presentation.components.PlatformTabBar
 import cobresun.movieclub.app.core.presentation.components.LocalSnackbarHostState
 import cobresun.movieclub.app.lists.presentation.ListsAction
 import cobresun.movieclub.app.lists.presentation.ListsEvent
@@ -148,64 +146,25 @@ fun ClubScreenRoot(
     Scaffold(
         snackbarHost = { AppSnackbarHost(snackbarHostState) },
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
-                val colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.onSecondary,
-                    indicatorColor = MaterialTheme.colorScheme.secondary,
-                    selectedTextColor = MaterialTheme.colorScheme.secondary,
-                )
-                NavigationBarItem(
-                    selected = selectedTab == ClubTab.REVIEWS,
-                    onClick = { clubViewModel.selectTab(ClubTab.REVIEWS) },
-                    icon = {
-                        Icon(
-                            if (selectedTab == ClubTab.REVIEWS) Icons.Filled.Star else Icons.Outlined.StarOutline,
-                            contentDescription = null,
-                        )
-                    },
-                    label = { Text("Reviews") },
-                    colors = colors,
-                )
-                NavigationBarItem(
-                    selected = selectedTab == ClubTab.LISTS,
-                    onClick = { clubViewModel.selectTab(ClubTab.LISTS) },
-                    icon = {
-                        Icon(
-                            if (selectedTab == ClubTab.LISTS) Icons.AutoMirrored.Filled.FormatListBulleted
-                            else Icons.AutoMirrored.Outlined.FormatListBulleted,
-                            contentDescription = null,
-                        )
-                    },
-                    label = { Text("Lists") },
-                    colors = colors,
-                )
-                NavigationBarItem(
-                    selected = selectedTab == ClubTab.STATS,
-                    onClick = { clubViewModel.selectTab(ClubTab.STATS) },
-                    icon = {
-                        Icon(
-                            if (selectedTab == ClubTab.STATS) Icons.Filled.Insights else Icons.Outlined.Insights,
-                            contentDescription = null,
-                        )
-                    },
-                    label = { Text("Stats") },
-                    colors = colors,
-                )
-                if (awardsState.isAvailable) {
-                    NavigationBarItem(
-                        selected = selectedTab == ClubTab.AWARDS,
-                        onClick = { clubViewModel.selectTab(ClubTab.AWARDS) },
-                        icon = {
-                            Icon(
-                                if (selectedTab == ClubTab.AWARDS) Icons.Filled.EmojiEvents else Icons.Outlined.EmojiEvents,
-                                contentDescription = null,
-                            )
-                        },
-                        label = { Text("Awards") },
-                        colors = colors,
+            val tabs = buildList {
+                add(PlatformTab(ClubTab.REVIEWS.name, "Reviews", Icons.Outlined.StarOutline, Icons.Filled.Star, "star", "star.fill"))
+                add(
+                    PlatformTab(
+                        ClubTab.LISTS.name, "Lists",
+                        Icons.AutoMirrored.Outlined.FormatListBulleted, Icons.AutoMirrored.Filled.FormatListBulleted,
+                        "list.bullet.rectangle", "list.bullet.rectangle.fill",
                     )
+                )
+                add(PlatformTab(ClubTab.STATS.name, "Stats", Icons.Outlined.Insights, Icons.Filled.Insights, "chart.bar", "chart.bar.fill"))
+                if (awardsState.isAvailable) {
+                    add(PlatformTab(ClubTab.AWARDS.name, "Awards", Icons.Outlined.EmojiEvents, Icons.Filled.EmojiEvents, "trophy", "trophy.fill"))
                 }
             }
+            PlatformTabBar(
+                tabs = tabs,
+                selectedKey = selectedTab.name,
+                onSelect = { clubViewModel.selectTab(ClubTab.valueOf(it)) },
+            )
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->

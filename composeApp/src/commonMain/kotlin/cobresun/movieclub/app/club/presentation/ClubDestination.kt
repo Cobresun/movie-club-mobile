@@ -27,6 +27,8 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
+import androidx.compose.runtime.derivedStateOf
+import cobresun.movieclub.app.core.presentation.components.LocalNativeChromeVisible
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -175,7 +177,17 @@ fun ClubsScreen(
         modifier = Modifier.background(color = MaterialTheme.colorScheme.surface),
         drawerState = drawerState,
     ) {
-        CompositionLocalProvider(LocalClubSwitcher provides { coroutineScope.launch { drawerState.open() } }) {
+        val drawerClosed by remember {
+            derivedStateOf {
+                drawerState.currentValue == DrawerValue.Closed &&
+                    drawerState.targetValue == DrawerValue.Closed &&
+                    !drawerState.isAnimationRunning
+            }
+        }
+        CompositionLocalProvider(
+            LocalClubSwitcher provides { coroutineScope.launch { drawerState.open() } },
+            LocalNativeChromeVisible provides drawerClosed,
+        ) {
             when (clubs) {
                 is AsyncResult.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
