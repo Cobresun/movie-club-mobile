@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.search.data.repository
 
+import cobresun.movieclub.app.core.data.retryOnRateLimit
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.WorkType
@@ -25,7 +26,7 @@ class WorkSearchRepositoryImpl(
                 dto.results.map { it.toSearchResult() }
             }
 
-            WorkType.BOOK -> dataSource.searchBooks(trimmed).map { dto ->
+            WorkType.BOOK -> retryOnRateLimit { dataSource.searchBooks(trimmed) }.map { dto ->
                 dto.items.orEmpty().sortedByPopularity().map { it.toSearchResult() }
             }
         }
@@ -37,7 +38,7 @@ class WorkSearchRepositoryImpl(
                 dto.results.map { it.toSearchResult() }
             }
 
-            WorkType.BOOK -> dataSource.searchBooks("subject:fiction", maxResults = 20).map { dto ->
+            WorkType.BOOK -> retryOnRateLimit { dataSource.searchBooks("subject:fiction", maxResults = 20) }.map { dto ->
                 dto.items.orEmpty().sortedByPopularity().map { it.toSearchResult() }
             }
         }

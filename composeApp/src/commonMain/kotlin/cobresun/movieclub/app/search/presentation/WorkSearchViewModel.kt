@@ -6,6 +6,7 @@ import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.WorkType
 import cobresun.movieclub.app.core.presentation.toUserMessage
+import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.search.domain.WorkSearchRepository
 import cobresun.movieclub.app.search.domain.WorkSearchResult
 import kotlinx.coroutines.FlowPreview
@@ -76,7 +77,7 @@ class WorkSearchViewModel(
                 is Result.Error -> _state.update {
                     it.copy(
                         suggestions = AsyncResult.Error(dataError = result.error),
-                        errorMessage = result.error.toUserMessage("load suggestions"),
+                        errorMessage = result.error.message(type, "load suggestions"),
                     )
                 }
             }
@@ -97,10 +98,18 @@ class WorkSearchViewModel(
                 is Result.Error -> _state.update {
                     it.copy(
                         results = AsyncResult.Error(dataError = result.error),
-                        errorMessage = result.error.toUserMessage("search"),
+                        errorMessage = result.error.message(type, "search"),
                     )
                 }
             }
         }
     }
 }
+
+/** Keyless Google Books has a small shared quota; say so rather than a generic rate-limit message. */
+private fun DataError.Remote.message(type: WorkType, action: String): String =
+    if (this == DataError.Remote.TOO_MANY_REQUESTS && type == WorkType.BOOK) {
+        "Google Books is busy right now. Wait a minute and try again."
+    } else {
+        toUserMessage(action)
+    }
