@@ -53,6 +53,7 @@ import cobresun.movieclub.app.core.presentation.components.SectionLabel
 import cobresun.movieclub.app.core.presentation.components.ShimmerBox
 import cobresun.movieclub.app.core.presentation.components.WorkAbout
 import cobresun.movieclub.app.core.presentation.components.WorkHero
+import cobresun.movieclub.app.providers.presentation.WatchProvidersSection
 import cobresun.movieclub.app.core.presentation.formatShort
 import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.reviews.domain.Review
@@ -118,6 +119,12 @@ fun ReviewDetailSheet(
                 ClubScores(review = review, members = members, currentUserId = currentUserId)
             }
 
+            if (work.type == cobresun.movieclub.app.core.domain.WorkType.MOVIE) {
+                work.externalId?.let {
+                    WatchProvidersSection(it, Modifier.padding(start = 20.dp, end = 20.dp, bottom = 20.dp))
+                }
+            }
+
             val cast = (work.details as? WorkDetails.Movie)?.cast.orEmpty()
             if (cast.isNotEmpty()) {
                 SectionLabel("Cast", Modifier.padding(horizontal = 20.dp))
@@ -161,7 +168,7 @@ fun ReviewDetailSheet(
                     OutlinedButton(onClick = { onAction(ReviewsAction.Share(work)) }, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Copy link")
+                        Text("Share")
                     }
                     OutlinedButton(
                         onClick = { confirmRemove = true },

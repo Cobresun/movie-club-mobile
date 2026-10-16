@@ -45,6 +45,7 @@ import cobresun.movieclub.app.core.domain.Work
 import cobresun.movieclub.app.core.presentation.components.ConfirmDialog
 import cobresun.movieclub.app.core.presentation.components.WorkAbout
 import cobresun.movieclub.app.core.presentation.components.WorkHero
+import cobresun.movieclub.app.providers.presentation.WatchProvidersSection
 import cobresun.movieclub.app.core.presentation.finishedVerb
 import cobresun.movieclub.app.core.presentation.formatShort
 import cobresun.movieclub.app.lists.domain.WorkList
@@ -100,6 +101,10 @@ fun ListItemDetailSheet(
                 ).joinToString(" ")
                 if (added.isNotBlank()) {
                     Text(added, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+
+                if (work.type == cobresun.movieclub.app.core.domain.WorkType.MOVIE) {
+                    work.externalId?.let { WatchProvidersSection(it) }
                 }
 
                 // Primary actions
