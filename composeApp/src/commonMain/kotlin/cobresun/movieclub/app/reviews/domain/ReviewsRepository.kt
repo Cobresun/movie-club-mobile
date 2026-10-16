@@ -36,6 +36,9 @@ interface ReviewsRepository {
     /** Whether the club has AI discussion questions switched on. */
     suspend fun isDiscussionQuestionsEnabled(clubSlug: String): Result<Boolean, DataError.Remote>
 
+    /** Every work the signed-in member has scored, across all their clubs (for Score Assist). */
+    suspend fun getMyScoredWorks(): Result<List<ScoredWork>, DataError.Remote>
+
     /** Generates up to five discussion questions for a work. */
     suspend fun generateDiscussionQuestions(clubSlug: String, workId: String): Result<List<String>, DataError.Remote>
 }

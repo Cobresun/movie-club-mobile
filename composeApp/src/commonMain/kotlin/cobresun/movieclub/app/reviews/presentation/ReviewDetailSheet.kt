@@ -58,6 +58,8 @@ import cobresun.movieclub.app.core.presentation.formatShort
 import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.domain.ScoreScale
+import cobresun.movieclub.app.reviews.domain.ScoreAssist
+import cobresun.movieclub.app.reviews.domain.ScoredWork
 
 /** Everything about one reviewed work: scores, your score, cast, comments. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,6 +70,7 @@ fun ReviewDetailSheet(
     members: List<Member>,
     currentUserId: String?,
     discussionQuestionsEnabled: Boolean,
+    scoredWorks: List<ScoredWork>,
     onAction: (ReviewsAction) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -114,6 +117,15 @@ fun ReviewDetailSheet(
                     enabled = currentUserId != null,
                     onSave = { onAction(ReviewsAction.SaveScore(work.id, it)) },
                     onDelete = { onAction(ReviewsAction.DeleteScore(work.id)) },
+                    assist = remember(work.id, scoredWorks) {
+                        val target = ScoreAssist.Target(
+                            workId = work.id,
+                            type = work.type,
+                            externalId = work.externalId,
+                            genres = (work.details as? WorkDetails.Movie)?.genres.orEmpty(),
+                        )
+                        ScoreAssistInput(target, work.title, work.imageUrl, ScoreAssist.buildCandidatePool(scoredWorks, target))
+                    },
                 )
 
                 ClubScores(review = review, members = members, currentUserId = currentUserId)

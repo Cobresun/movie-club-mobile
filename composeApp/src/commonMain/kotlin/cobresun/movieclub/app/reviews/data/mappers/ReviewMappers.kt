@@ -9,8 +9,32 @@ import cobresun.movieclub.app.reviews.domain.MemberScore
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.domain.ReviewComment
 import kotlinx.datetime.TimeZone
+import cobresun.movieclub.app.core.domain.WorkDetails
+import cobresun.movieclub.app.reviews.data.dto.MemberScoredWorkDto
+import cobresun.movieclub.app.reviews.domain.ScoredWork
 
 private const val AVERAGE_KEY = "average"
+
+fun MemberScoredWorkDto.toScoredWork(): ScoredWork {
+    // Reuse the list-item mapper for poster selection and metadata parsing.
+    val work = WorkListItemDto(
+        id = workId, type = type, title = title, createdDate = scoredDate,
+        imageUrl = imageUrl, externalId = externalId, externalData = externalData,
+    ).toWork()
+    return ScoredWork(
+        workId = workId,
+        type = work.type,
+        title = title,
+        imageUrl = work.imageUrl,
+        externalId = externalId,
+        genres = (work.details as? WorkDetails.Movie)?.genres.orEmpty(),
+        score = score,
+        clubId = clubId,
+        clubName = clubName,
+        clubSlug = clubSlug,
+        scoredDate = scoredDate,
+    )
+}
 
 fun ReviewItemDto.toReview(timeZone: TimeZone = TimeZone.currentSystemDefault()): Review {
     val work = WorkListItemDto(

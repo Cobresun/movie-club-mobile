@@ -64,3 +64,19 @@ data class ClubFeaturesDto(val discussionQuestions: Boolean = false)
 
 @Serializable
 data class DiscussionQuestionsDto(val questions: List<String> = emptyList())
+
+/** One work the signed-in member has scored, in any of their clubs (`GET /api/member/scores`). */
+@Serializable
+data class MemberScoredWorkDto(
+    val workId: String,
+    val clubId: String,
+    val clubName: String = "",
+    val clubSlug: String = "",
+    val type: String = "movie",
+    val title: String,
+    val imageUrl: String? = null,
+    val externalId: String? = null,
+    val externalData: JsonElement? = null,
+    val score: Double,
+    val scoredDate: String = "",
+)

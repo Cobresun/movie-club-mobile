@@ -15,6 +15,7 @@ import cobresun.movieclub.app.core.domain.WorkDetails
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.core.domain.ShareLinks
+import cobresun.movieclub.app.reviews.domain.ScoredWork
 import cobresun.movieclub.app.core.presentation.UiMessage
 import cobresun.movieclub.app.core.presentation.isRetryable
 import cobresun.movieclub.app.core.presentation.toUserMessage
@@ -48,6 +49,8 @@ data class ReviewsState(
     val currentUserId: String? = null,
     val discussionQuestionsEnabled: Boolean = false,
     val detail: ReviewDetailState? = null,
+    /** The user's scores across all clubs, for Score Assist. */
+    val myScoredWorks: List<ScoredWork> = emptyList(),
 ) {
     val visibleReviews: List<Review>
         get() = sortReviews(
@@ -170,9 +173,16 @@ class ReviewsViewModel(
         viewModelScope.launch {
             clubRepository.getMembers(clubSlug).onSuccess { members -> _state.update { it.copy(members = members) } }
         }
+        loadMyScoredWorks()
         viewModelScope.launch {
             reviewsRepository.isDiscussionQuestionsEnabled(clubSlug)
                 .onSuccess { enabled -> _state.update { it.copy(discussionQuestionsEnabled = enabled) } }
+        }
+    }
+
+    private fun loadMyScoredWorks() {
+        viewModelScope.launch {
+            reviewsRepository.getMyScoredWorks().onSuccess { works -> _state.update { it.copy(myScoredWorks = works) } }
         }
     }
 
@@ -284,7 +294,10 @@ class ReviewsViewModel(
         updateDetail(workId) { it.copy(isSavingScore = true) }
         viewModelScope.launch {
             reviewsRepository.saveScore(clubSlug, workId, existing?.id, score)
-                .onSuccess { message("Score saved: ${ScoreScale.format(score)}") }
+                .onSuccess {
+                    message("Score saved: ${ScoreScale.format(score)}")
+                    loadMyScoredWorks()
+                }
                 .onError { error ->
                     updateReview(workId) { review }
                     emitError(error, "save your score") { saveScore(workId, score) }

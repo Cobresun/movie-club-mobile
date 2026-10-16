@@ -12,6 +12,8 @@ import cobresun.movieclub.app.reviews.data.dto.ListInsertBodyDto
 import cobresun.movieclub.app.reviews.data.dto.ScoreCreateDto
 import cobresun.movieclub.app.reviews.data.dto.ScoreUpdateDto
 import cobresun.movieclub.app.reviews.data.mappers.toReview
+import cobresun.movieclub.app.reviews.data.mappers.toScoredWork
+import cobresun.movieclub.app.reviews.domain.ScoredWork
 import cobresun.movieclub.app.reviews.data.mappers.toReviewComment
 import cobresun.movieclub.app.reviews.data.network.ReviewsDataSource
 import cobresun.movieclub.app.reviews.domain.Review
@@ -32,6 +34,9 @@ class ReviewsRepositoryImpl(
             dto.id
         }
     }
+
+    override suspend fun getMyScoredWorks(): Result<List<ScoredWork>, DataError.Remote> =
+        dataSource.getMyScores().map { items -> items.map { it.toScoredWork() } }
 
     override suspend fun getReviews(clubSlug: String): Result<List<Review>, DataError.Remote> =
         dataSource.getReviews(clubSlug).map { items ->

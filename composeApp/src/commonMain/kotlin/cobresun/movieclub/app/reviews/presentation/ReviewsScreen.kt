@@ -167,6 +167,7 @@ fun ReviewsScreen(
                 members = state.members,
                 currentUserId = state.currentUserId,
                 discussionQuestionsEnabled = state.discussionQuestionsEnabled,
+                scoredWorks = state.myScoredWorks,
                 onAction = onAction,
                 onDismiss = { onAction(ReviewsAction.CloseDetail) },
             )

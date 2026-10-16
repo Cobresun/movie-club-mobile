@@ -32,6 +32,19 @@ import androidx.compose.ui.unit.dp
 import cobresun.movieclub.app.core.presentation.components.PlatformNumericTextField
 import cobresun.movieclub.app.core.presentation.components.SectionLabel
 import cobresun.movieclub.app.reviews.domain.ScoreScale
+import cobresun.movieclub.app.reviews.domain.ScoreAssist
+import cobresun.movieclub.app.reviews.domain.ScoredWork
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material3.Icon
+
+/** What Score Assist needs to compare the work being scored against the user's other scores. */
+data class ScoreAssistInput(
+    val target: ScoreAssist.Target,
+    val title: String,
+    val imageUrl: String?,
+    val pool: List<ScoredWork>,
+)
 
 /**
  * Your score for a work: a 0–10 slider in half steps for quick entry, plus a
@@ -45,8 +58,11 @@ fun ScoreEntryPanel(
     enabled: Boolean,
     onSave: (Double) -> Unit,
     onDelete: () -> Unit,
+    assist: ScoreAssistInput? = null,
 ) {
     var text by remember(workId, existing) { mutableStateOf(existing?.let(ScoreScale::format) ?: "") }
+    var showAssist by remember(workId) { mutableStateOf(false) }
+    var suggested by remember(workId, existing) { mutableStateOf<Double?>(null) }
     val parsed = text.toDoubleOrNull()
     val valid = ScoreScale.isValid(parsed)
     val dirty = valid && parsed != existing
@@ -65,7 +81,11 @@ fun ScoreEntryPanel(
             Column(Modifier.weight(1f)) {
                 SectionLabel("Your score")
                 Text(
-                    if (existing == null) "Slide or type a score from 0 to 10" else "Tap Save after changing it",
+                    when {
+                        suggested != null && parsed == suggested -> "Suggested by Score Assist. Save it or adjust first."
+                        existing == null -> "Slide or type a score from 0 to 10"
+                        else -> "Tap Save after changing it"
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -105,6 +125,13 @@ fun ScoreEntryPanel(
             ),
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
+            if (assist != null && ScoreAssist.isEligible(assist.pool) && enabled) {
+                TextButton(onClick = { showAssist = true }, enabled = !isSaving) {
+                    Icon(Icons.Outlined.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Help me score")
+                }
+            }
             if (existing != null) {
                 TextButton(onClick = onDelete, enabled = !isSaving) {
                     Text("Clear my score", color = MaterialTheme.colorScheme.error)
@@ -127,5 +154,19 @@ fun ScoreEntryPanel(
                 }
             }
         }
+    }
+    if (showAssist && assist != null) {
+        ScoreAssistDialog(
+            target = assist.target,
+            targetTitle = assist.title,
+            targetImageUrl = assist.imageUrl,
+            pool = assist.pool,
+            onSuggest = { score ->
+                showAssist = false
+                suggested = score
+                text = ScoreScale.format(score)
+            },
+            onDismiss = { showAssist = false },
+        )
     }
 }
