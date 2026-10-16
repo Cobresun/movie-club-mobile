@@ -7,6 +7,7 @@ sealed class AuthAction {
         val password: String,
         val fullName: String
     ) : AuthAction()
+    data class AppleSignInResult(val outcome: AppleSignInOutcome) : AuthAction()
     data object Logout : AuthAction()
     data object ClearError : AuthAction()
     data class ResendVerificationEmail(val email: String) : AuthAction()

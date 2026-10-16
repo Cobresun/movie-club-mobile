@@ -34,6 +34,7 @@ class AuthViewModel(
     fun onAction(action: AuthAction) = when (action) {
         is AuthAction.LogIn -> login(action.email, action.password)
         is AuthAction.SignUp -> signup(action.email, action.password, action.fullName)
+        is AuthAction.AppleSignInResult -> onAppleSignInResult(action.outcome)
         is AuthAction.Logout -> logout()
         is AuthAction.ClearError -> clearError()
         is AuthAction.ResendVerificationEmail -> resendVerificationEmail(action.email)
@@ -84,6 +85,37 @@ class AuthViewModel(
                     }
                 }
             }
+    }
+
+    private fun onAppleSignInResult(outcome: AppleSignInOutcome) {
+        when (outcome) {
+            is AppleSignInOutcome.Cancelled -> Unit
+            is AppleSignInOutcome.Failed -> _errorMessage.update {
+                "Sign in with Apple couldn't be completed. Please try again."
+            }
+            is AppleSignInOutcome.Success -> viewModelScope.launch {
+                _state.update { it.copy(user = AsyncResult.Loading, confirmationMessage = null) }
+                _errorMessage.update { null }
+
+                authRepository.loginWithApple(outcome.credential)
+                    .onSuccess {
+                        _state.update { it.copy(user = AsyncResult.Success(Unit)) }
+                    }
+                    .onError { error ->
+                        _state.update { it.copy(user = AsyncResult.Error(dataError = error)) }
+                        _errorMessage.update {
+                            when (error) {
+                                DataError.Remote.NO_INTERNET ->
+                                    "No internet connection. Please check your connection and try again."
+                                DataError.Remote.REQUEST_TIMEOUT ->
+                                    "Request timed out. Please try again."
+                                else ->
+                                    "Sign in with Apple isn't available right now. Please use email and password instead."
+                            }
+                        }
+                    }
+            }
+        }
     }
 
     private fun signup(email: String, password: String, fullName: String) = viewModelScope.launch {

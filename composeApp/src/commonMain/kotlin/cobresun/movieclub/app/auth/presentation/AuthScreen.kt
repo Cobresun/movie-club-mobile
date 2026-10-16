@@ -157,6 +157,11 @@ private fun AuthLandingScreen(
             }
         }
 
+        AppleSignInButton(
+            enabled = !isLoading,
+            onOutcome = { onAction(AuthAction.AppleSignInResult(it)) },
+        )
+
         // Error Message
         errorMessage?.let { message ->
             Column(modifier = Modifier.padding(top = 8.dp)) {

@@ -7,6 +7,8 @@ import cobresun.movieclub.app.auth.data.dto.SignInRequestDto
 import cobresun.movieclub.app.auth.data.dto.SignInResponseDto
 import cobresun.movieclub.app.auth.data.dto.SignUpRequestDto
 import cobresun.movieclub.app.auth.data.dto.SignUpResponseDto
+import cobresun.movieclub.app.auth.data.dto.SocialSignInRequestDto
+import cobresun.movieclub.app.auth.data.dto.SocialSignInResponseDto
 import cobresun.movieclub.app.core.data.safeCall
 import cobresun.movieclub.app.core.domain.Constants.BASE_URL
 import cobresun.movieclub.app.core.domain.DataError
@@ -48,6 +50,22 @@ class KtorBetterAuthDataSource(
                 setBody(SignInRequestDto(email, password))
             }
         }.map { response -> response.user }
+    }
+
+    override suspend fun signInWithIdToken(
+        request: SocialSignInRequestDto
+    ): Result<BetterAuthUserDto, DataError.Remote> {
+        val result = safeCall<SocialSignInResponseDto> {
+            httpClient.post("$BASE_URL/api/auth/sign-in/social") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+        }
+        return when (result) {
+            is Result.Success -> result.data.user?.let { Result.Success(it) }
+                ?: Result.Error(DataError.Remote.SERIALIZATION)
+            is Result.Error -> result
+        }
     }
 
     override suspend fun signOut(): Result<Unit, DataError.Remote> {
