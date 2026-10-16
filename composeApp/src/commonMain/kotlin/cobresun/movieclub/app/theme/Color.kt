@@ -29,6 +29,23 @@ val Gold40 = Color(0xFF8A6D00)
 val Green80 = Color(0xFF4CAF50)     // Success
 val Green40 = Color(0xFF2E7D32)
 
+/**
+ * Categorical series colors for statistics charts (one per member, by position
+ * in the club's member list so a member keeps their color across charts).
+ */
+val ChartSeriesColors = listOf(
+    Color(0xFF6FBAFF), // highlight blue
+    Color(0xFFFFB454), // amber
+    Color(0xFF7BD88F), // green
+    Color(0xFFF178B6), // pink
+    Color(0xFFB39DFF), // violet
+    Color(0xFF4DD0E1), // cyan
+    Color(0xFFFF8A65), // coral
+    Color(0xFFD4E157), // lime
+)
+
+fun chartSeriesColor(index: Int): Color = ChartSeriesColors[index.mod(ChartSeriesColors.size)]
+
 // Error Colors
 val Red80 = Color(0xFFEF5350)
 val Red40 = Color(0xFF8E2424)

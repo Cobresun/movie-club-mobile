@@ -11,8 +11,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.EmojiEvents
+import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -59,6 +61,9 @@ import cobresun.movieclub.app.search.domain.WorkSearchResult
 import cobresun.movieclub.app.search.presentation.AddWorkSheet
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import cobresun.movieclub.app.stats.presentation.StatsAction
+import cobresun.movieclub.app.stats.presentation.StatsScreen
+import cobresun.movieclub.app.stats.presentation.StatsViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -71,6 +76,7 @@ fun ClubScreenRoot(
     clubViewModel: ClubViewModel = koinViewModel(),
     listsViewModel: ListsViewModel = koinViewModel(),
     reviewsViewModel: ReviewsViewModel = koinViewModel(),
+    statsViewModel: StatsViewModel = koinViewModel(),
     awardsViewModel: AwardsViewModel = koinViewModel(),
 ) {
     val selectedTab by clubViewModel.selectedTab.collectAsStateWithLifecycle()
@@ -173,6 +179,18 @@ fun ClubScreenRoot(
                     label = { Text("Lists") },
                     colors = colors,
                 )
+                NavigationBarItem(
+                    selected = selectedTab == ClubTab.STATS,
+                    onClick = { clubViewModel.selectTab(ClubTab.STATS) },
+                    icon = {
+                        Icon(
+                            if (selectedTab == ClubTab.STATS) Icons.Filled.Insights else Icons.Outlined.Insights,
+                            contentDescription = null,
+                        )
+                    },
+                    label = { Text("Stats") },
+                    colors = colors,
+                )
                 if (awardsState.isAvailable) {
                     NavigationBarItem(
                         selected = selectedTab == ClubTab.AWARDS,
@@ -213,6 +231,15 @@ fun ClubScreenRoot(
                         hapticFeedback = hapticFeedback,
                     )
 
+                    ClubTab.STATS -> {
+                        val statsState by statsViewModel.state.collectAsStateWithLifecycle()
+                        LaunchedEffect(Unit) { statsViewModel.onAction(StatsAction.Shown) }
+                        StatsScreen(
+                            state = statsState,
+                            onAction = statsViewModel::onAction,
+                            onGoToReviews = { clubViewModel.selectTab(ClubTab.REVIEWS) },
+                        )
+                    }
                     ClubTab.AWARDS -> AwardsScreen(
                         state = awardsState,
                         onAction = awardsViewModel::onAction,

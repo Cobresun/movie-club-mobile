@@ -27,6 +27,8 @@ data class MemberScore(
     val id: String,
     val userId: String,
     val value: Double,
+    /** ISO-8601 instant the score was first entered, when known. */
+    val createdAt: String? = null,
 )
 
 data class ReviewComment(
