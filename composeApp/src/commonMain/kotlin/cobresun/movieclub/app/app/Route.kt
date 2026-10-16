@@ -27,4 +27,13 @@ sealed interface Route {
     data class ClubSettings(
         val clubSlug: String
     ) : Route
+
+    @Serializable
+    data object Profile : Route
+
+    /** [token] pre-fills the invite (e.g. from a join-club link). */
+    @Serializable
+    data class JoinClub(
+        val token: String? = null
+    ) : Route
 }

@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.Club
 import cobresun.movieclub.app.core.domain.Result
+import cobresun.movieclub.app.core.domain.onSuccess
+import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.member.domain.MemberRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,22 +20,35 @@ class MemberViewModel(
     val state = _state.asStateFlow()
 
     init {
-        loadClubs()
+        loadClubs(showLoading = true)
+        loadMe()
     }
 
+    /**
+     * Reloads clubs (and the signed-in member) in place. Existing data stays on screen
+     * while refreshing, so the club navigation host isn't torn down.
+     */
     fun refresh() {
-        loadClubs()
+        val hasData = _state.value.clubs is AsyncResult.Success
+        loadClubs(showLoading = !hasData)
+        loadMe()
     }
 
-    private fun loadClubs() {
+    private fun loadMe() {
         viewModelScope.launch {
-            _state.update { it.copy(clubs = AsyncResult.Loading) }
+            memberRepository.getMember().onSuccess { me -> _state.update { it.copy(me = me) } }
+        }
+    }
+
+    private fun loadClubs(showLoading: Boolean) {
+        viewModelScope.launch {
+            if (showLoading) _state.update { it.copy(clubs = AsyncResult.Loading) }
             when (val result = memberRepository.getClubs()) {
                 is Result.Success -> {
                     _state.update { it.copy(clubs = AsyncResult.Success(result.data)) }
                 }
                 is Result.Error -> {
-                    _state.update { it.copy(clubs = AsyncResult.Error()) }
+                    if (showLoading) _state.update { it.copy(clubs = AsyncResult.Error(dataError = result.error)) }
                 }
             }
         }
@@ -41,5 +56,6 @@ class MemberViewModel(
 }
 
 data class MemberState(
-    val clubs: AsyncResult<List<Club>> = AsyncResult.Loading
+    val clubs: AsyncResult<List<Club>> = AsyncResult.Loading,
+    val me: Member? = null,
 )

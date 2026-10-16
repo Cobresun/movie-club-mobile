@@ -5,6 +5,7 @@ import cobresun.movieclub.app.auth.data.network.KtorBetterAuthDataSource
 import cobresun.movieclub.app.auth.data.repository.AuthRepositoryImpl
 import cobresun.movieclub.app.auth.domain.AuthRepository
 import cobresun.movieclub.app.auth.presentation.AuthViewModel
+import cobresun.movieclub.app.auth.presentation.ForgotPasswordViewModel
 import cobresun.movieclub.app.club.data.network.ClubDataSource
 import cobresun.movieclub.app.club.data.network.KtorClubDataSource
 import cobresun.movieclub.app.club.data.repository.ClubRepositoryImpl
@@ -21,6 +22,8 @@ import cobresun.movieclub.app.member.domain.MemberRepository
 import cobresun.movieclub.app.member.domain.AccountRepository
 import cobresun.movieclub.app.member.presentation.CreateClubViewModel
 import cobresun.movieclub.app.member.presentation.MemberViewModel
+import cobresun.movieclub.app.member.presentation.JoinClubViewModel
+import cobresun.movieclub.app.member.presentation.ProfileViewModel
 import cobresun.movieclub.app.reviews.data.network.KtorReviewsDataSource
 import cobresun.movieclub.app.reviews.data.network.ReviewsDataSource
 import cobresun.movieclub.app.reviews.data.repository.ReviewsRepositoryImpl
@@ -59,6 +62,9 @@ val sharedModule = module {
     single { MemberRepositoryImpl(get()) } binds arrayOf(MemberRepository::class, AccountRepository::class)
     viewModel { MemberViewModel(get()) }
     viewModel { CreateClubViewModel(get()) }
+    viewModelOf(::JoinClubViewModel)
+    viewModelOf(::ProfileViewModel)
+    viewModelOf(::ForgotPasswordViewModel)
 
     // Club
     single { KtorClubDataSource(get()) }.bind<ClubDataSource>()

@@ -34,6 +34,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -244,6 +245,21 @@ private fun LoginForm(
             onShowPasswordToggle = { showPassword = !showPassword },
             enabled = !isLoading
         )
+
+        var showForgotPassword by remember { mutableStateOf(false) }
+        TextButton(
+            onClick = { showForgotPassword = true },
+            enabled = !isLoading,
+            modifier = Modifier.align(Alignment.End)
+        ) {
+            Text("Forgot password?")
+        }
+        if (showForgotPassword) {
+            ForgotPasswordDialog(
+                initialEmail = email.trim(),
+                onDismiss = { showForgotPassword = false }
+            )
+        }
 
         Button(
             onClick = {
