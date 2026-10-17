@@ -15,45 +15,45 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/** Web profile name limit. */
+const val MAX_NAME_LENGTH = 100
+
 object PasswordRules {
     const val MIN_LENGTH = 8
 
-    /** Mirrors the web ChangePasswordForm checks; null when the input can be submitted. */
-    fun validate(current: String, new: String, confirm: String): String? = when {
-        current.isEmpty() -> "Enter your current password"
-        new.length < MIN_LENGTH -> "New password must be at least $MIN_LENGTH characters"
-        new != confirm -> "Passwords don't match"
-        new == current -> "New password must be different from current password"
+    /** The web ChangePasswordForm checks; null when the input can be submitted. */
+    fun validate(current: String, new: String): String? = when {
+        new.length < MIN_LENGTH -> "New password must be at least $MIN_LENGTH characters."
+        new == current -> "New password must be different from current password."
         else -> null
     }
 }
 
 data class ProfileState(
     val member: AsyncResult<Member> = AsyncResult.Loading,
-    val isEditingName: Boolean = false,
     val isSavingName: Boolean = false,
     val nameError: String? = null,
     val isUploadingAvatar: Boolean = false,
-    val showRemoveAvatarConfirmation: Boolean = false,
-    val showChangePassword: Boolean = false,
     val isChangingPassword: Boolean = false,
     val passwordError: String? = null,
+    /** Bumped on each successful change, so the form clears its fields. */
+    val passwordChanges: Int = 0,
     val message: String? = null,
 )
 
 sealed interface ProfileAction {
     data object Retry : ProfileAction
-    data object OnEditName : ProfileAction
-    data object OnDismissEditName : ProfileAction
+    /** The name field changed: drop its error. */
+    data object OnNameEdited : ProfileAction
     data class OnSaveName(val name: String) : ProfileAction
     data class OnAvatarPicked(val bytes: ByteArray?, val mimeType: String) : ProfileAction
     data object OnRemoveAvatar : ProfileAction
-    data object OnConfirmRemoveAvatar : ProfileAction
-    data object OnCancelRemoveAvatar : ProfileAction
-    data object OnChangePassword : ProfileAction
-    data object OnDismissChangePassword : ProfileAction
+    /** A password field changed: drop the form error. */
+    data object OnPasswordEdited : ProfileAction
     data class OnSubmitPassword(val current: String, val new: String, val revokeOthers: Boolean) : ProfileAction
     data object OnClearMessage : ProfileAction
+    /** A picked photo couldn't be decoded or the crop couldn't be encoded. */
+    data class OnPhotoFailed(val message: String) : ProfileAction
 }
 
 class ProfileViewModel(
@@ -82,30 +82,37 @@ class ProfileViewModel(
     fun onAction(action: ProfileAction) {
         when (action) {
             ProfileAction.Retry -> load(showLoading = true)
-            ProfileAction.OnEditName -> _state.update { it.copy(isEditingName = true, nameError = null) }
-            ProfileAction.OnDismissEditName -> _state.update { it.copy(isEditingName = false, nameError = null) }
+            ProfileAction.OnNameEdited -> _state.update { it.copy(nameError = null) }
             is ProfileAction.OnSaveName -> saveName(action.name)
             is ProfileAction.OnAvatarPicked -> uploadAvatar(action.bytes, action.mimeType)
-            ProfileAction.OnRemoveAvatar -> _state.update { it.copy(showRemoveAvatarConfirmation = true) }
-            ProfileAction.OnCancelRemoveAvatar -> _state.update { it.copy(showRemoveAvatarConfirmation = false) }
-            ProfileAction.OnConfirmRemoveAvatar -> removeAvatar()
-            ProfileAction.OnChangePassword -> _state.update { it.copy(showChangePassword = true, passwordError = null) }
-            ProfileAction.OnDismissChangePassword -> _state.update { it.copy(showChangePassword = false, passwordError = null) }
+            // Web removes straight away: the photo can simply be added again.
+            ProfileAction.OnRemoveAvatar -> removeAvatar()
+            ProfileAction.OnPasswordEdited -> _state.update { it.copy(passwordError = null) }
             is ProfileAction.OnSubmitPassword -> changePassword(action.current, action.new, action.revokeOthers)
             ProfileAction.OnClearMessage -> _state.update { it.copy(message = null) }
+            is ProfileAction.OnPhotoFailed -> _state.update { it.copy(message = action.message) }
         }
     }
 
-    private fun saveName(name: String) {
-        if (name.isBlank()) return
+    private fun saveName(input: String) {
+        val name = input.trim()
+        val invalid = when {
+            name.isEmpty() -> "Name cannot be empty"
+            name.length > MAX_NAME_LENGTH -> "Name is too long (max $MAX_NAME_LENGTH characters)"
+            else -> null
+        }
+        if (invalid != null) {
+            _state.update { it.copy(nameError = invalid) }
+            return
+        }
         viewModelScope.launch {
             _state.update { it.copy(isSavingName = true, nameError = null) }
             accountRepository.updateName(name)
                 .onSuccess {
-                    _state.update { it.copy(isSavingName = false, isEditingName = false, message = "Name updated") }
+                    _state.update { it.copy(isSavingName = false, message = "Name updated successfully") }
                     load(showLoading = false)
                 }
-                .onError { e -> _state.update { it.copy(isSavingName = false, nameError = e.toUserMessage("update your name")) } }
+                .onError { e -> _state.update { it.copy(isSavingName = false, nameError = e.serverMessage?.takeIf { m -> m.isNotBlank() } ?: "Failed to update name") } }
         }
     }
 
@@ -118,13 +125,13 @@ class ProfileViewModel(
                     _state.update { it.copy(isUploadingAvatar = false, message = "Photo updated") }
                     load(showLoading = false)
                 }
-                .onError { e -> _state.update { it.copy(isUploadingAvatar = false, message = e.toUserMessage("upload your photo")) } }
+                .onError { _ -> _state.update { it.copy(isUploadingAvatar = false, message = "Couldn't update your photo") } }
         }
     }
 
     private fun removeAvatar() {
         viewModelScope.launch {
-            _state.update { it.copy(isUploadingAvatar = true, showRemoveAvatarConfirmation = false) }
+            _state.update { it.copy(isUploadingAvatar = true) }
             accountRepository.removeAvatar()
                 .onSuccess {
                     _state.update { it.copy(isUploadingAvatar = false, message = "Photo removed") }
@@ -135,16 +142,22 @@ class ProfileViewModel(
     }
 
     private fun changePassword(current: String, new: String, revokeOthers: Boolean) {
+        PasswordRules.validate(current, new)?.let { error ->
+            _state.update { it.copy(passwordError = error) }
+            return
+        }
         viewModelScope.launch {
             _state.update { it.copy(isChangingPassword = true, passwordError = null) }
             accountRepository.changePassword(current, new, revokeOthers)
                 .onSuccess {
-                    _state.update { it.copy(isChangingPassword = false, showChangePassword = false, message = "Password changed") }
+                    _state.update {
+                        it.copy(isChangingPassword = false, passwordChanges = it.passwordChanges + 1, message = "Password changed successfully")
+                    }
                 }
                 .onError { e ->
                     val msg = e.serverMessage?.let { m ->
-                        if (m.contains("invalid", true) || m.contains("incorrect", true)) "Current password is incorrect" else m
-                    } ?: e.remote.toUserMessage("change your password")
+                        if (m.contains("invalid", true) || m.contains("incorrect", true)) "Current password is incorrect." else m
+                    } ?: "Failed to change password. Please try again."
                     _state.update { it.copy(isChangingPassword = false, passwordError = msg) }
                 }
         }

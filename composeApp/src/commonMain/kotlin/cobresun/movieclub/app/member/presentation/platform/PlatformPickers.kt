@@ -17,7 +17,10 @@ expect fun rememberImageShareSheet(): (png: ByteArray, fileName: String, title: 
 /** Encodes a rendered image (e.g. a captured graphics layer) as PNG bytes. */
 expect fun ImageBitmap.encodeToPng(): ByteArray
 
-/** A picked image, re-encoded as JPEG and downscaled so uploads stay small. */
+/** Encodes an image as JPEG bytes ([quality] 0–100), e.g. a cropped avatar. */
+expect fun ImageBitmap.encodeToJpeg(quality: Int): ByteArray
+
+/** A picked image, upright, re-encoded as JPEG and downscaled to [MAX_AVATAR_DIMENSION]. */
 class PickedImage(val bytes: ByteArray, val mimeType: String = "image/jpeg")
 
 /**
@@ -27,4 +30,8 @@ class PickedImage(val bytes: ByteArray, val mimeType: String = "image/jpeg")
 @Composable
 expect fun rememberImagePicker(onPicked: (PickedImage?) -> Unit): () -> Unit
 
-internal const val MAX_AVATAR_DIMENSION = 1024.0
+/**
+ * Longest side a picked photo is scaled to (web `WORKING_MAX_SIDE`): cheap to
+ * redraw while cropping, still full resolution for the avatar at maximum zoom.
+ */
+internal const val MAX_AVATAR_DIMENSION = 2048.0

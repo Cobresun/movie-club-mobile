@@ -68,6 +68,10 @@ actual fun ImageBitmap.encodeToPng(): ByteArray =
     Image.makeFromBitmap(asSkiaBitmap()).encodeToData(EncodedImageFormat.PNG)?.bytes
         ?: error("The image could not be encoded as PNG")
 
+actual fun ImageBitmap.encodeToJpeg(quality: Int): ByteArray =
+    Image.makeFromBitmap(asSkiaBitmap()).encodeToData(EncodedImageFormat.JPEG, quality)?.bytes
+        ?: error("The image could not be encoded as JPEG")
+
 @OptIn(ExperimentalForeignApi::class)
 private fun ByteArray.toNSData(): NSData = usePinned {
     NSData.create(bytes = it.addressOf(0), length = size.toULong())
