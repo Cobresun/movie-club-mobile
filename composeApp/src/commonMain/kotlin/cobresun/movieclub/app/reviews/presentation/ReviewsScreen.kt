@@ -1,6 +1,10 @@
 package cobresun.movieclub.app.reviews.presentation
 
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 
 import cobresun.movieclub.app.core.presentation.components.LocalTabBarInset
 import androidx.compose.animation.AnimatedVisibility
@@ -26,6 +30,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -107,7 +112,19 @@ fun ReviewsScreen(
                         modifier = Modifier.fillMaxSize(),
                     ) {
                         val visible = state.visibleReviews
+                        val gridState = rememberLazyGridState()
+                        // Keyed items keep the first visible card anchored when the order
+                        // changes, which lands the user mid-list. Jump back to the top instead.
+                        var lastOrdering by remember { mutableStateOf(state.sortState to state.query) }
+                        LaunchedEffect(state.sortState, state.query) {
+                            val ordering = state.sortState to state.query
+                            if (ordering != lastOrdering) {
+                                lastOrdering = ordering
+                                gridState.scrollToItem(0)
+                            }
+                        }
                         LazyVerticalGrid(
+                            state = gridState,
                             columns = GridCells.Adaptive(minSize = 150.dp),
                             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 112.dp + LocalTabBarInset.current),
                             horizontalArrangement = Arrangement.spacedBy(14.dp),
