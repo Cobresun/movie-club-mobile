@@ -97,3 +97,9 @@ data class MemberOutliers(val member: Member, val works: List<OutlierWork>)
 data class DeviationEntry(val work: Work, val clubScore: Double, val externalScore: Double, val deviation: Double)
 
 data class ExternalDeviation(val clubRatedHigher: List<DeviationEntry>, val clubRatedLower: List<DeviationEntry>)
+
+/** Most- and least-watched genres, five each. */
+data class GenreWatchCounts(val mostWatched: List<CategoryCount>, val leastWatched: List<CategoryCount>)
+
+/** The best-scored work of one review year (UTC). */
+data class YearBest(val year: Int, val work: Work, val average: Double, val workCount: Int)

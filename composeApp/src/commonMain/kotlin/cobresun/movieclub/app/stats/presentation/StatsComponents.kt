@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,24 +49,28 @@ fun StatCard(
     controls: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
+    val (reveal, animateIn) = rememberReveal()
     // Cards space themselves so widgets that render nothing leave no gap.
-    Column(
-        modifier
-            .padding(bottom = 14.dp)
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerLow)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            if (subtitle != null) {
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    CompositionLocalProvider(LocalAnimateIn provides animateIn) {
+        Column(
+            modifier
+                .then(reveal)
+                .padding(bottom = 14.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                if (subtitle != null) {
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
+            controls?.invoke()
+            content()
         }
-        controls?.invoke()
-        content()
     }
 }
 
@@ -199,8 +204,11 @@ fun RankedBar(
     supporting: String? = null,
     leading: (@Composable () -> Unit)? = null,
     barHeight: Dp = 6.dp,
+    /** Row position, for the staggered grow-in. */
+    index: Int = 0,
 ) {
     val animated by animateFloatAsState(fraction.coerceIn(0.02f, 1f))
+    val growth = rememberBarGrowth(index)
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         leading?.invoke()
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -222,7 +230,7 @@ fun RankedBar(
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             ) {
-                Box(Modifier.fillMaxWidth(animated).fillMaxHeight().clip(CircleShape).background(color))
+                Box(Modifier.fillMaxWidth(animated * growth).fillMaxHeight().clip(CircleShape).background(color))
             }
             if (supporting != null) {
                 Text(

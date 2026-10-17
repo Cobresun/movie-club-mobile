@@ -1,32 +1,43 @@
 package cobresun.movieclub.app.stats.presentation
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.StarOutline
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,21 +48,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cobresun.movieclub.app.core.domain.ClubType
+import cobresun.movieclub.app.core.domain.Work
 import cobresun.movieclub.app.core.presentation.components.Avatar
 import cobresun.movieclub.app.core.presentation.components.Poster
-import cobresun.movieclub.app.core.presentation.formatRuntime
 import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.domain.ScoreScale
 import cobresun.movieclub.app.stats.domain.CategoryCount
 import cobresun.movieclub.app.stats.domain.CategoryStat
 import cobresun.movieclub.app.stats.domain.CreditedPerson
-import cobresun.movieclub.app.stats.domain.PairSimilarity
 import cobresun.movieclub.app.stats.domain.PersonStat
 import cobresun.movieclub.app.stats.domain.ReviewerTitle
 import cobresun.movieclub.app.stats.domain.StatsSummary
@@ -60,9 +73,10 @@ import cobresun.movieclub.app.stats.domain.computeClubRecords
 import cobresun.movieclub.app.stats.domain.computeConsensus
 import cobresun.movieclub.app.stats.domain.computeCumulativeCounts
 import cobresun.movieclub.app.stats.domain.computeCurmudgeons
-import cobresun.movieclub.app.stats.domain.computeGenreCounts
 import cobresun.movieclub.app.stats.domain.computeGenreStats
+import cobresun.movieclub.app.stats.domain.computeGenreWatchCounts
 import cobresun.movieclub.app.stats.domain.computeGuiltyPleasures
+import cobresun.movieclub.app.stats.domain.computeHighestRatedByYear
 import cobresun.movieclub.app.stats.domain.computeLeaderboard
 import cobresun.movieclub.app.stats.domain.computeMonthlyActivity
 import cobresun.movieclub.app.stats.domain.computeScoreDistribution
@@ -75,50 +89,62 @@ import cobresun.movieclub.app.stats.domain.computeTmdbDeviation
 import cobresun.movieclub.app.stats.domain.computeTopActors
 import cobresun.movieclub.app.stats.domain.computeTopAuthors
 import cobresun.movieclub.app.stats.domain.computeTopDirectors
+import cobresun.movieclub.app.stats.domain.toFixed1
 import cobresun.movieclub.app.theme.chartSeriesColor
 
+/*
+ * The statistics widgets, in the web's `statisticsWidgets.ts` order and with
+ * its copy. Each widget hides itself when it has nothing to show.
+ */
+
 private fun fmt(v: Double) = ScoreScale.format(v)
-private fun signed(v: Double) = (if (v > 0) "+" else "") + fmt(v)
+private fun signed1(v: Double) = (if (v > 0) "+" else "") + v.toFixed1()
 private fun plural(n: Int, one: String, many: String = one + "s") = "$n ${if (n == 1) one else many}"
 
-/** Positive / negative accents (green, red) taken from the theme. */
+/** Positive / negative accents taken from the theme. */
 @Composable private fun goodColor() = MaterialTheme.colorScheme.secondary
 @Composable private fun badColor() = MaterialTheme.colorScheme.error
 @Composable private fun scoreColor() = MaterialTheme.colorScheme.tertiary
 
 private fun Member.firstName() = name.trim().substringBefore(' ').ifBlank { name }
 
+private fun nouns(type: ClubType) = if (type == ClubType.BOOK) "book" to "Books" else "movie" to "Movies"
+
+/** Picks [picked] when it's still offered, else the first option (web's tab fallback). */
+private fun <T> List<Pair<T, String>>.pick(picked: T): T = if (any { it.first == picked }) picked else first().first
+
 // --- Summary -----------------------------------------------------------------
 
 @Composable
 fun SummaryTiles(summary: StatsSummary, clubType: ClubType) {
     val isMovie = clubType == ClubType.MOVIE
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        SummaryTile(
-            icon = if (isMovie) Icons.Outlined.Movie else Icons.AutoMirrored.Outlined.MenuBook,
-            value = summary.workCount.toString(),
-            label = if (isMovie) "watched" else "read",
-            modifier = Modifier.weight(1f),
-        )
-        when {
-            isMovie && summary.runtimeMinutes > 0 -> {
-                val hours = summary.runtimeMinutes / 60
-                SummaryTile(
-                    icon = Icons.Outlined.Schedule,
-                    value = if (hours >= 24) "${hours}h" else formatRuntime(summary.runtimeMinutes),
-                    label = if (hours >= 48) "${(hours + 12) / 24} days" else "watch time",
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            !isMovie && summary.pageCount > 0 -> SummaryTile(
-                icon = Icons.AutoMirrored.Outlined.MenuBook,
-                value = formatThousands(summary.pageCount),
-                label = "pages",
+    val (reveal, animateIn) = rememberReveal()
+    CompositionLocalProvider(LocalAnimateIn provides animateIn) {
+        Row(Modifier.fillMaxWidth().then(reveal), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            val works = rememberCountUp(summary.workCount)
+            SummaryTile(
+                icon = if (isMovie) Icons.Outlined.Movie else Icons.AutoMirrored.Outlined.MenuBook,
+                value = works.toString(),
+                label = if (isMovie) "movies watched" else "books read",
                 modifier = Modifier.weight(1f),
             )
-        }
-        summary.clubAverage?.let {
-            SummaryTile(Icons.Outlined.StarOutline, fmt(it), "avg score", Modifier.weight(1f), accent = scoreColor())
+            if (isMovie) {
+                val minutes = rememberCountUp(summary.runtimeMinutes)
+                val totalHours = summary.runtimeMinutes / 60
+                val days = if (totalHours > 24) (totalHours / 24.0).let { kotlin.math.round(it).toInt() } else 0
+                SummaryTile(
+                    icon = Icons.Outlined.Schedule,
+                    value = "${minutes / 60}h ${minutes % 60}m",
+                    label = "watch time" + if (days > 0) " (${plural(days, "day")})" else "",
+                    modifier = Modifier.weight(1f),
+                )
+            } else if (summary.pageCount > 0) {
+                val pages = rememberCountUp(summary.pageCount)
+                SummaryTile(Icons.Outlined.Description, formatThousands(pages), "pages read", Modifier.weight(1f))
+            }
+            summary.clubAverage?.let {
+                SummaryTile(Icons.Outlined.StarOutline, fmt(it), "avg score", Modifier.weight(1f), accent = scoreColor())
+            }
         }
     }
 }
@@ -131,7 +157,7 @@ private fun SummaryTile(
     value: String,
     label: String,
     modifier: Modifier = Modifier,
-    accent: Color = MaterialTheme.colorScheme.secondary,
+    accent: Color = MaterialTheme.colorScheme.primary,
 ) {
     Column(
         modifier
@@ -142,7 +168,7 @@ private fun SummaryTile(
     ) {
         Icon(icon, null, tint = accent, modifier = Modifier.size(20.dp))
         Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, maxLines = 1)
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -153,10 +179,10 @@ fun ClubRecordsCard(reviews: List<Review>) {
     val records = remember(reviews) { computeClubRecords(reviews) } ?: return
     StatCard("Club Records") {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            RecordTile("Highest", records.highest, fmt(records.highest.value), goodColor(), Modifier.weight(1f))
-            RecordTile("Lowest", records.lowest, fmt(records.lowest.value), badColor(), Modifier.weight(1f))
+            RecordTile("Highest Rated", records.highest, records.highest.value.toFixed1(), goodColor(), Modifier.weight(1f))
+            RecordTile("Lowest Rated", records.lowest, records.lowest.value.toFixed1(), badColor(), Modifier.weight(1f))
             records.mostDivisive?.let {
-                RecordTile("Divisive", it, "±" + fmt(it.value), scoreColor(), Modifier.weight(1f))
+                RecordTile("Most Divisive", it, "±${it.value.toFixed1()} spread", scoreColor(), Modifier.weight(1f))
             }
         }
     }
@@ -165,12 +191,10 @@ fun ClubRecordsCard(reviews: List<Review>) {
 @Composable
 private fun RecordTile(label: String, stat: WorkStat, value: String, color: Color, modifier: Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Box {
-            Poster(stat.work.imageUrl, stat.work.title, Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp))
-            ValuePill(value, color, Modifier.align(Alignment.BottomStart).padding(6.dp).background(MaterialTheme.colorScheme.surfaceDim.copy(alpha = 0.85f), CircleShape))
-        }
+        Poster(stat.work.imageUrl, stat.work.title, Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp))
         Text(label.uppercase(), style = MaterialTheme.typography.labelSmall, color = color, fontWeight = FontWeight.SemiBold)
         Text(stat.work.title, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        ValuePill(value, color)
     }
 }
 
@@ -190,11 +214,11 @@ fun ScoresCard(reviews: List<Review>, members: List<Member>) {
         if (spread.isNotEmpty()) add(ScoreMode.AGREEMENT to "Agreement")
     }
     var picked by rememberSaveable { mutableStateOf(ScoreMode.DISTRIBUTION) }
-    val mode = if (options.any { it.first == picked }) picked else ScoreMode.DISTRIBUTION
+    val mode = options.pick(picked)
     val subtitle = when (mode) {
-        ScoreMode.DISTRIBUTION -> "How often each score is given"
-        ScoreMode.TREND -> "Each member's rolling average over time"
-        ScoreMode.AGREEMENT -> "Rolling score spread · lower means more agreement"
+        ScoreMode.DISTRIBUTION -> "How often each score gets handed out, by member"
+        ScoreMode.TREND -> "Rolling average score per member over time"
+        ScoreMode.AGREEMENT -> "Rolling score spread — lower means more agreement"
     }
     StatCard("Scores", subtitle = subtitle, controls = {
         SegmentedToggle(options, mode, { picked = it }, Modifier.fillMaxWidth())
@@ -226,20 +250,28 @@ fun ScoresCard(reviews: List<Review>, members: List<Member>) {
 
 // --- Activity ----------------------------------------------------------------
 
-private enum class ActivityMode { MONTHLY, TOTAL }
+private enum class ActivityMode { MONTHLY, TOTAL, YEARS }
 
 @Composable
 fun ActivityCard(reviews: List<Review>, clubType: ClubType) {
     val monthly = remember(reviews) { computeMonthlyActivity(reviews) }
     val cumulative = remember(reviews) { computeCumulativeCounts(reviews) }
+    val yearlyBest = remember(reviews) { computeHighestRatedByYear(reviews) }
     if (monthly.isEmpty()) return
     var mode by rememberSaveable { mutableStateOf(ActivityMode.MONTHLY) }
-        val busiest = monthly.maxBy { it.count }
+    val (noun, pluralNoun) = nouns(clubType)
     StatCard(
-        "Activity",
-        subtitle = "Busiest month: ${monthLabel(busiest.month, busiest.year)} · ${if (clubType == ClubType.MOVIE) plural(busiest.count, "movie") + " watched" else plural(busiest.count, "book") + " read"}",
+        "Club Activity",
+        subtitle = when (mode) {
+            ActivityMode.MONTHLY -> "$pluralNoun reviewed per month"
+            ActivityMode.TOTAL -> "Total ${pluralNoun.lowercase()} reviewed over time"
+            ActivityMode.YEARS -> "The top-rated $noun from each year your club reviewed"
+        },
         controls = {
-            SegmentedToggle(listOf(ActivityMode.MONTHLY to "Per month", ActivityMode.TOTAL to "Running total"), mode, { mode = it }, Modifier.fillMaxWidth())
+            SegmentedToggle(
+                listOf(ActivityMode.MONTHLY to "Monthly", ActivityMode.TOTAL to "All Time", ActivityMode.YEARS to "Best of Year"),
+                mode, { mode = it }, Modifier.fillMaxWidth(),
+            )
         },
     ) {
         AnimatedContent(mode, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "activity") { m ->
@@ -250,6 +282,21 @@ fun ActivityCard(reviews: List<Review>, clubType: ClubType) {
                     color = MaterialTheme.colorScheme.primary,
                 )
                 ActivityMode.TOTAL -> TimeLines(listOf(MaterialTheme.colorScheme.primary to cumulative))
+                ActivityMode.YEARS -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    yearlyBest.forEach { entry ->
+                        StatRow {
+                            Text(
+                                "${entry.year}",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.width(48.dp),
+                            )
+                            WorkInfo(entry.work, "${plural(entry.workCount, noun)} reviewed", Modifier.weight(1f))
+                            ValuePill(entry.average.toFixed1(), goodColor())
+                        }
+                    }
+                }
             }
         }
     }
@@ -257,46 +304,46 @@ fun ActivityCard(reviews: List<Review>, clubType: ClubType) {
 
 // --- Genres / subjects -------------------------------------------------------
 
-private enum class CategoryMode { LOVED, POPULAR }
+private enum class CategoryMode { RATED, COUNTED }
 
 @Composable
 fun GenresCard(reviews: List<Review>, members: List<Member>, clubType: ClubType) {
-    val isMovie = clubType == ClubType.MOVIE
-    var mode by rememberSaveable { mutableStateOf(CategoryMode.LOVED) }
+    if (clubType == ClubType.BOOK) SubjectsCard(reviews) else MovieGenresCard(reviews, members)
+}
+
+@Composable
+private fun MovieGenresCard(reviews: List<Review>, members: List<Member>) {
+    var mode by rememberSaveable { mutableStateOf(CategoryMode.RATED) }
     var memberId by rememberSaveable { mutableStateOf<String?>(null) }
-    val counts = remember(reviews) { if (isMovie) computeGenreCounts(reviews) else computeSubjectCounts(reviews) }
-    if (counts.isEmpty()) return
-    val title = if (isMovie) "Genres" else "Subjects"
-    StatCard(
-        title,
-        subtitle = if (mode == CategoryMode.LOVED) "Average score by ${title.lowercase().dropLast(1)} (2+ ${if (isMovie) "movies" else "books"})"
-        else if (isMovie) "What the club watches most" else "What the club reads most",
-        controls = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                SegmentedToggle(listOf(CategoryMode.LOVED to "Best rated", CategoryMode.POPULAR to "Most ${if (isMovie) "watched" else "read"}"), mode, { mode = it }, Modifier.fillMaxWidth())
-                if (mode == CategoryMode.LOVED && members.size > 1) MemberFilterChips(members, memberId, { memberId = it })
-            }
-        },
-    ) {
+    val stats = remember(reviews, memberId) { computeGenreStats(reviews, memberId) }
+    val counts = remember(reviews) { computeGenreWatchCounts(reviews) }
+    val clubStats = remember(reviews) { computeGenreStats(reviews) }
+    if (clubStats.mostLoved.isEmpty() && clubStats.leastLoved.isEmpty() && counts.mostWatched.isEmpty()) return
+    StatCard("Genres", controls = {
+        SegmentedToggle(listOf(CategoryMode.RATED to "Top Rated", CategoryMode.COUNTED to "Most Watched"), mode, { mode = it }, Modifier.fillMaxWidth())
+    }) {
         when (mode) {
-            CategoryMode.POPULAR -> CountBars(counts)
-            CategoryMode.LOVED -> {
-                if (isMovie) {
-                    val stats = remember(reviews, memberId) { computeGenreStats(reviews, memberId) }
-                    if (stats.mostLoved.isEmpty()) CardHint("Not enough scores yet: a genre needs two scored movies.")
-                    else {
-                        SectionLabel("Most loved", goodColor())
-                        ScoreBars(stats.mostLoved, goodColor())
-                        val least = stats.leastLoved.filter { it !in stats.mostLoved }
-                        if (least.isNotEmpty()) {
-                            SectionLabel("Least loved", badColor())
-                            ScoreBars(least, badColor())
-                        }
-                    }
-                } else {
-                    val stats = remember(reviews, memberId) { computeSubjectStats(reviews, memberId) }
-                    if (stats.isEmpty()) CardHint("Not enough scores yet: a subject needs two scored books.")
-                    else ScoreBars(stats, goodColor())
+            CategoryMode.RATED -> {
+                if (members.size > 1) MemberFilterChips(members, memberId, { memberId = it })
+                if (stats.mostLoved.isNotEmpty()) {
+                    SectionLabel("Most Loved", goodColor())
+                    RatedCategoryList(stats.mostLoved, "movie", goodColor())
+                }
+                if (stats.leastLoved.isNotEmpty()) {
+                    SectionLabel("Least Loved", badColor())
+                    RatedCategoryList(stats.leastLoved, "movie", badColor())
+                }
+                if (stats.mostLoved.isEmpty()) CardHint("Not enough scores yet: a genre needs two scored movies.")
+            }
+            CategoryMode.COUNTED -> {
+                val max = counts.mostWatched.firstOrNull()?.count ?: 1
+                if (counts.mostWatched.isNotEmpty()) {
+                    SectionLabel("Most Watched", goodColor())
+                    CountedCategoryList(counts.mostWatched, max, goodColor())
+                }
+                if (counts.leastWatched.isNotEmpty()) {
+                    SectionLabel("Least Watched", badColor())
+                    CountedCategoryList(counts.leastWatched, max, badColor())
                 }
             }
         }
@@ -304,17 +351,78 @@ fun GenresCard(reviews: List<Review>, members: List<Member>, clubType: ClubType)
 }
 
 @Composable
-private fun ScoreBars(stats: List<CategoryStat>, color: Color) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        stats.forEach { RankedBar(it.name, fmt(it.averageScore), (it.averageScore / 10).toFloat(), color, supporting = plural(it.count, "review")) }
+private fun SubjectsCard(reviews: List<Review>) {
+    val scores = remember(reviews) { computeSubjectStats(reviews) }
+    val counts = remember(reviews) { computeSubjectCounts(reviews) }
+    val options = buildList {
+        if (scores.isNotEmpty()) add(CategoryMode.RATED to "Top Rated")
+        if (counts.isNotEmpty()) add(CategoryMode.COUNTED to "Most Read")
+    }
+    if (options.isEmpty()) return
+    var picked by rememberSaveable { mutableStateOf(CategoryMode.RATED) }
+    val mode = options.pick(picked)
+    StatCard(
+        "Subjects",
+        subtitle = if (mode == CategoryMode.RATED) "Average score per subject (2+ books)" else "The subjects your club reaches for most",
+        controls = { SegmentedToggle(options, mode, { picked = it }, Modifier.fillMaxWidth()) },
+    ) {
+        when (mode) {
+            CategoryMode.RATED -> RatedCategoryList(scores, "book", goodColor())
+            CategoryMode.COUNTED -> CountedCategoryList(counts, counts.first().count, MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
+/** Ranked categories with their count and average score (web genre / subject lists). */
+@Composable
+private fun RatedCategoryList(stats: List<CategoryStat>, noun: String, color: Color) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        stats.forEachIndexed { index, stat ->
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                RankNumber(index, color)
+                Text(stat.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text(plural(stat.count, noun), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ValuePill(fmt(stat.averageScore), color, Modifier.widthIn(min = 48.dp))
+            }
+        }
+    }
+}
+
+/** Ranked categories with a bar against the most common one and their count. */
+@Composable
+private fun CountedCategoryList(counts: List<CategoryCount>, max: Int, color: Color) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        counts.forEachIndexed { index, count ->
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                RankNumber(index, color)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text(count.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    GrowingBar(count.count.toFloat() / max.coerceAtLeast(1), color, index, Modifier.width(96.dp))
+                }
+                ValuePill("${count.count}", color, Modifier.widthIn(min = 48.dp))
+            }
+        }
     }
 }
 
 @Composable
-private fun CountBars(counts: List<CategoryCount>) {
-    val max = counts.maxOf { it.count }
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        counts.forEach { RankedBar(it.name, it.count.toString(), it.count.toFloat() / max, MaterialTheme.colorScheme.primary) }
+private fun RankNumber(index: Int, color: Color) {
+    Text(
+        "${index + 1}",
+        style = MaterialTheme.typography.headlineSmall,
+        fontWeight = FontWeight.Bold,
+        color = color,
+        modifier = Modifier.width(22.dp),
+        textAlign = TextAlign.Center,
+    )
+}
+
+/** A thin rounded bar that grows in with its row (web `animate-bar-grow`). */
+@Composable
+private fun GrowingBar(fraction: Float, color: Color, index: Int, modifier: Modifier = Modifier) {
+    val growth = rememberBarGrowth(index)
+    Box(modifier.height(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
+        Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f) * growth).fillMaxHeight().clip(CircleShape).background(color))
     }
 }
 
@@ -327,49 +435,125 @@ fun PeopleCard(reviews: List<Review>, clubType: ClubType, cast: Map<String, List
     if (clubType == ClubType.BOOK) {
         val authors = remember(reviews) { computeTopAuthors(reviews) }
         if (authors.isEmpty()) return
-        StatCard("Authors", subtitle = "Most-read authors and how the club rated them") { PeopleList(authors) }
+        StatCard("Most Read Authors", subtitle = "Ranked by appearances in your club's reviews") {
+            PersonLeaderboard(authors, itemNoun = "book")
+        }
         return
     }
     val directors = remember(reviews) { computeTopDirectors(reviews) }
     val actors = remember(reviews, cast) { cast?.let { computeTopActors(reviews, it) }.orEmpty() }
-    if (directors.isEmpty() && actors.isEmpty()) return
-    var picked by rememberSaveable { mutableStateOf(PeopleMode.DIRECTORS) }
     val options = buildList {
         if (directors.isNotEmpty()) add(PeopleMode.DIRECTORS to "Directors")
         if (actors.isNotEmpty()) add(PeopleMode.ACTORS to "Actors")
     }
-    val mode = if (options.any { it.first == picked }) picked else options.first().first
-    StatCard("People", subtitle = "Most-watched and how the club rated them", controls = {
+    if (options.isEmpty()) return
+    var picked by rememberSaveable { mutableStateOf(PeopleMode.DIRECTORS) }
+    val mode = options.pick(picked)
+    StatCard("Filmmakers", subtitle = "Ranked by appearances in your club's reviews", controls = {
         SegmentedToggle(options, mode, { picked = it }, Modifier.fillMaxWidth())
     }) {
-        PeopleList(if (mode == PeopleMode.DIRECTORS) directors else actors)
+        PersonLeaderboard(if (mode == PeopleMode.DIRECTORS) directors else actors, itemNoun = "film")
     }
 }
 
+/** web PersonLeaderboard: ranked people, tap a row to list the works they appear in. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PeopleList(people: List<PersonStat>) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        people.forEachIndexed { i, p ->
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    "${i + 1}",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.width(14.dp),
-                    textAlign = TextAlign.Center,
-                )
-                Avatar(p.name, p.imageUrl, size = 40.dp)
-                Column(Modifier.weight(1f)) {
-                    Text(p.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(
-                        "${plural(p.workCount, "title")} · ${p.works.joinToString(", ")}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+private fun PersonLeaderboard(entries: List<PersonStat>, itemNoun: String) {
+    var expanded by remember(entries) { mutableStateOf(emptySet<String>()) }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        entries.forEachIndexed { index, entry ->
+            val isOpen = entry.name in expanded
+            val color = when {
+                entry.averageScore >= 7.5 -> goodColor()
+                entry.averageScore >= 5 -> MaterialTheme.colorScheme.primary
+                else -> badColor()
+            }
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .clickable(role = Role.Button, onClickLabel = if (isOpen) "Hide titles" else "Show titles") {
+                        expanded = if (isOpen) expanded - entry.name else expanded + entry.name
+                    }
+                    .semantics { stateDescription = if (isOpen) "Expanded" else "Collapsed" }
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    RankedAvatar(entry, index)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text(entry.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                            Text(plural(entry.workCount, itemNoun), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(entry.averageScore.toFixed1(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = color)
+                            Icon(
+                                if (isOpen) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                        GrowingBar((entry.averageScore / 10).toFloat(), color.copy(alpha = 0.7f), index, Modifier.fillMaxWidth())
+                    }
                 }
-                ValuePill(fmt(p.averageScore), scoreColor())
+                AnimatedVisibility(isOpen, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+                    FlowRow(
+                        Modifier.padding(start = 54.dp, top = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        entry.works.forEach { work ->
+                            Text(
+                                work,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier
+                                    .widthIn(max = 160.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Gold, silver and bronze for the podium; muted for the rest. */
+@Composable
+private fun rankColor(index: Int): Color = when (index) {
+    0 -> MaterialTheme.colorScheme.tertiary
+    1 -> MaterialTheme.colorScheme.onSurfaceVariant
+    2 -> MaterialTheme.colorScheme.error.copy(alpha = 0.85f)
+    else -> MaterialTheme.colorScheme.outline
+}
+
+@Composable
+private fun RankedAvatar(entry: PersonStat, index: Int) {
+    val color = rankColor(index)
+    Box(Modifier.size(40.dp)) {
+        if (entry.imageUrl != null) {
+            Avatar(entry.name, entry.imageUrl, size = 40.dp)
+            Box(
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .offset(x = 4.dp, y = 4.dp)
+                    .size(20.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .background(color.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("${index + 1}", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = color)
+            }
+        } else {
+            Box(Modifier.size(40.dp).clip(CircleShape).background(color.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
+                Text("${index + 1}", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = color)
             }
         }
     }
@@ -380,26 +564,49 @@ private fun PeopleList(people: List<PersonStat>) {
 @Composable
 fun ReviewerLeaderboardCard(reviews: List<Review>, members: List<Member>) {
     val entries = remember(reviews, members) { computeLeaderboard(reviews, members) }
-    if (entries.size < 2) return
-    StatCard("Reviewers", subtitle = "Average score each member gives") {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            entries.forEach { e ->
-                val color = chartSeriesColor(members.indexOf(e.member))
-                RankedBar(
-                    label = e.member.name,
-                    value = fmt(e.averageScore),
-                    fraction = (e.averageScore / 10).toFloat(),
-                    color = color,
-                    supporting = buildString {
-                        append(plural(e.reviewCount, "review"))
-                        when (e.title) {
-                            ReviewerTitle.SOFTIE -> append(" · The Softie")
-                            ReviewerTitle.HATER -> append(" · The Hater")
-                            null -> {}
+    if (entries.isEmpty()) return
+    StatCard("Reviewer Stats", subtitle = "Average score per member — chart colors match") {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            entries.forEachIndexed { index, e ->
+                val color = chartSeriesColor(maxOf(0, members.indexOf(e.member)))
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Avatar(e.member.name, e.member.imageUrl, size = 36.dp)
+                        Column(Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Box(Modifier.size(10.dp).clip(CircleShape).background(color))
+                                Text(
+                                    e.member.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false),
+                                )
+                                e.title?.let { title ->
+                                    val badge = if (title == ReviewerTitle.SOFTIE) goodColor() else badColor()
+                                    Text(
+                                        if (title == ReviewerTitle.SOFTIE) "The Softie" else "The Hater",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = badge,
+                                        modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(badge.copy(alpha = 0.16f)).padding(horizontal = 8.dp, vertical = 2.dp),
+                                    )
+                                }
+                            }
+                            Text(plural(e.reviewCount, "review"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                    },
-                    leading = { Avatar(e.member.name, e.member.imageUrl, size = 36.dp) },
-                )
+                        Text(e.averageScore.toFixed1(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    }
+                    GrowingBar((e.averageScore / 10).toFloat(), color, index, Modifier.fillMaxWidth())
+                }
             }
         }
     }
@@ -407,69 +614,91 @@ fun ReviewerLeaderboardCard(reviews: List<Review>, members: List<Member>) {
 
 // --- Taste similarity --------------------------------------------------------
 
+private enum class TasteScope { CLUB, YOU }
+private enum class TasteMode { MOST, LEAST }
+
 @Composable
 fun TasteSimilarityCard(reviews: List<Review>, members: List<Member>, currentUserId: String?) {
-    val isMember = members.any { it.id == currentUserId }
-    var scope by rememberSaveable { mutableStateOf<String?>(null) }
-    val scoped = scope.takeIf { s -> members.any { it.id == s } }
-    val result = remember(reviews, members, scoped) { computeTasteSimilarity(reviews, members, scoped) }
-    val everyone = remember(reviews, members) { computeTasteSimilarity(reviews, members) }
-    if (everyone.mostSimilar == null) return
+    val club = remember(reviews, members) { computeTasteSimilarity(reviews, members) }
+    val yours = remember(reviews, members, currentUserId) {
+        currentUserId?.let { computeTasteSimilarity(reviews, members, it) }
+    }
+    val scopes = buildList {
+        add(TasteScope.CLUB to "Club")
+        if (yours?.mostSimilar != null) add(TasteScope.YOU to "You")
+    }
+    var pickedScope by rememberSaveable { mutableStateOf(TasteScope.CLUB) }
+    val scope = scopes.pick(pickedScope)
+    val similarity = if (scope == TasteScope.YOU) yours!! else club
+    val modes = buildList {
+        if (similarity.mostSimilar != null) add(TasteMode.MOST to "Most Similar")
+        if (similarity.leastSimilar != null) add(TasteMode.LEAST to "Least Similar")
+    }
+    if (modes.isEmpty()) return
+    var pickedMode by rememberSaveable { mutableStateOf(TasteMode.MOST) }
+    val mode = modes.pick(pickedMode)
+    val pair = (if (mode == TasteMode.MOST) similarity.mostSimilar else similarity.leastSimilar) ?: return
+    val accent = if (mode == TasteMode.MOST) goodColor() else badColor()
+    fun label(member: Member) = if (scope == TasteScope.YOU && member.id == currentUserId) "You" else member.firstName()
+
     StatCard(
         "Taste Similarity",
-        subtitle = "How closely members' scores line up (3+ shared reviews)",
-        controls = if (members.size > 2) {
-            {
-                // Put the viewer first, labelled "You".
-                val ordered = members.sortedByDescending { it.id == currentUserId }
-                MemberFilterChips(ordered, scoped, { scope = it }, labelFor = { if (isMember && it.id == currentUserId) "You" else it.firstName() })
+        subtitle = when (scope to mode) {
+            TasteScope.CLUB to TasteMode.MOST -> "The pair whose scores line up the closest"
+            TasteScope.CLUB to TasteMode.LEAST -> "The pair whose scores clash the hardest"
+            TasteScope.YOU to TasteMode.MOST -> "The member whose scores line up closest with yours"
+            else -> "The member whose scores clash hardest with yours"
+        },
+        controls = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (scopes.size > 1) SegmentedToggle(scopes, scope, { pickedScope = it }, Modifier.fillMaxWidth())
+                SegmentedToggle(modes, mode, { pickedMode = it }, Modifier.fillMaxWidth())
             }
-        } else null,
+        },
     ) {
-        val most = result.mostSimilar
-        val least = result.leastSimilar
-        if (most == null) {
-            CardHint("Not enough shared reviews yet for this member.")
-        } else {
-            PairRow("Most alike", most, goodColor(), currentUserId)
-            if (least != null && least != most) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                PairRow("Least alike", least, badColor(), currentUserId)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+            PairMember(pair.memberA, label(pair.memberA))
+            Column(Modifier.padding(horizontal = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("${fmt(pair.similarityPercent)}%", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = accent)
+                Text("similar", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            PairMember(pair.memberB, label(pair.memberB))
+        }
+        Text(
+            buildString {
+                append("Average score difference: ")
+                append(fmt(pair.avgDifference))
+                append(" points across ${pair.sharedCount} shared reviews")
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(accent.copy(alpha = 0.1f)).padding(horizontal = 12.dp, vertical = 8.dp),
+        )
+        val highlights = if (mode == TasteMode.MOST) pair.bestAgreements else pair.worstAgreements
+        if (highlights.isNotEmpty()) {
+            SectionLabel(if (mode == TasteMode.MOST) "Top agreements" else "Biggest disagreements")
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                highlights.forEach { a ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(a.work.title, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        Text(
+                            "${fmt(a.scoreA)} vs ${fmt(a.scoreB)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun PairRow(label: String, pair: PairSimilarity, color: Color, currentUserId: String?) {
-    fun Member.short() = if (id == currentUserId) "You" else firstName()
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        SectionLabel(label, color)
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(Modifier.width(62.dp)) {
-                Avatar(pair.memberA.name, pair.memberA.imageUrl, size = 38.dp)
-                Avatar(pair.memberB.name, pair.memberB.imageUrl, size = 38.dp, modifier = Modifier.align(Alignment.CenterEnd))
-            }
-            Column(Modifier.weight(1f)) {
-                Text(
-                    "${pair.memberA.short()} & ${pair.memberB.short()}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    "${plural(pair.sharedCount, "shared review")} · ${fmt(pair.avgDifference)} pts apart on average",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Text("${pair.similarityPercent.toInt()}%", style = MaterialTheme.typography.titleLarge, color = color, fontWeight = FontWeight.Bold)
-        }
-        val examples = if (color == goodColor()) pair.bestAgreements.take(2) else pair.worstAgreements.take(2)
-        examples.forEach { a ->
-            WorkStatRow(a.work, "${pair.memberA.short()} ${fmt(a.scoreA)} · ${pair.memberB.short()} ${fmt(a.scoreB)}")
-        }
+private fun PairMember(member: Member, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Avatar(member.name, member.imageUrl, size = 48.dp)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
     }
 }
 
@@ -481,33 +710,38 @@ private enum class OutlierMode { GUILTY, CURMUDGEON }
 fun MemberOutliersCard(reviews: List<Review>, members: List<Member>, clubType: ClubType) {
     val guilty = remember(reviews, members) { computeGuiltyPleasures(reviews, members) }
     val curmudgeons = remember(reviews, members) { computeCurmudgeons(reviews, members) }
-    if (guilty.isEmpty() && curmudgeons.isEmpty()) return
-    var picked by rememberSaveable { mutableStateOf(OutlierMode.GUILTY) }
     val options = buildList {
-        if (guilty.isNotEmpty()) add(OutlierMode.GUILTY to "Guilty pleasures")
+        if (guilty.isNotEmpty()) add(OutlierMode.GUILTY to "Guilty Pleasures")
         if (curmudgeons.isNotEmpty()) add(OutlierMode.CURMUDGEON to "Curmudgeons")
     }
-    val mode = if (options.any { it.first == picked }) picked else options.first().first
+    if (options.isEmpty()) return
+    var picked by rememberSaveable { mutableStateOf(OutlierMode.GUILTY) }
+    val mode = options.pick(picked)
     val entries = if (mode == OutlierMode.GUILTY) guilty else curmudgeons
     var memberId by rememberSaveable { mutableStateOf<String?>(null) }
     val selected = entries.firstOrNull { it.member.id == memberId } ?: entries.first()
-    val noun = if (clubType == ClubType.MOVIE) "movies" else "books"
+    val pluralNoun = nouns(clubType).second
+    val isGuilty = mode == OutlierMode.GUILTY
     StatCard(
-        if (mode == OutlierMode.GUILTY) "Guilty Pleasures" else "Club Curmudgeons",
-        subtitle = if (mode == OutlierMode.GUILTY) "${noun.replaceFirstChar { it.uppercase() }} one member alone loved, 2+ above the club"
-        else "${noun.replaceFirstChar { it.uppercase() }} one member alone disliked, 2+ below the club",
+        if (isGuilty) "Guilty Pleasures" else "Club Curmudgeons",
+        subtitle = if (isGuilty) "$pluralNoun where only one member loved it (2+ points above club average)"
+        else "$pluralNoun where only one member hated it (2+ points below club average)",
         controls = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 SegmentedToggle(options, mode, { picked = it }, Modifier.fillMaxWidth())
-                MemberFilterChips(entries.map { it.member }, selected.member.id, { memberId = it }, includeAll = false, labelFor = { "${it.firstName()} · ${entries.first { e -> e.member.id == it.id }.works.size}" })
+                MemberFilterChips(entries.map { it.member }, selected.member.id, { memberId = it }, includeAll = false)
             }
         },
     ) {
-        val color = if (mode == OutlierMode.GUILTY) goodColor() else badColor()
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        val color = if (isGuilty) goodColor() else badColor()
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             selected.works.forEach { w ->
-                WorkStatRow(w.work, "${selected.member.firstName()} ${fmt(w.memberScore)} · club ${fmt(w.clubAverage)}") {
-                    ValuePill(signed(w.difference), color)
+                StatRow {
+                    WorkInfo(w.work, "Club avg: ${w.clubAverage.toFixed1()}", Modifier.weight(1f))
+                    Column(horizontalAlignment = Alignment.End) {
+                        ValuePill(w.memberScore.toFixed1(), color)
+                        Text(signed1(w.difference), style = MaterialTheme.typography.labelSmall, color = color.copy(alpha = 0.7f), modifier = Modifier.padding(top = 2.dp, end = 4.dp))
+                    }
                 }
             }
         }
@@ -518,22 +752,39 @@ fun MemberOutliersCard(reviews: List<Review>, members: List<Member>, clubType: C
 
 private enum class ConsensusMode { AGREED, DIVISIVE }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ConsensusCard(reviews: List<Review>, members: List<Member>) {
     val consensus = remember(reviews, members) { computeConsensus(reviews, members) }
     if (consensus.mostAgreed.isEmpty()) return
     var mode by rememberSaveable { mutableStateOf(ConsensusMode.AGREED) }
-    StatCard("Club Consensus", subtitle = "Where scores were closest together and furthest apart", controls = {
-        SegmentedToggle(listOf(ConsensusMode.AGREED to "Agreed", ConsensusMode.DIVISIVE to "Divisive"), mode, { mode = it }, Modifier.fillMaxWidth())
-    }) {
+    StatCard(
+        "Club Consensus",
+        subtitle = if (mode == ConsensusMode.AGREED) "Scores that landed closest together" else "Scores that split the room",
+        controls = {
+            SegmentedToggle(listOf(ConsensusMode.AGREED to "Most Agreed", ConsensusMode.DIVISIVE to "Most Divisive"), mode, { mode = it }, Modifier.fillMaxWidth())
+        },
+    ) {
         val list = if (mode == ConsensusMode.AGREED) consensus.mostAgreed else consensus.mostDivisive
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        val color = if (mode == ConsensusMode.AGREED) goodColor() else badColor()
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             list.forEach { e ->
-                WorkStatRow(e.work, e.scores.joinToString(" · ") { "${it.member.firstName()} ${fmt(it.score)}" }) {
-                    Column(horizontalAlignment = Alignment.End) {
-                        ValuePill(fmt(e.average), scoreColor())
-                        Text("±${fmt(e.stdDev)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp, end = 4.dp))
+                StatRow {
+                    Poster(e.work.imageUrl, e.work.title, Modifier.width(40.dp), shape = RoundedCornerShape(6.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(e.work.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            e.scores.forEach { s ->
+                                Text(
+                                    "${s.member.firstName()}: ${fmt(s.score)}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(horizontal = 6.dp, vertical = 2.dp),
+                                )
+                            }
+                        }
                     }
+                    ValuePill(e.average.toFixed1(), color)
                 }
             }
         }
@@ -547,24 +798,57 @@ private enum class DeviationMode { HIGHER, LOWER }
 @Composable
 fun TmdbDeviationCard(reviews: List<Review>) {
     val deviation = remember(reviews) { computeTmdbDeviation(reviews) }
-    if (deviation.clubRatedHigher.isEmpty() && deviation.clubRatedLower.isEmpty()) return
-    var picked by rememberSaveable { mutableStateOf(DeviationMode.HIGHER) }
     val options = buildList {
-        if (deviation.clubRatedHigher.isNotEmpty()) add(DeviationMode.HIGHER to "Club liked more")
-        if (deviation.clubRatedLower.isNotEmpty()) add(DeviationMode.LOWER to "Club liked less")
+        if (deviation.clubRatedHigher.isNotEmpty()) add(DeviationMode.HIGHER to "We Liked More")
+        if (deviation.clubRatedLower.isNotEmpty()) add(DeviationMode.LOWER to "We Liked Less")
     }
-    val mode = if (options.any { it.first == picked }) picked else options.first().first
-    StatCard("vs. TMDB", subtitle = "Where the club disagrees with TMDB's audience", controls = {
-        SegmentedToggle(options, mode, { picked = it }, Modifier.fillMaxWidth())
-    }) {
-        val list = if (mode == DeviationMode.HIGHER) deviation.clubRatedHigher else deviation.clubRatedLower
-        val color = if (mode == DeviationMode.HIGHER) goodColor() else badColor()
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    if (options.isEmpty()) return
+    var picked by rememberSaveable { mutableStateOf(DeviationMode.HIGHER) }
+    val mode = options.pick(picked)
+    val higher = mode == DeviationMode.HIGHER
+    StatCard(
+        "Club vs TMDB",
+        subtitle = if (higher) "Movies your club rated above the TMDB average" else "Movies your club rated below the TMDB average",
+        controls = { SegmentedToggle(options, mode, { picked = it }, Modifier.fillMaxWidth()) },
+    ) {
+        val list = if (higher) deviation.clubRatedHigher else deviation.clubRatedLower
+        val color = if (higher) goodColor() else badColor()
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             list.forEach { e ->
-                WorkStatRow(e.work, "Club ${fmt(e.clubScore)} · TMDB ${fmt(e.externalScore)}") {
-                    ValuePill(signed(e.deviation), color)
+                StatRow {
+                    WorkInfo(e.work, "Club: ${fmt(e.clubScore)}  |  TMDB: ${fmt(e.externalScore)}", Modifier.weight(1f))
+                    ValuePill((if (e.deviation > 0) "+" else "") + fmt(e.deviation), color)
                 }
             }
+        }
+    }
+}
+
+// --- Shared rows ---------------------------------------------------------------
+
+/** A bordered row inside a widget (web `rounded-lg border bg-background/50`). */
+@Composable
+private fun StatRow(content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        content = content,
+    )
+}
+
+/** Poster, title and a supporting line. */
+@Composable
+private fun WorkInfo(work: Work, supporting: String, modifier: Modifier = Modifier) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Poster(work.imageUrl, work.title, Modifier.width(40.dp), shape = RoundedCornerShape(6.dp))
+        Column(Modifier.weight(1f)) {
+            Text(work.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(supporting, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -590,4 +874,3 @@ fun FewReviewsHint(count: Int, clubType: ClubType) {
         )
     }
 }
-

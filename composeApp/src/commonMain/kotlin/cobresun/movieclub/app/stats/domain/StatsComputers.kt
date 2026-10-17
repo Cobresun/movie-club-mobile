@@ -141,6 +141,22 @@ fun computeMonthlyActivity(reviews: List<Review>): List<MonthCount> {
     }
 }
 
+/** Each review year's best-scored work (the first one wins a tie), newest year first. */
+fun computeHighestRatedByYear(reviews: List<Review>): List<YearBest> {
+    val groups = linkedMapOf<Int, Pair<Review, Int>>()
+    for (review in reviews) {
+        val year = review.addedInstant?.toLocalDateTime(TimeZone.UTC)?.year ?: continue
+        val group = groups[year]
+        groups[year] = when {
+            group == null -> review to 1
+            review.avg > group.first.avg -> review to group.second + 1
+            else -> group.first to group.second + 1
+        }
+    }
+    return groups.map { (year, group) -> YearBest(year, group.first.work, group.first.avg.round2(), group.second) }
+        .sortedByDescending { it.year }
+}
+
 /** Running total of works reviewed, in review order. */
 fun computeCumulativeCounts(reviews: List<Review>): List<TimePoint> =
     reviews.mapNotNull { r -> r.addedInstant?.let { it to r.work.title } }
@@ -187,6 +203,15 @@ fun computeGenreStats(reviews: List<Review>, memberId: String? = null): LovedCat
 
 /** Most-watched genres, top five. */
 fun computeGenreCounts(reviews: List<Review>): List<CategoryCount> = categoryCounts(reviews, movieGenres).take(5)
+
+/** The five most- and five least-watched genres (least first in the latter). */
+fun computeGenreWatchCounts(reviews: List<Review>): GenreWatchCounts {
+    val sorted = categoryCounts(reviews, movieGenres)
+    return GenreWatchCounts(
+        mostWatched = sorted.take(5),
+        leastWatched = sorted.takeLast(5).sortedBy { it.count },
+    )
+}
 
 /** Best-scored book subjects (ties broken by count), top five. */
 fun computeSubjectStats(reviews: List<Review>, memberId: String? = null): List<CategoryStat> =
