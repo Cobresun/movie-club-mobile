@@ -200,6 +200,7 @@ fun ListsScreen(
     if (showManage) {
         ManageListsSheet(
             lists = state.listsOrEmpty,
+            noun = state.clubType.workType.noun,
             onAction = onAction,
             onDismiss = { showManage = false },
         )
