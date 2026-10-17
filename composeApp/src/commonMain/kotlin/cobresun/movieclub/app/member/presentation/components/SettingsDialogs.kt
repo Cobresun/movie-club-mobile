@@ -94,7 +94,6 @@ fun TextInputDialog(
                         edited = true
                     },
                     label = { Text(label) },
-                    prefix = prefix?.let { p -> { Text(p, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
                     singleLine = true,
                     enabled = !isSaving,
                     isError = shownError != null,
@@ -102,6 +101,16 @@ fun TextInputDialog(
                     keyboardOptions = keyboardOptions,
                     modifier = Modifier.fillMaxWidth().focusRequester(focus),
                 )
+                // An inline prefix leaves almost no room for the value on phones, so the
+                // full result (e.g. the club URL) is previewed below the field instead.
+                prefix?.let { p ->
+                    Text(
+                        p + value.text,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                    )
+                }
             }
         },
         confirmButton = {
