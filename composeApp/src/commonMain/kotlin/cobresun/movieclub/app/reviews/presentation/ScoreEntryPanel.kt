@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -29,7 +27,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import cobresun.movieclub.app.core.presentation.components.PlatformNumericTextField
+import cobresun.movieclub.app.core.platform.HapticFeedback
+import org.koin.compose.koinInject
 import cobresun.movieclub.app.core.presentation.components.SectionLabel
 import cobresun.movieclub.app.reviews.domain.ScoreScale
 import cobresun.movieclub.app.reviews.domain.ScoreAssist
@@ -47,8 +46,8 @@ data class ScoreAssistInput(
 )
 
 /**
- * Your score for a work: a 0–10 slider in half steps for quick entry, plus a
- * text field for exact values (up to two decimals), matching the web panel.
+ * Your score for a work: the arc dial snaps to half steps for quick entry and
+ * its readout takes exact values (up to two decimals), matching the web panel.
  */
 @Composable
 fun ScoreEntryPanel(
@@ -68,6 +67,11 @@ fun ScoreEntryPanel(
     val dirty = valid && parsed != existing
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
+    val haptics = koinInject<HapticFeedback>()
+    fun save(score: Double) {
+        haptics.performConfirm()
+        onSave(score)
+    }
 
     Column(
         Modifier
@@ -77,53 +81,24 @@ fun ScoreEntryPanel(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                SectionLabel("Your score")
-                Text(
-                    when {
-                        suggested != null && parsed == suggested -> "Suggested by Score Assist. Save it or adjust first."
-                        existing == null -> "Slide or type a score from 0 to 10"
-                        dirty -> "Tap Update to save the change"
-                        else -> "Slide or type to change it"
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            PlatformNumericTextField(
-                value = text,
-                onValueChange = { text = ScoreScale.sanitizeInput(it) },
-                modifier = Modifier
-                    .width(84.dp)
-                    .clip(MaterialTheme.shapes.small)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                textStyle = MaterialTheme.typography.headlineMedium.copy(
-                    color = if (existing == null && text.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant
-                    else MaterialTheme.colorScheme.secondary,
-                    textAlign = TextAlign.Center,
-                ),
-                singleLine = true,
-                onDone = {
-                    focusManager.clearFocus()
-                    if (dirty && parsed != null) onSave(parsed)
-                },
-                focusRequester = focusRequester,
-            )
-        }
-        Slider(
-            value = (parsed ?: existing ?: 5.0).toFloat().coerceIn(0f, 10f),
-            onValueChange = { text = ScoreScale.format(ScoreScale.snap(it.toDouble())) },
-            valueRange = ScoreScale.MIN.toFloat()..ScoreScale.MAX.toFloat(),
-            steps = ((ScoreScale.MAX - ScoreScale.MIN) / ScoreScale.STEP).toInt() - 1,
+        SectionLabel("Your score")
+        Text(
+            when {
+                suggested != null && parsed == suggested -> "Suggested by Score Assist. Save it or adjust first."
+                existing == null -> "Drag the dial or type a score from 0 to 10"
+                dirty -> "Tap Update to save the change"
+                else -> "Drag or type to change it"
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        ScoreDial(
+            text = text,
+            onTextChange = { text = it },
+            onSave = { if (dirty && parsed != null) save(parsed) },
             enabled = enabled && !isSaving,
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.secondary,
-                activeTrackColor = MaterialTheme.colorScheme.secondary,
-                activeTickColor = MaterialTheme.colorScheme.onSecondary.copy(alpha = 0.4f),
-                inactiveTickColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
-            ),
+            focusRequester = focusRequester,
+            modifier = Modifier.align(Alignment.CenterHorizontally),
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (assist != null && ScoreAssist.isEligible(assist.pool) && enabled) {
@@ -143,7 +118,7 @@ fun ScoreEntryPanel(
                 Button(
                     onClick = {
                         focusManager.clearFocus()
-                        parsed?.let(onSave)
+                        parsed?.let(::save)
                     },
                     enabled = enabled && dirty && !isSaving,
                 ) {
