@@ -6,11 +6,19 @@ import cobresun.movieclub.app.core.domain.Result
 /**
  * A movie club's yearly awards: categories, nominations, member rankings and
  * results. All operations address the club by slug and a season by year.
- * Seasons are opened server-side; there is no API to create a year.
  */
 interface AwardsRepository {
     /** Years that have an awards season, newest first. */
     suspend fun getYears(clubSlug: String): Result<List<Int>, DataError.Remote>
+
+    /** Years the club reviewed movies in that have no awards yet, newest first. */
+    suspend fun getAvailableYears(clubSlug: String): Result<List<Int>, DataError.Remote>
+
+    /** Opens [year]'s awards in the Categories phase, starting with [categories]. */
+    suspend fun createYear(clubSlug: String, year: Int, categories: List<String>): Result<Unit, DataError.Remote>
+
+    /** Deletes [year]'s awards: every category, nomination and vote. */
+    suspend fun deleteYear(clubSlug: String, year: Int): Result<Unit, DataError.Remote>
 
     /** One season with nominee titles and posters. */
     suspend fun getSeason(clubSlug: String, year: Int): Result<AwardsSeason, DataError.Remote>

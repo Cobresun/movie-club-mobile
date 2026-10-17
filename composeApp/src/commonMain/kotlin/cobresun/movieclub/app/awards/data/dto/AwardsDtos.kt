@@ -46,3 +46,6 @@ data class NominationBodyDto(val awardTitle: String, val movieId: Int, val nomin
 
 @Serializable
 data class RankingBodyDto(val awardTitle: String, val movies: List<Int>, val voter: String)
+
+@Serializable
+data class CreateAwardsYearBodyDto(val year: Int, val categories: List<String>)

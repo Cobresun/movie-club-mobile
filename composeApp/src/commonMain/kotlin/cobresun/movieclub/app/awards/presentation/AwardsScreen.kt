@@ -24,6 +24,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.EmojiEvents
@@ -86,9 +87,9 @@ fun AwardsScreen(
                         EmptyState(
                             icon = Icons.Outlined.EmojiEvents,
                             title = "No awards yet",
-                            message = "This club hasn't run an awards season. Once a year is opened you'll pick categories, nominate movies and rank them here.",
-                            actionLabel = "Check again",
-                            onAction = { onAction(AwardsAction.Refresh) },
+                            message = "Run your own awards season: choose categories like Best Picture or Funniest Movie, nominate the movies you reviewed, vote, and reveal the winners together.",
+                            actionLabel = "Start your first awards",
+                            onAction = { onAction(AwardsAction.OpenNewAwards) },
                         )
                     }
                 } else {
@@ -116,6 +117,16 @@ fun AwardsScreen(
         }
     }
 
+    state.newAwards?.let { sheet ->
+        NewAwardsSheet(
+            sheet = sheet,
+            hasExistingYears = (state.years as? AsyncResult.Success)?.data?.isNotEmpty() == true,
+            onCreate = { year, categories -> onAction(AwardsAction.CreateYear(year, categories)) },
+            onRetry = { onAction(AwardsAction.OpenNewAwards) },
+            onDismiss = { onAction(AwardsAction.DismissNewAwards) },
+        )
+    }
+
     val season = state.loadedSeason
     val category = picking?.let { title -> season?.categories?.firstOrNull { it.title == title } }
     if (season != null && category != null) {
@@ -140,7 +151,18 @@ private fun Header(state: AwardsState, onAction: (AwardsAction) -> Unit) {
             Text("Awards", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
             val years = (state.years as? AsyncResult.Success)?.data.orEmpty()
             val selected = state.selectedYear
-            if (selected != null) YearPicker(years, selected) { onAction(AwardsAction.SelectYear(it)) }
+            if (selected != null) {
+                YearPicker(years, selected) { onAction(AwardsAction.SelectYear(it)) }
+                Spacer(Modifier.width(8.dp))
+                FilledTonalButton(
+                    onClick = { onAction(AwardsAction.OpenNewAwards) },
+                    contentPadding = PaddingValues(start = 12.dp, end = 16.dp),
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("New awards")
+                }
+            }
         }
     }
 }

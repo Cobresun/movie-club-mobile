@@ -2,6 +2,7 @@ package cobresun.movieclub.app.awards.data.network
 
 import cobresun.movieclub.app.awards.data.dto.AddCategoryBodyDto
 import cobresun.movieclub.app.awards.data.dto.ClubAwardsDto
+import cobresun.movieclub.app.awards.data.dto.CreateAwardsYearBodyDto
 import cobresun.movieclub.app.awards.data.dto.NominationBodyDto
 import cobresun.movieclub.app.awards.data.dto.RankingBodyDto
 import cobresun.movieclub.app.awards.data.dto.ReorderCategoriesBodyDto
@@ -25,7 +26,10 @@ import io.ktor.http.encodeURLPathPart
  */
 interface AwardsDataSource {
     suspend fun getYears(clubSlug: String): Result<List<Int>, DataError.Remote>
+    suspend fun getAvailableYears(clubSlug: String): Result<List<Int>, DataError.Remote>
     suspend fun getAwards(clubSlug: String, year: Int): Result<ClubAwardsDto, DataError.Remote>
+    suspend fun createYear(clubSlug: String, body: CreateAwardsYearBodyDto): Result<Unit, DataError.Remote>
+    suspend fun deleteYear(clubSlug: String, year: Int): Result<Unit, DataError.Remote>
     suspend fun putStep(clubSlug: String, year: Int, body: StepBodyDto): Result<Unit, DataError.Remote>
     suspend fun addCategory(clubSlug: String, year: Int, body: AddCategoryBodyDto): Result<Unit, DataError.Remote>
     suspend fun reorderCategories(clubSlug: String, year: Int, body: ReorderCategoriesBodyDto): Result<Unit, DataError.Remote>
@@ -44,8 +48,17 @@ class KtorAwardsDataSource(
     override suspend fun getYears(clubSlug: String): Result<List<Int>, DataError.Remote> =
         safeCall { httpClient.get("${awards(clubSlug)}/years") }
 
+    override suspend fun getAvailableYears(clubSlug: String): Result<List<Int>, DataError.Remote> =
+        safeCall { httpClient.get("${awards(clubSlug)}/available-years") }
+
     override suspend fun getAwards(clubSlug: String, year: Int): Result<ClubAwardsDto, DataError.Remote> =
         safeCall { httpClient.get(year(clubSlug, year)) }
+
+    override suspend fun createYear(clubSlug: String, body: CreateAwardsYearBodyDto): Result<Unit, DataError.Remote> =
+        safeCall { httpClient.post(awards(clubSlug)) { setBody(body) } }
+
+    override suspend fun deleteYear(clubSlug: String, year: Int): Result<Unit, DataError.Remote> =
+        safeCall { httpClient.delete(year(clubSlug, year)) }
 
     override suspend fun putStep(clubSlug: String, year: Int, body: StepBodyDto): Result<Unit, DataError.Remote> =
         safeCall { httpClient.put("${year(clubSlug, year)}/step") { setBody(body) } }

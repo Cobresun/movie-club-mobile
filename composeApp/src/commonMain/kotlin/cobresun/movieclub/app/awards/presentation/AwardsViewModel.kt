@@ -55,6 +55,8 @@ data class AwardsState(
     /** Categories revealed during the presentation on this device. */
     val revealed: Set<String> = emptySet(),
     val isAdvancing: Boolean = false,
+    /** The "New awards" sheet, while open. */
+    val newAwards: NewAwardsState? = null,
 ) {
     val loadedSeason: AwardsSeason? get() = (season as? AsyncResult.Success)?.data
     val memberIds: List<String> get() = members.map { it.id }
@@ -111,6 +113,16 @@ data class AwardsState(
         loadedSeason?.step == AwardsStep.COMPLETED || category.title in revealed
 }
 
+/** What the "New awards" sheet offers (web `NewAwardsModal`). */
+data class NewAwardsState(
+    /** Years the club reviewed movies in that have no awards yet, newest first. */
+    val availableYears: AsyncResult<List<Int>> = AsyncResult.Loading,
+    /** The newest existing year, whose categories a new year can copy. */
+    val latestYear: Int? = null,
+    val previousCategories: List<String> = emptyList(),
+    val isCreating: Boolean = false,
+)
+
 /** A reviewed movie and the year it was added to reviews (web filters nominations by this). */
 data class ReviewedMovie(val candidate: NominationCandidate, val reviewedYear: Int?)
 
@@ -122,6 +134,10 @@ sealed interface AwardsAction {
     data object Refresh : AwardsAction
     data class SelectYear(val year: Int) : AwardsAction
     data object AdvanceStep : AwardsAction
+
+    data object OpenNewAwards : AwardsAction
+    data object DismissNewAwards : AwardsAction
+    data class CreateYear(val year: Int, val categories: List<String>) : AwardsAction
 
     data class AddCategory(val title: String) : AwardsAction
     data class RenameCategory(val from: String, val to: String) : AwardsAction
@@ -194,6 +210,9 @@ class AwardsViewModel(
                 loadSeason()
             }
             AwardsAction.AdvanceStep -> advance()
+            AwardsAction.OpenNewAwards -> openNewAwards()
+            AwardsAction.DismissNewAwards -> _state.update { it.copy(newAwards = null) }
+            is AwardsAction.CreateYear -> createYear(action.year, action.categories)
             is AwardsAction.AddCategory -> addCategory(action.title)
             is AwardsAction.RenameCategory -> renameCategory(action.from, action.to)
             is AwardsAction.DeleteCategory -> deleteCategory(action.title)
@@ -307,6 +326,54 @@ class AwardsViewModel(
                 .onError { emitError(it, season.step.phase.next?.label?.lowercase() ?: "move on") { advance() } }
             _state.update { it.copy(isAdvancing = false) }
             loadSeason(quiet = true)
+        }
+    }
+
+    private fun openNewAwards() {
+        val latest = (_state.value.years as? AsyncResult.Success)?.data?.firstOrNull()
+        _state.update { it.copy(newAwards = NewAwardsState(latestYear = latest)) }
+        viewModelScope.launch {
+            val result = awardsRepository.getAvailableYears(clubSlug)
+            _state.update { s ->
+                s.copy(newAwards = s.newAwards?.copy(
+                    availableYears = when (result) {
+                        is Result.Success -> AsyncResult.Success(result.data)
+                        is Result.Error -> AsyncResult.Error(dataError = result.error)
+                    }
+                ))
+            }
+        }
+        if (latest != null) viewModelScope.launch {
+            val loaded = _state.value.loadedSeason?.takeIf { it.year == latest }
+            val season = loaded ?: (awardsRepository.getSeason(clubSlug, latest) as? Result.Success)?.data
+            val titles = season?.categories?.map { it.title }.orEmpty()
+            _state.update { s -> s.copy(newAwards = s.newAwards?.copy(previousCategories = titles)) }
+        }
+    }
+
+    private fun createYear(year: Int, categories: List<String>) {
+        val sheet = _state.value.newAwards ?: return
+        if (sheet.isCreating) return
+        _state.update { it.copy(newAwards = sheet.copy(isCreating = true)) }
+        viewModelScope.launch {
+            awardsRepository.createYear(clubSlug, year, categories)
+                .onSuccess {
+                    // Open the new year, like the web does.
+                    _state.update {
+                        it.copy(
+                            newAwards = null,
+                            selectedYear = year,
+                            season = AsyncResult.Loading,
+                            rankingDrafts = emptyMap(),
+                            revealed = emptySet(),
+                        )
+                    }
+                    loadYears(quiet = true)
+                }
+                .onError { error ->
+                    _state.update { s -> s.copy(newAwards = s.newAwards?.copy(isCreating = false)) }
+                    emitError(error, "start the $year awards") { createYear(year, categories) }
+                }
         }
     }
 

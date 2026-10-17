@@ -1,6 +1,7 @@
 package cobresun.movieclub.app.awards.data.repository
 
 import cobresun.movieclub.app.awards.data.dto.AddCategoryBodyDto
+import cobresun.movieclub.app.awards.data.dto.CreateAwardsYearBodyDto
 import cobresun.movieclub.app.awards.data.dto.NominationBodyDto
 import cobresun.movieclub.app.awards.data.dto.RankingBodyDto
 import cobresun.movieclub.app.awards.data.dto.ReorderCategoriesBodyDto
@@ -20,6 +21,15 @@ class AwardsRepositoryImpl(
 ) : AwardsRepository {
     override suspend fun getYears(clubSlug: String): Result<List<Int>, DataError.Remote> =
         dataSource.getYears(clubSlug).map { years -> years.sortedDescending() }
+
+    override suspend fun getAvailableYears(clubSlug: String): Result<List<Int>, DataError.Remote> =
+        dataSource.getAvailableYears(clubSlug).map { years -> years.sortedDescending() }
+
+    override suspend fun createYear(clubSlug: String, year: Int, categories: List<String>): Result<Unit, DataError.Remote> =
+        dataSource.createYear(clubSlug, CreateAwardsYearBodyDto(year, categories))
+
+    override suspend fun deleteYear(clubSlug: String, year: Int): Result<Unit, DataError.Remote> =
+        dataSource.deleteYear(clubSlug, year)
 
     override suspend fun getSeason(clubSlug: String, year: Int): Result<AwardsSeason, DataError.Remote> =
         dataSource.getAwards(clubSlug, year).map { it.toSeason() }
