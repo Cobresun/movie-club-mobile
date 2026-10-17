@@ -84,7 +84,8 @@ fun ScoreEntryPanel(
                     when {
                         suggested != null && parsed == suggested -> "Suggested by Score Assist. Save it or adjust first."
                         existing == null -> "Slide or type a score from 0 to 10"
-                        else -> "Tap Save after changing it"
+                        dirty -> "Tap Update to save the change"
+                        else -> "Slide or type to change it"
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -150,7 +151,7 @@ fun ScoreEntryPanel(
                         CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                         Spacer(Modifier.width(8.dp))
                     }
-                    Text(if (existing == null) "Save score" else "Update score")
+                    Text(if (existing == null) "Save" else "Update", maxLines = 1)
                 }
             }
         }
