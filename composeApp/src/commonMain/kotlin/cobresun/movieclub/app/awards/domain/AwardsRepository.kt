@@ -32,8 +32,8 @@ interface AwardsRepository {
 
     /**
      * Renames a category in place. The server has no rename, so this adds the
-     * new title and reorders it into the old one's slot, which drops the old
-     * category and any nominations it had.
+     * new title, deletes the old one (dropping any nominations it had) and
+     * moves the new one into the old one's slot.
      */
     suspend fun renameCategory(
         clubSlug: String,

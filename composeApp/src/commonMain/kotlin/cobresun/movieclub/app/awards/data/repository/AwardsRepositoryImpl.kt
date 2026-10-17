@@ -51,10 +51,11 @@ class AwardsRepositoryImpl(
         to: String,
     ): Result<Unit, DataError.Remote> {
         val newTitle = to.trim()
-        return addCategory(clubSlug, year, newTitle).flatMap {
-            // Listing the new title in place of the old one drops the old category server-side.
-            reorderCategories(clubSlug, year, order.map { if (it == from) newTitle else it })
-        }
+        // The server only reorders when sent every category exactly once, so
+        // add the new title, drop the old one, then move the new one into place.
+        return addCategory(clubSlug, year, newTitle)
+            .flatMap { deleteCategory(clubSlug, year, from) }
+            .flatMap { reorderCategories(clubSlug, year, order.map { if (it == from) newTitle else it }) }
     }
 
     override suspend fun deleteCategory(clubSlug: String, year: Int, title: String): Result<Unit, DataError.Remote> =

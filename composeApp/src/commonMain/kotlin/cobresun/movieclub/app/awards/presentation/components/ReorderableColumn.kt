@@ -21,17 +21,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import cobresun.movieclub.app.core.platform.HapticFeedback
+import org.koin.compose.koinInject
 
 /** What a row needs to render itself inside [ReorderableColumn]. */
 class ReorderableItemScope(
@@ -58,7 +58,7 @@ fun <T> ReorderableColumn(
     enabled: Boolean = true,
     itemContent: @Composable ReorderableItemScope.(T) -> Unit,
 ) {
-    val haptics = LocalHapticFeedback.current
+    val haptics = koinInject<HapticFeedback>()
     val spacingPx = with(LocalDensity.current) { spacing.toPx() }
     var order by remember { mutableStateOf(items) }
     var draggingKey by remember { mutableStateOf<Any?>(null) }
@@ -80,7 +80,7 @@ fun <T> ReorderableColumn(
                             draggingKey = itemKey
                             dragStartIndex = order.indexOfFirst { key(it) == itemKey }
                             offset = 0f
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            haptics.performLightPulse()
                         },
                         onDrag = { change, amount ->
                             change.consume()
@@ -92,14 +92,14 @@ fun <T> ReorderableColumn(
                                 if (offset > next / 2f) {
                                     order = order.toMutableList().apply { add(current + 1, removeAt(current)) }
                                     offset -= next + spacingPx
-                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    haptics.performTick()
                                 }
                             } else if (offset < 0 && current > 0) {
                                 val prev = heights[key(order[current - 1])] ?: return@detectDragGestures
                                 if (-offset > prev / 2f) {
                                     order = order.toMutableList().apply { add(current - 1, removeAt(current)) }
                                     offset += prev + spacingPx
-                                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    haptics.performTick()
                                 }
                             }
                         },
@@ -108,6 +108,7 @@ fun <T> ReorderableColumn(
                             val start = dragStartIndex
                             draggingKey = null
                             offset = 0f
+                            haptics.performConfirm()
                             if (start >= 0 && end != start) currentOnMove(start, end)
                         },
                         onDragCancel = {

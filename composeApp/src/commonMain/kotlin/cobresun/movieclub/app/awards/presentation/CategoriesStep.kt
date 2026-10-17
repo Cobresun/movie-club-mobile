@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -19,7 +20,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,17 +41,14 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cobresun.movieclub.app.awards.domain.AwardCategory
+import cobresun.movieclub.app.awards.domain.AWARD_TITLE_MAX_LENGTH
 import cobresun.movieclub.app.awards.domain.AwardsSeason
+import cobresun.movieclub.app.awards.domain.categoryTitleError
+import cobresun.movieclub.app.awards.domain.isSameCategoryTitle
 import cobresun.movieclub.app.awards.presentation.components.DragHandle
 import cobresun.movieclub.app.awards.presentation.components.ReorderableColumn
-import cobresun.movieclub.app.core.presentation.components.ConfirmDialog
 import cobresun.movieclub.app.core.presentation.components.EmptyState
 import cobresun.movieclub.app.core.presentation.components.TextInputDialog
-
-private val SUGGESTIONS = listOf(
-    "Best Picture", "Best Director", "Best Actor", "Best Actress", "Best Cinematography",
-    "Best Score", "Best Screenplay", "Best Villain", "Most Rewatchable", "Biggest Surprise",
-)
 
 fun LazyListScope.categoriesStep(
     season: AwardsSeason,
@@ -61,7 +59,7 @@ fun LazyListScope.categoriesStep(
             EmptyState(
                 icon = Icons.Outlined.EmojiEvents,
                 title = "No categories yet",
-                message = "Add a few below, or start from a suggestion.",
+                message = "Add your own below or pick from the suggestions.",
                 modifier = Modifier.padding(vertical = 0.dp),
             )
         } else {
@@ -76,7 +74,6 @@ fun LazyListScope.categoriesStep(
 @Composable
 private fun CategoryList(categories: List<AwardCategory>, onAction: (AwardsAction) -> Unit) {
     var renaming by rememberSaveable { mutableStateOf<String?>(null) }
-    var deleting by rememberSaveable { mutableStateOf<String?>(null) }
 
     ReorderableColumn(
         items = categories,
@@ -112,30 +109,21 @@ private fun CategoryList(categories: List<AwardCategory>, onAction: (AwardsActio
             IconButton(onClick = { renaming = category.title }) {
                 Icon(Icons.Outlined.Edit, "Rename ${category.title}", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            IconButton(onClick = { deleting = category.title }) {
-                Icon(Icons.Outlined.DeleteOutline, "Delete ${category.title}", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            IconButton(onClick = { onAction(AwardsAction.DeleteCategory(category.title)) }) {
+                Icon(Icons.Outlined.DeleteOutline, "Remove ${category.title}", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
 
     renaming?.let { title ->
-        val nominated = categories.firstOrNull { it.title == title }?.nominations?.isNotEmpty() == true
         TextInputDialog(
-            title = if (nominated) "Rename (clears nominations)" else "Rename category",
+            title = "Rename category",
             initialValue = title,
             confirmLabel = "Save",
             placeholder = "Category name",
             onConfirm = { onAction(AwardsAction.RenameCategory(title, it)) },
             onDismiss = { renaming = null },
-        )
-    }
-    deleting?.let { title ->
-        ConfirmDialog(
-            title = "Delete $title?",
-            message = "This removes the category and any nominations in it for everyone.",
-            confirmLabel = "Delete",
-            onConfirm = { onAction(AwardsAction.DeleteCategory(title)) },
-            onDismiss = { deleting = null },
+            maxLength = AWARD_TITLE_MAX_LENGTH,
         )
     }
 }
@@ -143,44 +131,52 @@ private fun CategoryList(categories: List<AwardCategory>, onAction: (AwardsActio
 @Composable
 private fun AddCategory(season: AwardsSeason, onAction: (AwardsAction) -> Unit) {
     var text by rememberSaveable { mutableStateOf("") }
+    var error by rememberSaveable { mutableStateOf<String?>(null) }
+    fun add(title: String): Boolean {
+        error = season.categoryTitleError(title)
+        if (error != null) return false
+        onAction(AwardsAction.AddCategory(title))
+        return true
+    }
     fun submit() {
-        if (text.isNotBlank()) {
-            onAction(AwardsAction.AddCategory(text))
-            text = ""
-        }
+        if (add(text)) text = ""
     }
     Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextField(
                 value = text,
-                onValueChange = { if (it.length <= 60) text = it },
-                placeholder = { Text("Add a category") },
+                onValueChange = {
+                    if (it.length <= AWARD_TITLE_MAX_LENGTH) text = it
+                    error = null
+                },
+                label = { Text("New category") },
+                placeholder = { Text("e.g. Best Soundtrack") },
+                isError = error != null,
+                supportingText = error?.let { { Text(it) } },
                 singleLine = true,
-                shape = MaterialTheme.shapes.extraLarge,
+                shape = MaterialTheme.shapes.medium,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { submit() }),
                 colors = TextFieldDefaults.colors(
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
+                    errorIndicatorColor = Color.Transparent,
                     focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                 ),
                 modifier = Modifier.weight(1f),
             )
-            FilledIconButton(onClick = ::submit, enabled = text.isNotBlank(), modifier = Modifier.size(48.dp)) {
-                Icon(Icons.Default.Add, contentDescription = "Add category")
-            }
+            Button(onClick = ::submit, modifier = Modifier.height(56.dp)) { Text("Add") }
         }
-        val taken = season.categories.map { it.title.lowercase() }.toSet()
-        val suggestions = SUGGESTIONS.filter { it.lowercase() !in taken }
+        val suggestions = SUGGESTED_CATEGORIES.filter { s -> season.categories.none { isSameCategoryTitle(it.title, s) } }
         if (suggestions.isNotEmpty()) {
             Text("Suggestions", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 suggestions.forEach { suggestion ->
                     AssistChip(
-                        onClick = { onAction(AwardsAction.AddCategory(suggestion)) },
+                        onClick = { add(suggestion) },
                         label = { Text(suggestion) },
-                        leadingIcon = { Icon(Icons.Default.Add, null, Modifier.size(16.dp)) },
+                        leadingIcon = { Icon(Icons.Default.Add, "Add $suggestion", Modifier.size(16.dp)) },
                         colors = AssistChipDefaults.assistChipColors(leadingIconContentColor = MaterialTheme.colorScheme.secondary),
                     )
                 }
