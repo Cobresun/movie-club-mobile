@@ -20,6 +20,8 @@ import cobresun.movieclub.app.club.presentation.ClubViewModel
 import cobresun.movieclub.app.core.data.HttpClientFactory
 import cobresun.movieclub.app.core.data.SessionCookieStorage
 import cobresun.movieclub.app.core.data.SessionCookieStorageImpl
+import cobresun.movieclub.app.core.data.LastClubStoreImpl
+import cobresun.movieclub.app.core.domain.LastClubStore
 import cobresun.movieclub.app.member.data.network.KtorMemberDataSource
 import cobresun.movieclub.app.member.data.network.MemberDataSource
 import cobresun.movieclub.app.member.data.repository.MemberRepositoryImpl
@@ -73,7 +75,8 @@ val sharedModule = module {
     // Member
     single { KtorMemberDataSource(get()) }.bind<MemberDataSource>()
     single { MemberRepositoryImpl(get()) } binds arrayOf(MemberRepository::class, AccountRepository::class)
-    viewModel { MemberViewModel(get()) }
+    single { LastClubStoreImpl(get()) }.bind<LastClubStore>()
+    viewModel { MemberViewModel(get(), get()) }
     viewModel { CreateClubViewModel(get()) }
     viewModelOf(::JoinClubViewModel)
     viewModelOf(::ProfileViewModel)

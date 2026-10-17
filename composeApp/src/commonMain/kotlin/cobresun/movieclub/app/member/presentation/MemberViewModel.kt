@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.Club
+import cobresun.movieclub.app.core.domain.LastClubStore
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.member.domain.Member
@@ -15,6 +16,7 @@ import kotlinx.coroutines.launch
 
 class MemberViewModel(
     private val memberRepository: MemberRepository,
+    private val lastClubStore: LastClubStore,
 ) : ViewModel() {
     private val _state = MutableStateFlow(MemberState())
     val state = _state.asStateFlow()
@@ -34,6 +36,12 @@ class MemberViewModel(
         loadMe()
     }
 
+    /** Remembers the open club so the next launch starts there. */
+    fun rememberClub(slug: String) {
+        _state.update { it.copy(lastClubSlug = slug) }
+        viewModelScope.launch { lastClubStore.set(slug) }
+    }
+
     private fun loadMe() {
         viewModelScope.launch {
             memberRepository.getMember().onSuccess { me -> _state.update { it.copy(me = me) } }
@@ -43,9 +51,10 @@ class MemberViewModel(
     private fun loadClubs(showLoading: Boolean) {
         viewModelScope.launch {
             if (showLoading) _state.update { it.copy(clubs = AsyncResult.Loading) }
+            val lastSlug = _state.value.lastClubSlug ?: lastClubStore.get()
             when (val result = memberRepository.getClubs()) {
                 is Result.Success -> {
-                    _state.update { it.copy(clubs = AsyncResult.Success(result.data)) }
+                    _state.update { it.copy(clubs = AsyncResult.Success(result.data), lastClubSlug = lastSlug) }
                 }
                 is Result.Error -> {
                     if (showLoading) _state.update { it.copy(clubs = AsyncResult.Error(dataError = result.error)) }
@@ -58,4 +67,6 @@ class MemberViewModel(
 data class MemberState(
     val clubs: AsyncResult<List<Club>> = AsyncResult.Loading,
     val me: Member? = null,
+    /** The club opened most recently (possibly in an earlier session). */
+    val lastClubSlug: String? = null,
 )

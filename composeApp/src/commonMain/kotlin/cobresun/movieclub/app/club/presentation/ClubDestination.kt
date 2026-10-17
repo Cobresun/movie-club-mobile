@@ -43,6 +43,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import cobresun.movieclub.app.core.domain.defaultClubSlug
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -97,6 +99,7 @@ fun ClubsScreenRoot(
     ClubsScreen(
         clubs = state.clubs,
         me = state.me,
+        lastClubSlug = state.lastClubSlug,
         onLogout = { authViewModel.onAction(AuthAction.Logout) },
         memberViewModel = viewModel,
         isLoggingOut = authState.isLoggingOut
@@ -114,6 +117,7 @@ private fun NavHostController.navigateClearingStack(route: Route) {
 fun ClubsScreen(
     clubs: AsyncResult<List<Club>>,
     me: Member?,
+    lastClubSlug: String?,
     onLogout: () -> Unit = {},
     memberViewModel: MemberViewModel,
     isLoggingOut: Boolean = false,
@@ -122,12 +126,17 @@ fun ClubsScreen(
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
 
-    var currentClubSlug by remember { mutableStateOf<String?>(null) }
+    var currentClubSlug by rememberSaveable { mutableStateOf<String?>(null) }
 
     fun closeDrawer() = coroutineScope.launch { drawerState.close() }
 
-    fun openClub(slug: String) {
+    fun selectClub(slug: String?) {
         currentClubSlug = slug
+        if (slug != null) memberViewModel.rememberClub(slug)
+    }
+
+    fun openClub(slug: String) {
+        selectClub(slug)
         navController.navigateClearingStack(Route.Club(slug))
     }
 
@@ -141,7 +150,8 @@ fun ClubsScreen(
                 currentClubSlug = null
                 navController.navigateClearingStack(Route.EmptyClubs)
             }
-            selected == null -> currentClubSlug = list.first().slug
+            // Matches ClubNavHost's start destination.
+            selected == null -> selectClub(defaultClubSlug(list, lastClubSlug))
             list.none { it.slug == selected } -> openClub(list.first().slug)
         }
     }
@@ -202,10 +212,11 @@ fun ClubsScreen(
                 }
                 is AsyncResult.Success -> ClubNavHost(
                     initialClubs = clubs.data,
+                    lastClubSlug = lastClubSlug,
                     navController = navController,
                     memberViewModel = memberViewModel,
                     onOpenClub = ::openClub,
-                    onSlugChanged = { currentClubSlug = it },
+                    onSlugChanged = { selectClub(it) },
                     onLogout = onLogout,
                     isLoggingOut = isLoggingOut,
                 )
@@ -217,6 +228,7 @@ fun ClubsScreen(
 @Composable
 private fun ClubNavHost(
     initialClubs: List<Club>,
+    lastClubSlug: String?,
     navController: NavHostController,
     memberViewModel: MemberViewModel,
     onOpenClub: (String) -> Unit,
@@ -226,7 +238,7 @@ private fun ClubNavHost(
 ) {
     // Start destination is fixed at first composition; later changes navigate explicitly.
     val startDestination = remember {
-        initialClubs.firstOrNull()?.let { Route.Club(it.slug) } ?: Route.EmptyClubs
+        defaultClubSlug(initialClubs, lastClubSlug)?.let { Route.Club(it) } ?: Route.EmptyClubs
     }
     // Invite links opened from outside the app (held while signed out, consumed once signed in).
     val pendingLink by DeepLinks.pending.collectAsStateWithLifecycle()
