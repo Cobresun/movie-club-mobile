@@ -246,7 +246,7 @@ class AwardsViewModel(
                     val id = work.externalId?.toIntOrNull() ?: return@mapNotNull null
                     ReviewedMovie(
                         candidate = NominationCandidate(id, work.title, work.imageUrl, work.year),
-                        reviewedYear = work.addedDate?.year,
+                        reviewedYear = work.addedYearUtc,
                     )
                 }
                 _state.update { it.copy(reviewed = movies) }

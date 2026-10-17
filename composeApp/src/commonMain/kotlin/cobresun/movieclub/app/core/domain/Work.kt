@@ -1,6 +1,9 @@
 package cobresun.movieclub.app.core.domain
 
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
 
 /**
  * A movie or book that belongs to a club, as it appears on one of the club's
@@ -20,6 +23,14 @@ data class Work(
     val addedByUserId: String?,
     val details: WorkDetails?,
 ) {
+    /**
+     * The UTC calendar year the work was added (reviewed), matching the web and
+     * server, which bucket by the ISO instant's year rather than the device's
+     * time zone (a New Year's Eve review in the Americas is still last year's).
+     */
+    val addedYearUtc: Int?
+        get() = runCatching { Instant.parse(addedAt).toLocalDateTime(TimeZone.UTC).year }.getOrNull()
+
     /** Release year for movies, first publish year for books. */
     val year: Int?
         get() = when (details) {
