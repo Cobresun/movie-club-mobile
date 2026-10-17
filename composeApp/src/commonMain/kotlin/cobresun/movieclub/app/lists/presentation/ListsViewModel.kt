@@ -23,6 +23,7 @@ import cobresun.movieclub.app.member.domain.MemberRepository
 import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.lists.domain.CollapsedListsStore
 import cobresun.movieclub.app.lists.domain.withSubsetReordered
+import cobresun.movieclub.app.lists.domain.withFirst
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableSharedFlow
 import cobresun.movieclub.app.core.domain.ShareLinks
@@ -160,7 +161,10 @@ class ListsViewModel(
             is ListsAction.MoveList -> moveList(action.listId, action.offset)
             is ListsAction.AddWork -> addWork(action.work, action.listId)
             is ListsAction.RemoveWork -> runItemOp(ListItemOp.Remove(action.work, action.listId))
-            is ListsAction.SetUpNext -> setUpNext(action.work.id, "${action.work.title} is up next")
+            is ListsAction.SetUpNext -> {
+                setUpNext(action.work.id, "${action.work.title} is up next")
+                moveToFront(action.work.id)
+            }
             ListsAction.ClearUpNext -> setUpNext(null, "Up Next cleared")
             is ListsAction.MoveWork -> if (action.fromListId != action.destinationListId) {
                 runItemOp(ListItemOp.Move(action.work, action.fromListId, action.destinationListId))
@@ -397,6 +401,23 @@ class ListsViewModel(
                     _state.update { it.copy(upNextWorkId = previous) }
                     emitError(error, "update Up Next") { setUpNext(workId, successText) }
                 }
+        }
+    }
+
+    /** Like web, a new Up Next also moves to the front of its list, and that order is saved. */
+    private fun moveToFront(workId: String) {
+        val listId = _state.value.itemsByList.entries.firstOrNull { (_, items) ->
+            (items as? AsyncResult.Success)?.data?.any { it.id == workId } == true
+        }?.key ?: return
+        val before = _state.value.itemsOrEmpty(listId)
+        val after = before.withFirst(workId) { it.id }
+        if (after.map { it.id } == before.map { it.id }) return
+        setItems(listId, after)
+        viewModelScope.launch {
+            listsRepository.reorderItems(clubSlug, listId, after.map { it.id }).onError { error ->
+                if (_state.value.itemsOrEmpty(listId).map { it.id } == after.map { it.id }) setItems(listId, before)
+                emitError(error, "move it to the front of the list") { moveToFront(workId) }
+            }
         }
     }
 

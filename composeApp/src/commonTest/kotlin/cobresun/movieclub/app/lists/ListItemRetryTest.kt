@@ -67,7 +67,11 @@ class ListItemRetryTest {
             items.getValue(listId).removeAll { it.id == workId }
             return ok(Unit)
         }
-        override suspend fun reorderItems(clubSlug: String, listId: String, workIds: List<String>) = ok(Unit)
+        val reorderCalls = mutableListOf<Pair<String, List<String>>>()
+        override suspend fun reorderItems(clubSlug: String, listId: String, workIds: List<String>): Result<Unit, DataError.Remote> {
+            reorderCalls += listId to workIds
+            return ok(Unit)
+        }
         override suspend fun moveItem(clubSlug: String, listId: String, workId: String, destinationListId: String): Result<Unit, DataError.Remote> {
             moveCalls += Triple(listId, workId, destinationListId)
             return if (fail) Result.Error(DataError.Remote.NO_INTERNET) else ok(Unit)
@@ -148,6 +152,32 @@ class ListItemRetryTest {
         advanceUntilIdle()
 
         assertTrue(repo.moveCalls.all { it == Triple("a", "1", "b") } && repo.moveCalls.size == 2)
+    }
+
+    @Test
+    fun settingUpNextMovesTheWorkToTheFrontOfItsList() = runTest(dispatcher) {
+        val repo = FakeLists(mutableMapOf("a" to mutableListOf(work("1"), work("2"), work("3")), "b" to mutableListOf(work("4"))))
+        repo.fail = false
+        val vm = setUpViewModel(repo)
+
+        vm.onAction(ListsAction.SetUpNext(work("3")))
+        advanceUntilIdle()
+
+        assertEquals(listOf("3", "1", "2"), vm.items("a"))
+        assertEquals(listOf("a" to listOf("3", "1", "2")), repo.reorderCalls)
+        assertEquals("3", vm.state.value.upNextWorkId)
+    }
+
+    @Test
+    fun droppingAFilteredCardKeepsHiddenItemsInPlace() = runTest(dispatcher) {
+        val repo = FakeLists(mutableMapOf("a" to mutableListOf(work("1"), work("2"), work("3"), work("4"))))
+        val vm = setUpViewModel(repo)
+
+        vm.onAction(ListsAction.Reorder("a", listOf("4", "2"), droppedId = "4"))
+        advanceUntilIdle()
+
+        assertEquals(listOf("1", "4", "3", "2"), vm.items("a"))
+        assertEquals(listOf("a" to listOf("4", "2")), repo.reorderCalls)
     }
 
     private fun <T> TestScope.async(block: suspend () -> T) =
