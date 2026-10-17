@@ -43,6 +43,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -104,6 +105,12 @@ val LocalCurrentMember = compositionLocalOf<Member?> { null }
 
 /** Name of the current club, known before each tab loads its own context. */
 val LocalCurrentClubName = compositionLocalOf { "" }
+
+/** "Movie club · 6 members" for the current club (web `clubMetaLine`). */
+val LocalCurrentClubMeta = compositionLocalOf { "" }
+
+/** Members of the current club, for the header's avatar stack. */
+val LocalCurrentClubMembers = compositionLocalOf<List<Member>> { emptyList() }
 
 /** Club screens report the tab they show, so switching clubs can keep the section. */
 internal val LocalClubTabShown = staticCompositionLocalOf<(ClubTab) -> Unit> { {} }
@@ -179,12 +186,18 @@ fun ClubsScreen(
 
     val clubList = (clubs as? AsyncResult.Success)?.data.orEmpty()
     val currentClub = clubList.firstOrNull { it.slug == currentClubSlug }
+    val memberState by memberViewModel.state.collectAsStateWithLifecycle()
+    val currentMembers = currentClubSlug?.let { memberState.members[it] }
+    val currentMeta = clubMetaLine(currentClub?.type, currentMembers?.size)
+    LaunchedEffect(currentClubSlug) { currentClubSlug?.let(memberViewModel::loadMembers) }
 
     CompositionLocalProvider(
         LocalClubSwitcher provides { showSwitcher = true },
         LocalAccountMenu provides { showAccount = true },
         LocalCurrentMember provides me,
         LocalCurrentClubName provides currentClub?.name.orEmpty(),
+        LocalCurrentClubMeta provides currentMeta,
+        LocalCurrentClubMembers provides currentMembers.orEmpty(),
         LocalClubTabShown provides { currentTab = it },
     ) {
         Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
@@ -216,7 +229,7 @@ fun ClubsScreen(
         ClubSwitcherSheet(
             clubs = clubList,
             current = currentClub,
-            meta = currentClub?.type?.label().orEmpty(),
+            meta = currentMeta,
             onDismiss = { showSwitcher = false },
             onSelectClub = { club ->
                 haptics.performTick()
@@ -355,6 +368,8 @@ private fun ClubNavHost(
 
         composable<Route.ClubSettings> { entry ->
             val routeSlug = entry.toRoute<Route.ClubSettings>().clubSlug
+            // Members may have been removed: refresh the header's count on the way out.
+            DisposableEffect(routeSlug) { onDispose { memberViewModel.loadMembers(routeSlug) } }
             ClubSettingsScreenRoot(
                 onNavigateBack = { navController.popBackStack() },
                 // The shell's club-list effect moves to another club (or the empty state).

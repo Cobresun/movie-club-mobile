@@ -83,7 +83,7 @@ val sharedModule = module {
     single { LastClubStoreImpl(get()) }.bind<LastClubStore>()
     single { cobresun.movieclub.app.core.data.WorkDetailsRepositoryImpl(get()) }
         .bind<cobresun.movieclub.app.core.domain.WorkDetailsRepository>()
-    viewModel { MemberViewModel(get(), get()) }
+    viewModel { MemberViewModel(get(), get(), get()) }
     viewModel { CreateClubViewModel(get()) }
     viewModelOf(::JoinClubViewModel)
     viewModelOf(::ProfileViewModel)

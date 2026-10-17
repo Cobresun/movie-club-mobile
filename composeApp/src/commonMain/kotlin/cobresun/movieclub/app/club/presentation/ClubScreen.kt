@@ -189,6 +189,8 @@ fun ClubScreenRoot(
     Scaffold(
         snackbarHost = { AppSnackbarHost(snackbarHostState) },
         bottomBar = {
+            // Wait for the restored tab, so the bar doesn't flick (or pop) from Reviews to it.
+            if (!tabResolved) return@Scaffold
             val tabs = buildList {
                 add(PlatformTab(ClubTab.REVIEWS.name, "Reviews", Icons.Outlined.StarOutline, Icons.Filled.Star, "star", "star.fill"))
                 add(
@@ -277,7 +279,7 @@ fun ClubScreenRoot(
         AccountButton(
             Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = padding.calculateTopPadding(), end = 12.dp)
+                .padding(top = padding.calculateTopPadding() + 8.dp, end = 12.dp)
         )
         }
     }

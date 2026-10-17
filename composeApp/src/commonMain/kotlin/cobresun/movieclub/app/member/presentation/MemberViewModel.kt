@@ -2,6 +2,7 @@ package cobresun.movieclub.app.member.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import cobresun.movieclub.app.club.domain.ClubRepository
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.Club
 import cobresun.movieclub.app.core.domain.LastClubStore
@@ -17,6 +18,7 @@ import kotlinx.coroutines.launch
 class MemberViewModel(
     private val memberRepository: MemberRepository,
     private val lastClubStore: LastClubStore,
+    private val clubRepository: ClubRepository,
 ) : ViewModel() {
     private val _state = MutableStateFlow(MemberState())
     val state = _state.asStateFlow()
@@ -34,6 +36,16 @@ class MemberViewModel(
         val hasData = _state.value.clubs is AsyncResult.Success
         loadClubs(showLoading = !hasData)
         loadMe()
+        _state.value.lastClubSlug?.let(::loadMembers)
+    }
+
+    /** Loads the members of [slug] for the club header (avatar stack and member count). */
+    fun loadMembers(slug: String) {
+        viewModelScope.launch {
+            clubRepository.getMembers(slug).onSuccess { members ->
+                _state.update { it.copy(members = it.members + (slug to members)) }
+            }
+        }
     }
 
     /** Remembers the open club so the next launch starts there. */
@@ -69,4 +81,6 @@ data class MemberState(
     val me: Member? = null,
     /** The club opened most recently (possibly in an earlier session). */
     val lastClubSlug: String? = null,
+    /** Members per club slug, loaded as clubs are opened. */
+    val members: Map<String, List<Member>> = emptyMap(),
 )
