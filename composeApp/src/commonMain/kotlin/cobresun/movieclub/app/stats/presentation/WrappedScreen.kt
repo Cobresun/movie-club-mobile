@@ -55,6 +55,26 @@ import cobresun.movieclub.app.core.presentation.components.ShimmerBox
 import cobresun.movieclub.app.core.presentation.rememberReducedMotion
 import cobresun.movieclub.app.core.presentation.toUserMessage
 import cobresun.movieclub.app.theme.WrappedColors
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
+import cobresun.movieclub.app.core.presentation.components.AppSnackbarHost
+import cobresun.movieclub.app.member.presentation.platform.encodeToPng
+import cobresun.movieclub.app.member.presentation.platform.rememberImageShareSheet
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -87,6 +107,7 @@ fun WrappedScreen(
     hapticFeedback: HapticFeedback,
 ) {
     val reducedMotion = rememberReducedMotion()
+    val snackbarHostState = remember { SnackbarHostState() }
     Box(Modifier.fillMaxSize().background(WrappedColors.Backdrop)) {
         Column(
             Modifier
@@ -143,19 +164,82 @@ fun WrappedScreen(
                         )
                         // A new year is a new story: start it from its first card.
                         is WrappedContent.Deck -> key(c.year) {
-                            WrappedStory(
-                            cards = c.cards,
-                            clubName = state.clubName,
-                            year = c.year,
-                            hapticFeedback = hapticFeedback,
-                            reducedMotion = reducedMotion,
-                        )
+                            ShareableStory(state, c, hapticFeedback, reducedMotion, snackbarHostState)
                         }
                     }
                 }
             }
         }
+        AppSnackbarHost(snackbarHostState, Modifier.align(Alignment.BottomCenter).safeDrawingPadding())
     }
+}
+
+/**
+ * The story with its "Share card" button: the current card is recorded into a
+ * graphics layer as it draws, so sharing turns exactly what's on screen (at
+ * the card's own size, not the on-screen scale) into a PNG.
+ */
+@Composable
+private fun ShareableStory(
+    state: WrappedState,
+    deck: WrappedContent.Deck,
+    hapticFeedback: HapticFeedback,
+    reducedMotion: Boolean,
+    snackbarHostState: SnackbarHostState,
+) {
+    val pagerState = rememberPagerState { deck.cards.size }
+    val cardLayer = rememberGraphicsLayer()
+    val shareImage = rememberImageShareSheet()
+    val scope = rememberCoroutineScope()
+    var preparing by remember { mutableStateOf(false) }
+
+    fun shareCard() {
+        if (preparing) return
+        val card = deck.cards[pagerState.settledPage]
+        scope.launch {
+            preparing = true
+            try {
+                val bitmap = cardLayer.toImageBitmap()
+                val png = withContext(Dispatchers.Default) { bitmap.encodeToPng() }
+                shareImage(png, "${state.clubSlug}-wrapped-${deck.year}-${card.id}.png", "${state.clubName} Wrapped ${deck.year}")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Throwable) {
+                snackbarHostState.showSnackbar("Couldn't turn this card into an image")
+            } finally {
+                preparing = false
+            }
+        }
+    }
+
+    WrappedStory(
+        cards = deck.cards,
+        clubName = state.clubName,
+        year = deck.year,
+        hapticFeedback = hapticFeedback,
+        reducedMotion = reducedMotion,
+        pagerState = pagerState,
+        cardModifier = Modifier.drawWithContent {
+            cardLayer.record { this@drawWithContent.drawContent() }
+            drawLayer(cardLayer)
+        },
+        shareButton = {
+            Button(
+                onClick = ::shareCard,
+                enabled = !preparing,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = WrappedColors.Ink.copy(alpha = 0.15f),
+                    contentColor = WrappedColors.Ink,
+                    disabledContainerColor = WrappedColors.Ink.copy(alpha = 0.1f),
+                    disabledContentColor = WrappedColors.Ink.copy(alpha = 0.6f),
+                ),
+                modifier = Modifier.heightIn(min = 44.dp),
+            ) {
+                Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(20.dp))
+                Text(if (preparing) "Preparing image\u2026" else "Share card", Modifier.padding(start = 8.dp))
+            }
+        },
+    )
 }
 
 /** Scrollable year chips; the open year is brought to the middle of the row. */

@@ -9,7 +9,15 @@ import kotlinx.cinterop.useContents
 import kotlinx.cinterop.usePinned
 import platform.CoreGraphics.CGRectMake
 import platform.CoreGraphics.CGSizeMake
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asSkiaBitmap
+import org.jetbrains.skia.EncodedImageFormat
+import org.jetbrains.skia.Image
 import platform.Foundation.NSData
+import platform.Foundation.NSTemporaryDirectory
+import platform.Foundation.NSURL
+import platform.Foundation.create
+import platform.Foundation.writeToURL
 import platform.PhotosUI.PHPickerConfiguration
 import platform.PhotosUI.PHPickerFilter
 import platform.PhotosUI.PHPickerResult
@@ -38,19 +46,46 @@ private fun topViewController(): UIViewController? {
 @OptIn(ExperimentalForeignApi::class)
 @Composable
 actual fun rememberShareSheet(): (text: String, subject: String?) -> Unit = remember {
-    { text, _ ->
-        val controller = UIActivityViewController(activityItems = listOf(text), applicationActivities = null)
-        val presenter = topViewController()
-        // iPad presents share sheets as popovers, which need an anchor.
-        presenter?.view?.let { view ->
-            controller.popoverPresentationController?.sourceView = view
-            view.bounds.useContents {
-                controller.popoverPresentationController?.sourceRect =
-                    CGRectMake(size.width / 2, size.height / 2, 0.0, 0.0)
-            }
-        }
-        presenter?.presentViewController(controller, animated = true, completion = null)
+    { text, _ -> presentShareSheet(listOf(text)) }
+}
+
+/**
+ * Shares the image as a named PNG file in the temporary directory, so the
+ * share sheet previews it, offers "Save Image" and keeps the file name.
+ */
+@OptIn(ExperimentalForeignApi::class)
+@Composable
+actual fun rememberImageShareSheet(): (png: ByteArray, fileName: String, title: String?) -> Unit = remember {
+    { png, fileName, _ ->
+        val url = NSURL.fileURLWithPath(NSTemporaryDirectory() + fileName)
+        val written = png.toNSData().writeToURL(url, atomically = true)
+        val item: Any = if (written) url else (UIImage(data = png.toNSData()) as Any)
+        presentShareSheet(listOf(item))
     }
+}
+
+actual fun ImageBitmap.encodeToPng(): ByteArray =
+    Image.makeFromBitmap(asSkiaBitmap()).encodeToData(EncodedImageFormat.PNG)?.bytes
+        ?: error("The image could not be encoded as PNG")
+
+@OptIn(ExperimentalForeignApi::class)
+private fun ByteArray.toNSData(): NSData = usePinned {
+    NSData.create(bytes = it.addressOf(0), length = size.toULong())
+}
+
+@OptIn(ExperimentalForeignApi::class)
+private fun presentShareSheet(items: List<Any>) {
+    val controller = UIActivityViewController(activityItems = items, applicationActivities = null)
+    val presenter = topViewController()
+    // iPad presents share sheets as popovers, which need an anchor.
+    presenter?.view?.let { view ->
+        controller.popoverPresentationController?.sourceView = view
+        view.bounds.useContents {
+            controller.popoverPresentationController?.sourceRect =
+                CGRectMake(size.width / 2, size.height / 2, 0.0, 0.0)
+        }
+    }
+    presenter?.presentViewController(controller, animated = true, completion = null)
 }
 
 @OptIn(ExperimentalForeignApi::class)
