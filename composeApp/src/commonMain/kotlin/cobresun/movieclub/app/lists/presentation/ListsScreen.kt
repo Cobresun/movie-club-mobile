@@ -35,7 +35,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Casino
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Settings
@@ -47,8 +46,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -59,7 +56,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cobresun.movieclub.app.core.domain.AsyncResult
@@ -75,6 +71,7 @@ import cobresun.movieclub.app.core.presentation.components.ShimmerBox
 import cobresun.movieclub.app.core.presentation.noun
 import cobresun.movieclub.app.core.presentation.toUserMessage
 import cobresun.movieclub.app.lists.domain.WorkList
+import cobresun.movieclub.app.filters.presentation.SearchFilterBar
 
 /**
  * The Lists tab, like web `WatchListView`: every list stacked in one scroll,
@@ -144,9 +141,12 @@ fun ListsScreen(
                             modifier = Modifier.fillMaxSize().listGridDrag(drag),
                         ) {
                             item(span = { GridItemSpan(maxLineSpan) }, key = "filter") {
-                                FilterField(
-                                    query = state.filter,
+                                SearchFilterBar(
+                                    query = state.filterQuery,
+                                    results = state.filters,
                                     onQueryChange = { onAction(ListsAction.Filter(it)) },
+                                    placeholder = "Search watchlists",
+                                    horizontalPadding = 0.dp,
                                 )
                             }
                             lists.data.forEach { list ->
@@ -347,7 +347,7 @@ private fun LazyGridScope.listSection(
             } else if (visible.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }, key = "nomatch-${list.id}") {
                     Text(
-                        "Nothing on this list matches \"${state.filter.trim()}\".",
+                        "Nothing on this list matches.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.animateItem().padding(horizontal = 4.dp),
@@ -446,29 +446,4 @@ private fun ListSectionHeader(
             Icon(Icons.Default.Add, contentDescription = "Add to list")
         }
     }
-}
-
-@Composable
-private fun FilterField(query: String, onQueryChange: (String) -> Unit) {
-    TextField(
-        value = query,
-        onValueChange = onQueryChange,
-        placeholder = { Text("Search watchlists") },
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-        trailingIcon = {
-            if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) { Icon(Icons.Default.Close, contentDescription = "Clear filter") }
-            }
-        },
-        singleLine = true,
-        shape = MaterialTheme.shapes.extraLarge,
-        textStyle = MaterialTheme.typography.bodyMedium,
-        colors = TextFieldDefaults.colors(
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-        modifier = Modifier.fillMaxWidth(),
-    )
 }

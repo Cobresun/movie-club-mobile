@@ -10,7 +10,11 @@ import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.NewWork
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.Work
-import cobresun.movieclub.app.core.domain.matchesQuery
+import cobresun.movieclub.app.filters.domain.ClubFilters
+import cobresun.movieclub.app.filters.domain.FilterQuery
+import cobresun.movieclub.app.filters.domain.FilterResults
+import cobresun.movieclub.app.filters.domain.FilterTarget
+import cobresun.movieclub.app.filters.domain.computeFilters
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.core.presentation.UiMessage
@@ -46,8 +50,8 @@ data class ListsState(
     /** Lists the user folded away (persisted per club, like web). */
     val collapsedListIds: Set<String> = emptySet(),
     val upNextWorkId: String? = null,
-    /** Filters every list at once, like web's search bar above the lists. */
-    val filter: String = "",
+    /** Search text and filter picks; they apply to every list at once, like web's bar above the lists. */
+    val filterQuery: FilterQuery = FilterQuery(),
     val isRefreshing: Boolean = false,
     /** Club members by id, for "Added by". */
     val members: Map<String, Member> = emptyMap(),
@@ -76,8 +80,32 @@ data class ListsState(
 
     fun itemsOrEmpty(listId: String): List<Work> = (itemsByList[listId] as? AsyncResult.Success)?.data.orEmpty()
 
-    /** A list's items that match [filter], in list order. */
-    fun visibleItems(listId: String): List<Work> = itemsOrEmpty(listId).filter { it.matchesQuery(filter) }
+    /**
+     * The filter bar over every item on every list (a work on two lists counts
+     * once). Scores and review dates don't apply to watchlist items, so those
+     * filters are left out, as on web.
+     */
+    val filters: FilterResults<Work> by lazy {
+        computeFilters(
+            items = listsOrEmpty.flatMap { itemsOrEmpty(it.id) },
+            query = filterQuery,
+            clubType = clubType,
+            excludeKeys = ClubFilters.reviewOnlyKeys,
+            id = { it.id },
+            target = { FilterTarget(it) },
+        )
+    }
+
+    /** Ids of the works matching the filters, or null when nothing is filtering (show everything). */
+    private val matchingIds: Set<String>? by lazy {
+        if (filters.isActive) filters.filtered.mapTo(HashSet()) { it.id } else null
+    }
+
+    /** A list's items that match the filters, in list order. */
+    fun visibleItems(listId: String): List<Work> {
+        val ids = matchingIds ?: return itemsOrEmpty(listId)
+        return itemsOrEmpty(listId).filter { it.id in ids }
+    }
 
     fun isCollapsed(listId: String): Boolean = listId in collapsedListIds
 }
@@ -108,7 +136,7 @@ sealed interface ListsEvent {
 
 sealed interface ListsAction {
     data object Refresh : ListsAction
-    data class Filter(val query: String) : ListsAction
+    data class Filter(val query: FilterQuery) : ListsAction
     data class ToggleCollapsed(val listId: String) : ListsAction
 
     data class CreateList(val title: String) : ListsAction
@@ -181,7 +209,7 @@ class ListsViewModel(
                 if (_state.value.clubName.isBlank()) loadClubContext()
                 load(initial = false)
             }
-            is ListsAction.Filter -> _state.update { it.copy(filter = action.query) }
+            is ListsAction.Filter -> _state.update { it.copy(filterQuery = action.query) }
             is ListsAction.ToggleCollapsed -> toggleCollapsed(action.listId)
             is ListsAction.CreateList -> createList(action.title)
             is ListsAction.RenameList -> renameList(action.listId, action.title)
