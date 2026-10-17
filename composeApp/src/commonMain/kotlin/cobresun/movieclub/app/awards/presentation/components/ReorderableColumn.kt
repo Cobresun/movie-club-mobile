@@ -1,6 +1,11 @@
 package cobresun.movieclub.app.awards.presentation.components
 
+import androidx.compose.animation.BoundsTransform
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.animateBounds
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -22,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.LookaheadScope
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -48,6 +54,7 @@ class ReorderableItemScope(
  * drop, with the original and final positions. Rows also expose "Move up" /
  * "Move down" accessibility actions.
  */
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun <T> ReorderableColumn(
     items: List<T>,
@@ -68,6 +75,7 @@ fun <T> ReorderableColumn(
     if (draggingKey == null && order != items) order = items
     val currentOnMove by rememberUpdatedState(onMove)
 
+    LookaheadScope {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(spacing)) {
         order.forEachIndexed { index, item ->
             val itemKey = key(item)
@@ -119,6 +127,8 @@ fun <T> ReorderableColumn(
                     )
                 }
                 val rowModifier = Modifier
+                    // Neighbours glide into their new slots; the dragged row follows the finger instead.
+                    .then(if (dragging) Modifier else Modifier.animateBounds(this@LookaheadScope, boundsTransform = ReorderBounds))
                     .onSizeChanged { heights[itemKey] = it.height }
                     .zIndex(if (dragging) 1f else 0f)
                     .graphicsLayer {
@@ -139,6 +149,12 @@ fun <T> ReorderableColumn(
             }
         }
     }
+    }
+}
+
+@OptIn(ExperimentalSharedTransitionApi::class)
+private val ReorderBounds = BoundsTransform { _, _ ->
+    spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow)
 }
 
 /** The standard grip icon for [ReorderableItemScope.handleModifier]. */
