@@ -48,6 +48,7 @@ import cobresun.movieclub.app.core.domain.defaultClubSlug
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -87,6 +88,9 @@ import org.koin.compose.viewmodel.koinViewModel
  * menu button in ClubScreen) can call `LocalClubSwitcher.current()`.
  */
 val LocalClubSwitcher = staticCompositionLocalOf<() -> Unit> { {} }
+
+/** Name of the club selected in the drawer, known before each tab loads its own context. */
+val LocalCurrentClubName = compositionLocalOf { "" }
 
 @Composable
 fun ClubsScreenRoot(
@@ -198,6 +202,8 @@ fun ClubsScreen(
         }
         CompositionLocalProvider(
             LocalClubSwitcher provides { coroutineScope.launch { drawerState.open() } },
+            LocalCurrentClubName provides (clubs as? AsyncResult.Success)?.data
+                ?.firstOrNull { it.slug == currentClubSlug }?.name.orEmpty(),
             LocalNativeChromeVisible provides drawerClosed,
         ) {
             when (clubs) {

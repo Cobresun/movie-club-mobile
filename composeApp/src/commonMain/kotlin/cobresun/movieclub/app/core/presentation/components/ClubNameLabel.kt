@@ -19,6 +19,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cobresun.movieclub.app.club.presentation.LocalClubSwitcher
+import cobresun.movieclub.app.club.presentation.LocalCurrentClubName
 
 /** Tappable eyebrow above a tab title: names the current club and opens the club switcher drawer. */
 @Composable
@@ -39,7 +40,8 @@ fun ClubNameLabel(name: String) {
         )
         Spacer(Modifier.width(6.dp))
         Text(
-            name.ifBlank { "Clubs" }.uppercase(),
+            // While a tab's own club context loads, use the name the drawer already knows.
+            name.ifBlank { LocalCurrentClubName.current }.ifBlank { "Clubs" }.uppercase(),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.secondary,
             maxLines = 1,
