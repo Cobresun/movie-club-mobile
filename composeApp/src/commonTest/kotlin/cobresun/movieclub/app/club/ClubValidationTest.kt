@@ -16,13 +16,12 @@ class ClubValidationTest {
 
     @Test
     fun invalidSlugsFail() {
-        assertNotNull(ClubValidation.validateSlug("ab"))
-        assertNotNull(ClubValidation.validateSlug("-abc"))
-        assertNotNull(ClubValidation.validateSlug("abc-"))
-        assertNotNull(ClubValidation.validateSlug("Abc"))
-        assertNotNull(ClubValidation.validateSlug("a_bc"))
-        assertNotNull(ClubValidation.validateSlug("a".repeat(51)))
-        assertNotNull(ClubValidation.validateSlug("admin"))
+        assertEquals("Link must be 3-50 characters", ClubValidation.validateSlug("ab"))
+        assertEquals("Link must be 3-50 characters", ClubValidation.validateSlug("a".repeat(51)))
+        assertEquals("Only lowercase letters, numbers, and hyphens allowed", ClubValidation.validateSlug("Abc"))
+        assertEquals("Only lowercase letters, numbers, and hyphens allowed", ClubValidation.validateSlug("a_bc"))
+        assertEquals("Link cannot be all numbers", ClubValidation.validateSlug("2024"))
+        assertNull(ClubValidation.validateSlug("2024-club"))
     }
 
     @Test

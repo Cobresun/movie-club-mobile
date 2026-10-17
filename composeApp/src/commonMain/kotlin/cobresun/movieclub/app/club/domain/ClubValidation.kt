@@ -2,29 +2,28 @@ package cobresun.movieclub.app.club.domain
 
 import cobresun.movieclub.app.core.domain.Constants.BASE_URL
 
-/** Client-side mirror of the server's slug rules (web/netlify/functions/utils/slug.ts). */
+/** Client-side club name, link and invite rules, matching the web. */
 object ClubValidation {
     const val MIN_SLUG_LENGTH = 3
     const val MAX_SLUG_LENGTH = 50
     const val MAX_NAME_LENGTH = 100
-    private val SLUG_PATTERN = Regex("^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$")
-    private val RESERVED = setOf(
-        "new", "create", "join", "settings", "api", "share", "admin", "invite",
-        "clubs", "member", "auth", "login", "signup", "logout", "profile",
-    )
+    private val SLUG_PATTERN = Regex("^[a-z0-9-]+$")
+    private val ALL_DIGITS = Regex("^[0-9]+$")
 
-    /** Returns a user-facing error, or null when [slug] is acceptable. */
+    /**
+     * Returns a user-facing error, or null when [slug] is acceptable. Same rules and
+     * copy as the web's club-link editor; the server has the final say (reserved or
+     * taken links come back with its own message).
+     */
     fun validateSlug(slug: String): String? = when {
-        slug.length < MIN_SLUG_LENGTH -> "URL must be at least $MIN_SLUG_LENGTH characters"
-        slug.length > MAX_SLUG_LENGTH -> "URL must be at most $MAX_SLUG_LENGTH characters"
-        !SLUG_PATTERN.matches(slug) ->
-            "Use lowercase letters, numbers and hyphens; can't start or end with a hyphen"
-        slug in RESERVED -> "That URL is reserved"
+        slug.length !in MIN_SLUG_LENGTH..MAX_SLUG_LENGTH -> "Link must be $MIN_SLUG_LENGTH-$MAX_SLUG_LENGTH characters"
+        !SLUG_PATTERN.matches(slug) -> "Only lowercase letters, numbers, and hyphens allowed"
+        ALL_DIGITS.matches(slug) -> "Link cannot be all numbers"
         else -> null
     }
 
     fun validateName(name: String): String? = when {
-        name.isBlank() -> "Name can't be empty"
+        name.isBlank() -> "Name cannot be empty"
         name.trim().length > MAX_NAME_LENGTH -> "Name must be at most $MAX_NAME_LENGTH characters"
         else -> null
     }

@@ -73,7 +73,7 @@ import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 /** Web `clubTypeInvite(type).shareText`. */
-private fun ClubType.inviteShareText() = when (this) {
+internal fun ClubType.inviteShareText() = when (this) {
     ClubType.MOVIE -> "Join my club and score the movies we watch together."
     ClubType.BOOK -> "Join my club and score the books we read together."
 }

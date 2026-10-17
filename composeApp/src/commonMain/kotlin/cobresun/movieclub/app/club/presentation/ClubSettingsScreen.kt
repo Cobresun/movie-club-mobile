@@ -1,6 +1,21 @@
 package cobresun.movieclub.app.club.presentation
 
 import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.WarningAmber
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import cobresun.movieclub.app.core.platform.HapticFeedback
+import cobresun.movieclub.app.core.presentation.components.ConfirmSheet
+import cobresun.movieclub.app.member.presentation.components.SettingsIcon
+import org.koin.compose.koinInject
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -121,6 +136,7 @@ fun ClubSettingsScreen(
     contentPadding: PaddingValues,
 ) {
     val share = rememberShareSheet()
+    val haptics = koinInject<HapticFeedback>()
     val club = state.club
 
     Box(Modifier.fillMaxSize().padding(contentPadding)) {
@@ -135,19 +151,25 @@ fun ClubSettingsScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 32.dp),
             ) {
-                item { ClubHeader(club.data) }
-                generalSection(club.data, onAction)
-                featuresSection(club.data, state, onAction)
-                inviteSection(state, onAction, onShare = { link -> share(link, "Join ${club.data.name} on Movie Club") })
-                membersSection(state, onAction)
+                item { ClubHeader(club.data, (state.members as? AsyncResult.Success)?.data?.size) }
+                membersSection(
+                    state = state,
+                    onAction = onAction,
+                    onCopyInvite = {
+                        haptics.performConfirm()
+                        onAction(ClubSettingsAction.OnCopyInviteLink)
+                    },
+                    onShareInvite = { link -> share("${club.data.type.inviteShareText()}\n$link", "Join ${club.data.name}") },
+                )
+                settingsSection(club.data, state, onAction)
                 item {
                     Spacer(Modifier.height(24.dp))
                     SettingsGroup {
                         SettingsRow(
-                            title = if (state.isLeavingClub) "Leaving…" else "Leave club",
+                            title = "Leave club",
                             icon = Icons.AutoMirrored.Filled.Logout,
                             destructive = true,
-                            enabled = !state.isLeavingClub,
+                            showChevron = true,
                             onClick = { onAction(ClubSettingsAction.OnLeaveClub) },
                         )
                     }
@@ -160,22 +182,23 @@ fun ClubSettingsScreen(
     val loadedClub = (club as? AsyncResult.Success)?.data
     when (state.editing) {
         EditField.NAME -> TextInputDialog(
-            title = "Rename club",
+            title = "Club name",
             initialValue = loadedClub?.name.orEmpty(),
             label = "Club name",
             isSaving = state.isSaving,
             serverError = state.editError,
             validate = ClubValidation::validateName,
+            transform = { it.take(ClubValidation.MAX_NAME_LENGTH) },
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
             onDismiss = { onAction(ClubSettingsAction.OnDismissEdit) },
-            onConfirm = { onAction(ClubSettingsAction.OnSaveName(it)) },
+            onConfirm = { onAction(ClubSettingsAction.OnSaveName(it.trim())) },
         )
         EditField.SLUG -> TextInputDialog(
-            title = "Change club URL",
+            title = "Club link",
             initialValue = loadedClub?.slug.orEmpty(),
-            label = "URL",
+            label = "Club link",
             prefix = SLUG_PREFIX,
-            supportingText = "Old links will stop working.",
+            supportingText = "Changing this breaks existing links to your club.",
             isSaving = state.isSaving,
             serverError = state.editError,
             validate = { ClubValidation.validateSlug(it) },
@@ -188,21 +211,23 @@ fun ClubSettingsScreen(
     }
 
     state.memberPendingRemoval?.let { member ->
-        ConfirmDialog(
+        ConfirmSheet(
             title = "Remove ${member.name}?",
-            message = "They'll lose access to this club. You can invite them back later.",
+            message = "They lose access to this club. Their reviews and scores stay.",
             confirmLabel = "Remove",
-            isWorking = state.isRemovingMember,
+            destructive = true,
             onDismiss = { onAction(ClubSettingsAction.OnCancelRemoveMember) },
             onConfirm = { onAction(ClubSettingsAction.OnConfirmRemoveMember) },
         )
     }
     if (state.showLeaveConfirmation) {
-        ConfirmDialog(
-            title = "Leave ${loadedClub?.name ?: "club"}?",
-            message = "You'll need a new invite link to rejoin.",
+        ConfirmSheet(
+            title = "Leave club?",
+            message = "Are you sure you want to leave this club? This action cannot be undone.",
             confirmLabel = "Leave",
-            isWorking = state.isLeavingClub,
+            destructive = true,
+            loading = state.isLeavingClub,
+            dismissOnConfirm = false,
             onDismiss = { onAction(ClubSettingsAction.OnCancelLeaveClub) },
             onConfirm = { onAction(ClubSettingsAction.OnConfirmLeaveClub) },
         )
@@ -210,90 +235,162 @@ fun ClubSettingsScreen(
 }
 
 @Composable
-private fun ClubHeader(club: Club) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
+private fun ClubHeader(club: Club, memberCount: Int?) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Box(
-            modifier = Modifier
-                .size(72.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(club.type.icon(), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(36.dp))
+        MemberAvatar(club.name, null, size = 56.dp)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                club.name,
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                clubMetaLine(club.type, memberCount),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
-        Spacer(Modifier.height(12.dp))
-        Text(
-            club.name,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 24.dp),
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            club.type.label(),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
-        )
     }
 }
 
-private fun LazyListScope.generalSection(club: Club, onAction: (ClubSettingsAction) -> Unit) {
+private fun LazyListScope.membersSection(
+    state: ClubSettingsState,
+    onAction: (ClubSettingsAction) -> Unit,
+    onCopyInvite: () -> Unit,
+    onShareInvite: (String) -> Unit,
+) {
+    val members = state.members
     item {
-        SettingsSectionHeader("General")
+        val count = (members as? AsyncResult.Success)?.data?.size
+        Row(verticalAlignment = Alignment.Bottom) {
+            SettingsSectionHeader("Members", Modifier.weight(1f))
+            if (count != null && count > 0) {
+                Text(
+                    "$count ${if (count == 1) "person" else "people"}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(end = 20.dp, bottom = 8.dp),
+                )
+            }
+        }
+    }
+    item {
         SettingsGroup {
-            SettingsRow(
-                title = "Name",
-                icon = Icons.Default.Title,
-                value = club.name,
-                showChevron = true,
-                onClick = { onAction(ClubSettingsAction.OnEditName) },
-            )
-            SettingsDivider()
-            SettingsRow(
-                title = "URL",
-                icon = Icons.Default.Link,
-                subtitle = SLUG_PREFIX + club.slug,
-                showChevron = true,
-                onClick = { onAction(ClubSettingsAction.OnEditSlug) },
-            )
-            SettingsDivider()
-            SettingsRow(
-                title = "Type",
-                icon = club.type.icon(),
-                value = if (club.type == ClubType.MOVIE) "Movies" else "Books",
-            )
+            when (members) {
+                is AsyncResult.Loading -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                }
+                is AsyncResult.Error -> SettingsRow(
+                    title = "Couldn't load members",
+                    subtitle = "Tap to try again",
+                    onClick = { onAction(ClubSettingsAction.Retry) },
+                )
+                is AsyncResult.Success -> members.data.forEachIndexed { index, member ->
+                    if (index > 0) SettingsDivider(inset = 62.dp)
+                    MemberRow(
+                        member = member,
+                        isSelf = member.id == state.currentUserId,
+                        onRemove = { onAction(ClubSettingsAction.OnRemoveMember(member)) },
+                    )
+                }
+            }
+            SettingsDivider(inset = 0.dp)
+            InviteRow(state, onAction, onCopyInvite, onShareInvite)
         }
     }
 }
 
-private fun LazyListScope.featuresSection(
+@Composable
+private fun InviteRow(
+    state: ClubSettingsState,
+    onAction: (ClubSettingsAction) -> Unit,
+    onCopy: () -> Unit,
+    onShare: (String) -> Unit,
+) {
+    val link = state.inviteLink
+    SettingsRow(
+        title = "Invite people",
+        subtitle = when {
+            link != null -> "Copy the club link"
+            state.isCreatingInvite -> "Getting the club link…"
+            else -> "Couldn't get the link. Tap to try again"
+        },
+        icon = Icons.Default.Link,
+        onClick = if (link != null) onCopy else ({ onAction(ClubSettingsAction.OnCreateInviteLink) }),
+        enabled = !state.isCreatingInvite,
+        trailing = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (state.isCreatingInvite) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else if (link != null) {
+                    AnimatedContent(state.inviteCopied, label = "invite-copied") { copied ->
+                        Icon(
+                            if (copied) Icons.Default.Check else Icons.Default.ContentCopy,
+                            contentDescription = if (copied) "Invite link copied" else "Copy invite link",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                    IconButton(onClick = { onShare(link) }) {
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = "Share invite link",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+            }
+        },
+    )
+}
+
+private fun LazyListScope.settingsSection(
     club: Club,
     state: ClubSettingsState,
     onAction: (ClubSettingsAction) -> Unit,
 ) {
     item {
-        SettingsSectionHeader("Features")
+        SettingsSectionHeader("Club settings")
         val features = state.features
         SettingsGroup {
+            SettingsRow(
+                title = "Club name",
+                icon = Icons.Default.Title,
+                subtitle = club.name,
+                trailing = { EditGlyph() },
+                onClick = { onAction(ClubSettingsAction.OnEditName) },
+            )
+            SettingsDivider()
+            SettingsRow(
+                title = "Club link",
+                icon = Icons.Default.Link,
+                subtitle = SLUG_PREFIX + club.slug,
+                trailing = { EditGlyph() },
+                onClick = { onAction(ClubSettingsAction.OnEditSlug) },
+            )
+            // Web clubSections: awards are a movie-club feature.
             if (club.type == ClubType.MOVIE) {
-                SettingsSwitchRow(
+                SettingsDivider()
+                FeatureRow(
                     title = "Awards",
-                    subtitle = "Yearly nominations and ranked voting",
+                    description = "Season awards, ballots and winners for this club.",
                     icon = Icons.Default.EmojiEvents,
                     checked = features?.awards == true,
                     enabled = features != null,
                     onCheckedChange = { onAction(ClubSettingsAction.OnToggleAwards(it)) },
                 )
-                SettingsDivider()
             }
-            SettingsSwitchRow(
-                title = "Discussion questions",
-                subtitle = "Prompts to get conversation going",
+            SettingsDivider()
+            FeatureRow(
+                title = "AI discussion questions",
+                description = "Adds a button on each review that drafts questions to spark conversation.",
                 icon = Icons.Default.Forum,
                 checked = features?.discussionQuestions == true,
                 enabled = features != null,
@@ -303,104 +400,56 @@ private fun LazyListScope.featuresSection(
     }
 }
 
-private fun LazyListScope.inviteSection(
-    state: ClubSettingsState,
-    onAction: (ClubSettingsAction) -> Unit,
-    onShare: (String) -> Unit,
-) {
-    item {
-        SettingsSectionHeader("Invite")
-        SettingsGroup {
-            val link = state.inviteLink
-            if (link == null) {
-                SettingsRow(
-                    title = if (state.isCreatingInvite) "Creating link…" else "Create invite link",
-                    icon = Icons.Default.PersonAdd,
-                    enabled = !state.isCreatingInvite,
-                    trailing = if (state.isCreatingInvite) {
-                        { CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) }
-                    } else null,
-                    onClick = { onAction(ClubSettingsAction.OnCreateInviteLink) },
-                )
-            } else {
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        link,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(MaterialTheme.colorScheme.surface)
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        FilledTonalButton(
-                            onClick = { onAction(ClubSettingsAction.OnCopyInviteLink) },
-                            modifier = Modifier.weight(1f).heightIn(min = 44.dp),
-                            shape = RoundedCornerShape(12.dp),
-                        ) {
-                            Icon(Icons.Default.ContentCopy, null, Modifier.size(18.dp))
-                            Spacer(Modifier.size(8.dp))
-                            Text("Copy")
-                        }
-                        Button(
-                            onClick = { onShare(link) },
-                            modifier = Modifier.weight(1f).heightIn(min = 44.dp),
-                            shape = RoundedCornerShape(12.dp),
-                        ) {
-                            Icon(Icons.Default.IosShare, null, Modifier.size(18.dp))
-                            Spacer(Modifier.size(8.dp))
-                            Text("Share")
-                        }
-                    }
-                }
-            }
-        }
-        SettingsFooter("Anyone with the link can join. Links expire after a while.")
-    }
+@Composable
+private fun EditGlyph() {
+    Icon(
+        Icons.Default.Edit,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+        modifier = Modifier.size(20.dp),
+    )
 }
 
-private fun LazyListScope.membersSection(state: ClubSettingsState, onAction: (ClubSettingsAction) -> Unit) {
-    val members = state.members
-    item {
-        val count = (members as? AsyncResult.Success)?.data?.size
-        SettingsSectionHeader(if (count != null) "Members · $count" else "Members")
-    }
-    when (members) {
-        is AsyncResult.Loading -> item {
-            SettingsGroup {
-                Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
-                }
-            }
-        }
-        is AsyncResult.Error -> item {
-            SettingsGroup {
-                SettingsRow(
-                    title = "Couldn't load members",
-                    subtitle = "Tap to try again",
-                    onClick = { onAction(ClubSettingsAction.Retry) },
-                )
-            }
-        }
-        is AsyncResult.Success -> item {
-            val sorted = members.data.sortedWith(
-                compareBy<Member>({ it.id != state.currentUserId }, { it.role != MemberRole.ADMIN }, { it.name.lowercase() })
+/** A feature switch with its description and the web's "Experimental" warning label. */
+@Composable
+private fun FeatureRow(
+    title: String,
+    description: String,
+    icon: ImageVector,
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled, role = Role.Switch) { onCheckedChange(!checked) }
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        SettingsIcon(icon)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
             )
-            SettingsGroup {
-                sorted.forEachIndexed { index, member ->
-                    if (index > 0) SettingsDivider(inset = 66.dp)
-                    MemberRow(
-                        member = member,
-                        isSelf = member.id == state.currentUserId,
-                        onRemove = { onAction(ClubSettingsAction.OnRemoveMember(member)) },
-                    )
-                }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Icon(Icons.Outlined.WarningAmber, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(13.dp))
+                Text("Experimental", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
             }
         }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            enabled = enabled,
+            colors = SwitchDefaults.colors(
+                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+            ),
+        )
     }
 }
 
@@ -409,15 +458,17 @@ private fun MemberRow(member: Member, isSelf: Boolean, onRemove: () -> Unit) {
     SettingsRow(
         title = member.name.ifBlank { member.email },
         subtitle = member.email,
-        leading = { MemberAvatar(member.name, member.imageUrl, size = 40.dp) },
+        leading = { MemberAvatar(member.name, member.imageUrl, size = 36.dp) },
         trailing = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (isSelf) Badge("You", MaterialTheme.colorScheme.tertiary)
-                if (member.role == MemberRole.ADMIN) Badge("Admin")
-                if (!isSelf) {
+                // Web rule: admins can't be removed, so they show the badge instead of the button.
+                if (member.role == MemberRole.ADMIN) {
+                    Badge("Admin")
+                } else if (!isSelf) {
                     IconButton(onClick = onRemove) {
                         Icon(
-                            Icons.Default.PersonRemove,
+                            Icons.Default.Close,
                             contentDescription = "Remove ${member.name}",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             modifier = Modifier.size(20.dp),

@@ -16,6 +16,7 @@ import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.member.domain.MemberRepository
 import cobresun.movieclub.app.member.presentation.components.toUserMessage
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -63,6 +64,8 @@ data class ClubSettingsState(
     val editError: String? = null,
     val inviteLink: String? = null,
     val isCreatingInvite: Boolean = false,
+    /** True for a moment after copying, while the row shows a check. */
+    val inviteCopied: Boolean = false,
     val memberPendingRemoval: Member? = null,
     val isRemovingMember: Boolean = false,
     val showLeaveConfirmation: Boolean = false,
@@ -97,6 +100,8 @@ class ClubSettingsViewModel(
             val members = async { clubRepository.getMembers(slug) }
             val me = async { memberRepository.getMember() }
             val features = async { clubRepository.getFeatures(slug) }
+            // Fetched on open, like the web, so "Invite people" copies straight away.
+            if (_state.value.inviteLink == null) createInvite()
 
             when (val r = clubs.await()) {
                 is Result.Success -> {
@@ -161,11 +166,11 @@ class ClubSettingsViewModel(
             clubRepository.updateName(slug, name)
                 .onSuccess {
                     updateClub { it.copy(name = name.trim()) }
-                    _state.update { it.copy(isSaving = false, editing = null, message = "Club renamed") }
+                    _state.update { it.copy(isSaving = false, editing = null, message = "Club name updated successfully") }
                     _navigationEvents.emit(ClubSettingsNavigationEvent.ClubUpdated(slug))
                 }
                 .onError { e ->
-                    _state.update { it.copy(isSaving = false, editError = e.toUserMessage("rename the club")) }
+                    _state.update { it.copy(isSaving = false, editError = e.serverMessage?.takeIf { m -> m.isNotBlank() } ?: "Failed to update club name") }
                 }
         }
     }
@@ -178,12 +183,12 @@ class ClubSettingsViewModel(
                 .onSuccess { saved ->
                     updateClub { it.copy(slug = saved) }
                     _state.update {
-                        it.copy(clubSlug = saved, isSaving = false, editing = null, inviteLink = null, message = "Club URL updated")
+                        it.copy(clubSlug = saved, isSaving = false, editing = null, message = "Club link updated successfully")
                     }
                     _navigationEvents.emit(ClubSettingsNavigationEvent.ClubUpdated(saved))
                 }
                 .onError { e ->
-                    _state.update { it.copy(isSaving = false, editError = e.toUserMessage("change the URL")) }
+                    _state.update { it.copy(isSaving = false, editError = e.serverMessage?.takeIf { m -> m.isNotBlank() } ?: "Failed to update link") }
                 }
         }
     }
@@ -199,9 +204,9 @@ class ClubSettingsViewModel(
         }
         viewModelScope.launch {
             clubRepository.updateFeatures(slug, awards, discussion)
-                .onSuccess { f -> _state.update { it.copy(features = f) } }
-                .onError { e ->
-                    _state.update { it.copy(features = previous, message = e.toUserMessage("update features")) }
+                .onSuccess { f -> _state.update { it.copy(features = f, message = "Settings updated successfully") } }
+                .onError {
+                    _state.update { it.copy(features = previous, message = "Failed to update settings") }
                 }
         }
     }
@@ -224,7 +229,9 @@ class ClubSettingsViewModel(
         viewModelScope.launch {
             try {
                 clipboardManager.copyToClipboard(link)
-                _state.update { it.copy(message = "Invite link copied") }
+                _state.update { it.copy(message = "Invite link copied", inviteCopied = true) }
+                delay(2000)
+                _state.update { it.copy(inviteCopied = false) }
             } catch (e: Exception) {
                 _state.update { it.copy(message = "Couldn't copy the link") }
             }
@@ -243,13 +250,13 @@ class ClubSettingsViewModel(
                             isRemovingMember = false,
                             memberPendingRemoval = null,
                             members = AsyncResult.Success(members.filterNot { m -> m.id == member.id }),
-                            message = "${member.name} was removed",
+                            message = "Member removed successfully",
                         )
                     }
                 }
                 .onError { e ->
                     _state.update {
-                        it.copy(isRemovingMember = false, memberPendingRemoval = null, message = e.toUserMessage("remove ${member.name}"))
+                        it.copy(isRemovingMember = false, memberPendingRemoval = null, message = "Failed to remove member")
                     }
                 }
         }
