@@ -62,7 +62,11 @@ class StatsViewModel(
 
     fun onAction(action: StatsAction) {
         when (action) {
-            StatsAction.Refresh -> load(initial = _state.value.data !is AsyncResult.Success)
+            StatsAction.Refresh -> {
+                // The club context (name/type) may have failed alongside the stats; retry it too.
+                if (_state.value.clubName.isBlank()) loadContext()
+                load(initial = _state.value.data !is AsyncResult.Success)
+            }
             StatsAction.Shown -> if (!started) {
                 started = true
                 loadContext()

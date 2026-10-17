@@ -147,6 +147,7 @@ class ReviewsViewModel(
     fun onAction(action: ReviewsAction) {
         when (action) {
             ReviewsAction.Refresh -> {
+                if (_state.value.clubName.isBlank()) loadContext()
                 loadReviews(initial = false)
                 _state.value.detail?.let { loadDetail(it.workId) }
             }

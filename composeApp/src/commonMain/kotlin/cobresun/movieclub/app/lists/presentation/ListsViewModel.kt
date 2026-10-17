@@ -133,7 +133,10 @@ class ListsViewModel(
     fun onAction(action: ListsAction) {
         when (action) {
             is ListsAction.SelectList -> selectList(action.listId)
-            ListsAction.Refresh -> load(initial = false)
+            ListsAction.Refresh -> {
+                if (_state.value.clubName.isBlank()) loadClubContext()
+                load(initial = false)
+            }
             is ListsAction.Filter -> _state.update { it.copy(filter = action.query) }
             is ListsAction.CreateList -> createList(action.title)
             is ListsAction.RenameList -> renameList(action.listId, action.title)
