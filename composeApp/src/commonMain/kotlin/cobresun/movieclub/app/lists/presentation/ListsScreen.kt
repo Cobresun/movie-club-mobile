@@ -86,10 +86,10 @@ fun ListsScreen(
     onAction: (ListsAction) -> Unit,
     onAddClick: (listId: String) -> Unit,
     hapticFeedback: HapticFeedback,
+    /** "Mark as watched": move a work from a list to Reviews and go there. */
+    onMarkFinished: (work: Work, fromListId: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var detailListId by rememberSaveable { mutableStateOf<String?>(null) }
-    var detailWorkId by rememberSaveable { mutableStateOf<String?>(null) }
     var showManage by rememberSaveable { mutableStateOf(false) }
     val enteringKeys = rememberEnteringKeys(state)
     val gridState = rememberLazyGridState()
@@ -153,10 +153,7 @@ fun ListsScreen(
                                     state = state,
                                     onAction = onAction,
                                     onAdd = { onAddClick(list.id) },
-                                    onOpen = { work ->
-                                        detailListId = list.id
-                                        detailWorkId = work.id
-                                    },
+                                    onOpen = { work -> onAction(ListsAction.OpenDetail(list.id, work.id)) },
                                     enteringKeys = enteringKeys,
                                     drag = drag,
                                 )
@@ -177,20 +174,19 @@ fun ListsScreen(
         }
     }
 
-    val detailList = detailListId
-    if (detailList != null) {
-        state.itemsOrEmpty(detailList).firstOrNull { it.id == detailWorkId }?.let { work ->
+    state.detail?.let { detail ->
+        state.itemsOrEmpty(detail.listId).firstOrNull { it.id == detail.workId }?.let { work ->
             ListItemDetailSheet(
                 work = work,
+                detail = detail,
                 isUpNext = work.id == state.upNextWorkId,
-                addedByName = work.addedByUserId?.let { state.members[it]?.name },
-                currentListId = detailList,
+                addedBy = work.addedByUserId?.let { state.members[it] },
                 lists = state.listsOrEmpty,
+                currentUserId = state.currentUserId,
+                hapticFeedback = hapticFeedback,
                 onAction = onAction,
-                onDismiss = {
-                    detailListId = null
-                    detailWorkId = null
-                },
+                onMarkFinished = { onMarkFinished(it, detail.listId) },
+                onDismiss = { onAction(ListsAction.CloseDetail) },
             )
         }
     }

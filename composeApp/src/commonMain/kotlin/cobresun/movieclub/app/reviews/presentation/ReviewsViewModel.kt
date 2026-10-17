@@ -12,6 +12,7 @@ import cobresun.movieclub.app.core.domain.NewWork
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.Work
 import cobresun.movieclub.app.core.domain.WorkDetails
+import cobresun.movieclub.app.core.domain.WorkDetailsRepository
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.core.domain.ShareLinks
@@ -170,6 +171,7 @@ class ReviewsViewModel(
     private val authRepository: AuthRepository,
     private val clubRepository: ClubRepository,
     private val listsRepository: ListsRepository,
+    private val workDetailsRepository: WorkDetailsRepository,
 ) : ViewModel() {
     private val clubSlug = requireNotNull(savedStateHandle.get<String>("clubSlug"))
 
@@ -345,7 +347,7 @@ class ReviewsViewModel(
 
     private fun loadDetail(workId: String) {
         viewModelScope.launch {
-            val result = reviewsRepository.getWorkDetails(clubSlug, workId)
+            val result = workDetailsRepository.getWorkDetails(clubSlug, workId)
             updateDetail(workId) {
                 it.copy(
                     details = when (result) {

@@ -15,6 +15,10 @@ import cobresun.movieclub.app.core.domain.Work
 import cobresun.movieclub.app.core.domain.WorkType
 import cobresun.movieclub.app.lists.domain.ListedWork
 import cobresun.movieclub.app.lists.domain.CollapsedListsStore
+import cobresun.movieclub.app.core.domain.WorkDetails
+import cobresun.movieclub.app.core.domain.WorkDetailsRepository
+import cobresun.movieclub.app.reviews.domain.ReviewComment
+import cobresun.movieclub.app.reviews.domain.ReviewCommentsRepository
 import cobresun.movieclub.app.lists.domain.ListsRepository
 import cobresun.movieclub.app.lists.domain.WorkList
 import cobresun.movieclub.app.lists.presentation.ListsAction
@@ -102,13 +106,25 @@ class ListItemRetryTest {
         override suspend fun joinClub(token: String): Result<Unit, ApiError> = throw NotImplementedError()
     }
 
+    private object NoDetails : WorkDetailsRepository {
+        override suspend fun getWorkDetails(clubSlug: String, workId: String): Result<WorkDetails?, DataError.Remote> = Result.Success(null)
+    }
+
+    private object NoComments : ReviewCommentsRepository {
+        private val ok = Result.Success(Unit)
+        override suspend fun getComments(clubSlug: String, workId: String): Result<List<ReviewComment>, DataError.Remote> = Result.Success(emptyList())
+        override suspend fun addComment(clubSlug: String, workId: String, content: String, spoiler: Boolean) = ok
+        override suspend fun editComment(clubSlug: String, workId: String, commentId: String, content: String, spoiler: Boolean) = ok
+        override suspend fun deleteComment(clubSlug: String, workId: String, commentId: String) = ok
+    }
+
     private object NoCollapsed : CollapsedListsStore {
         override suspend fun get(clubSlug: String) = emptySet<String>()
         override suspend fun set(clubSlug: String, listIds: Set<String>) = Unit
     }
 
     private fun TestScope.setUpViewModel(repo: FakeLists): ListsViewModel {
-        val vm = ListsViewModel(SavedStateHandle(mapOf("clubSlug" to "club")), repo, Members, Clubs, NoCollapsed)
+        val vm = ListsViewModel(SavedStateHandle(mapOf("clubSlug" to "club")), repo, Members, Clubs, NoCollapsed, NoDetails, NoComments)
         advanceUntilIdle()
         return vm
     }

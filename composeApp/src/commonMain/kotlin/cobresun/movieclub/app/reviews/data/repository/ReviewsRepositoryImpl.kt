@@ -98,9 +98,6 @@ class ReviewsRepositoryImpl(
     override suspend fun deleteScore(clubSlug: String, scoreId: String): Result<Unit, DataError.Remote> =
         dataSource.deleteScore(clubSlug, scoreId)
 
-    override suspend fun getWorkDetails(clubSlug: String, workId: String): Result<WorkDetails?, DataError.Remote> =
-        dataSource.getWorkDetails(clubSlug, workId).map { it.toWorkDetails() }
-
     override suspend fun isDiscussionQuestionsEnabled(clubSlug: String): Result<Boolean, DataError.Remote> =
         dataSource.getSettings(clubSlug).map { it.features.discussionQuestions }
 

@@ -223,7 +223,10 @@ fun ReviewDetailSheet(
                     comments = detail.comments,
                     currentUserId = currentUserId,
                     isPosting = detail.isPostingComment,
-                    onAction = onAction,
+                    onAdd = { text, spoiler -> onAction(ReviewsAction.AddComment(text, spoiler)) },
+                    onEdit = { id, text, spoiler -> onAction(ReviewsAction.EditComment(id, text, spoiler)) },
+                    onDelete = { onAction(ReviewsAction.DeleteComment(it)) },
+                    onRetry = { onAction(ReviewsAction.RetryComments) },
                 )
 
                 if (discussionQuestionsEnabled) {

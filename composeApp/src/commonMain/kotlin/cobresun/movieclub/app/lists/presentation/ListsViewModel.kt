@@ -24,6 +24,11 @@ import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.lists.domain.CollapsedListsStore
 import cobresun.movieclub.app.lists.domain.withSubsetReordered
 import cobresun.movieclub.app.lists.domain.withFirst
+import cobresun.movieclub.app.core.domain.WorkDetails
+import cobresun.movieclub.app.core.domain.WorkDetailsRepository
+import cobresun.movieclub.app.reviews.domain.ReviewComment
+import cobresun.movieclub.app.reviews.domain.ReviewCommentsRepository
+import kotlin.time.Clock
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableSharedFlow
 import cobresun.movieclub.app.core.domain.ShareLinks
@@ -50,6 +55,10 @@ data class ListsState(
     val pulse: CardPulse? = null,
     /** Non-null while the random picker runs. */
     val shuffle: ShuffleState? = null,
+    /** The signed-in member, for their own comments. */
+    val currentUserId: String? = null,
+    /** The open item details sheet. */
+    val detail: ListItemDetailState? = null,
     /** Every item across the user lists, for picking a review in the Add review sheet. */
     val allItems: AsyncResult<List<ListedWork>> = AsyncResult.Loading,
 ) {
@@ -72,6 +81,15 @@ data class ListsState(
 
     fun isCollapsed(listId: String): Boolean = listId in collapsedListIds
 }
+
+data class ListItemDetailState(
+    val listId: String,
+    val workId: String,
+    /** Full metadata incl. cast; the sheet shows the list summary while this loads. */
+    val details: AsyncResult<WorkDetails?> = AsyncResult.Loading,
+    val comments: AsyncResult<List<ReviewComment>> = AsyncResult.Loading,
+    val isPostingComment: Boolean = false,
+)
 
 /** [id] is fresh per pulse so the same card can glow twice in a row. */
 data class CardPulse(val workId: String, val id: Int)
@@ -119,6 +137,13 @@ sealed interface ListsAction {
     data class Shuffle(val listId: String) : ListsAction
     data class ShareList(val listId: String) : ListsAction
     data object ShuffleFinished : ListsAction
+
+    data class OpenDetail(val listId: String, val workId: String) : ListsAction
+    data object CloseDetail : ListsAction
+    data class AddComment(val content: String, val spoiler: Boolean) : ListsAction
+    data class EditComment(val commentId: String, val content: String, val spoiler: Boolean) : ListsAction
+    data class DeleteComment(val commentId: String) : ListsAction
+    data object RetryComments : ListsAction
     /** The card glow ran; clear it so a card scrolled back into view doesn't glow again. */
     data object PulseShown : ListsAction
 }
@@ -129,6 +154,8 @@ class ListsViewModel(
     private val memberRepository: MemberRepository,
     private val clubRepository: ClubRepository,
     private val collapsedListsStore: CollapsedListsStore,
+    private val workDetailsRepository: WorkDetailsRepository,
+    private val commentsRepository: ReviewCommentsRepository,
 ) : ViewModel() {
     private val clubSlug = requireNotNull(savedStateHandle.get<String>("clubSlug"))
 
@@ -178,6 +205,18 @@ class ListsViewModel(
             }
             ListsAction.ShuffleFinished -> finishShuffle()
             ListsAction.PulseShown -> _state.update { it.copy(pulse = null) }
+            is ListsAction.OpenDetail -> {
+                _state.update { it.copy(detail = ListItemDetailState(action.listId, action.workId)) }
+                loadDetail(action.workId)
+            }
+            ListsAction.CloseDetail -> _state.update { it.copy(detail = null) }
+            is ListsAction.AddComment -> addComment(action.content, action.spoiler)
+            is ListsAction.EditComment -> editComment(action.commentId, action.content, action.spoiler)
+            is ListsAction.DeleteComment -> deleteComment(action.commentId)
+            ListsAction.RetryComments -> _state.value.detail?.let { d ->
+                updateDetail(d.workId) { it.copy(comments = AsyncResult.Loading) }
+                loadComments(d.workId)
+            }
         }
     }
 
@@ -190,6 +229,9 @@ class ListsViewModel(
                     _state.update { it.copy(clubType = club.type, clubName = club.name) }
                 }
             }
+        }
+        viewModelScope.launch {
+            memberRepository.getMember().onSuccess { me -> _state.update { it.copy(currentUserId = me.id) } }
         }
         viewModelScope.launch {
             clubRepository.getMembers(clubSlug).onSuccess { members ->
@@ -491,6 +533,103 @@ class ListsViewModel(
             listsRepository.reorderItems(clubSlug, listId, moved.map { it.id }).onError { error ->
                 setItems(listId, before)
                 emitError(error, "save the new order") { reorder(listId, workIds, droppedId) }
+            }
+        }
+    }
+
+    // endregion
+
+    // region details sheet
+
+    private fun loadDetail(workId: String) {
+        viewModelScope.launch {
+            val result = workDetailsRepository.getWorkDetails(clubSlug, workId)
+            updateDetail(workId) {
+                it.copy(
+                    details = when (result) {
+                        is Result.Success -> AsyncResult.Success(result.data)
+                        is Result.Error -> AsyncResult.Error(dataError = result.error)
+                    }
+                )
+            }
+        }
+        loadComments(workId)
+    }
+
+    private fun loadComments(workId: String) {
+        viewModelScope.launch {
+            val result = commentsRepository.getComments(clubSlug, workId)
+            updateDetail(workId) {
+                it.copy(
+                    comments = when (result) {
+                        is Result.Success -> AsyncResult.Success(result.data)
+                        is Result.Error -> if (it.comments is AsyncResult.Success) it.comments
+                        else AsyncResult.Error(dataError = result.error)
+                    }
+                )
+            }
+        }
+    }
+
+    private fun updateDetail(workId: String, transform: (ListItemDetailState) -> ListItemDetailState) {
+        _state.update { s -> if (s.detail?.workId == workId) s.copy(detail = transform(s.detail)) else s }
+    }
+
+    private fun updateComments(workId: String, transform: (List<ReviewComment>) -> List<ReviewComment>) {
+        updateDetail(workId) { d ->
+            (d.comments as? AsyncResult.Success)?.let { d.copy(comments = AsyncResult.Success(transform(it.data))) } ?: d
+        }
+    }
+
+    private var tempCommentCount = 0
+
+    private fun addComment(content: String, spoiler: Boolean) {
+        val workId = _state.value.detail?.workId ?: return
+        if (content.isBlank()) return
+        // Optimistic copy (web does the same), replaced by the refetch.
+        val me = _state.value.currentUserId?.let { _state.value.members[it] }
+        val temp = me?.let {
+            ReviewComment(
+                id = "temp-${++tempCommentCount}",
+                workId = workId,
+                userId = it.id,
+                userName = it.name,
+                userImageUrl = it.imageUrl,
+                content = content.trim(),
+                createdDate = null,
+                spoiler = spoiler,
+                createdAt = Clock.System.now().toString(),
+            )
+        }
+        if (temp != null) updateComments(workId) { it + temp } else updateDetail(workId) { it.copy(isPostingComment = true) }
+        viewModelScope.launch {
+            commentsRepository.addComment(clubSlug, workId, content, spoiler)
+                .onSuccess { loadComments(workId) }
+                .onError { error ->
+                    temp?.let { t -> updateComments(workId) { list -> list.filter { it.id != t.id } } }
+                    emitError(error, "post your comment")
+                }
+            updateDetail(workId) { it.copy(isPostingComment = false) }
+        }
+    }
+
+    private fun editComment(commentId: String, content: String, spoiler: Boolean) {
+        val workId = _state.value.detail?.workId ?: return
+        viewModelScope.launch {
+            commentsRepository.editComment(clubSlug, workId, commentId, content, spoiler)
+                .onSuccess { loadComments(workId) }
+                .onError { emitError(it, "edit your comment") }
+        }
+    }
+
+    private fun deleteComment(commentId: String) {
+        val workId = _state.value.detail?.workId ?: return
+        val before = _state.value.detail?.comments
+        updateComments(workId) { list -> list.filter { it.id != commentId } }
+        viewModelScope.launch {
+            commentsRepository.deleteComment(clubSlug, workId, commentId).onError { error ->
+                if (before != null) updateDetail(workId) { it.copy(comments = before) }
+                emitError(error, "delete your comment")
             }
         }
     }

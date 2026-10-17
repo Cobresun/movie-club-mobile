@@ -81,6 +81,8 @@ val sharedModule = module {
     single { KtorMemberDataSource(get()) }.bind<MemberDataSource>()
     single { MemberRepositoryImpl(get()) } binds arrayOf(MemberRepository::class, AccountRepository::class)
     single { LastClubStoreImpl(get()) }.bind<LastClubStore>()
+    single { cobresun.movieclub.app.core.data.WorkDetailsRepositoryImpl(get()) }
+        .bind<cobresun.movieclub.app.core.domain.WorkDetailsRepository>()
     viewModel { MemberViewModel(get(), get()) }
     viewModel { CreateClubViewModel(get()) }
     viewModelOf(::JoinClubViewModel)

@@ -67,7 +67,10 @@ fun CommentsSection(
     comments: AsyncResult<List<ReviewComment>>,
     currentUserId: String?,
     isPosting: Boolean,
-    onAction: (ReviewsAction) -> Unit,
+    onAdd: (content: String, spoiler: Boolean) -> Unit,
+    onEdit: (commentId: String, content: String, spoiler: Boolean) -> Unit,
+    onDelete: (commentId: String) -> Unit,
+    onRetry: () -> Unit,
 ) {
     // Comments already seen (by author + text, so an optimistic copy swapping for
     // the server's doesn't animate twice). Null until the first load lands.
@@ -90,7 +93,7 @@ fun CommentsSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
                 )
-                TextButton(onClick = { onAction(ReviewsAction.RetryComments) }) { Text("Retry") }
+                TextButton(onClick = onRetry) { Text("Retry") }
             }
 
             is AsyncResult.Success -> {
@@ -111,7 +114,8 @@ fun CommentsSection(
                         CommentRow(
                             comment,
                             isMine = comment.userId == currentUserId,
-                            onAction = onAction,
+                            onEdit = { text, spoiler -> onEdit(comment.id, text, spoiler) },
+                            onDelete = { onDelete(comment.id) },
                             modifier = if (entering) Modifier.fadeUpOnEnter() else Modifier,
                         )
                     }
@@ -120,7 +124,7 @@ fun CommentsSection(
         }
         CommentComposer(
             isPosting = isPosting,
-            onSubmit = { text, spoiler -> onAction(ReviewsAction.AddComment(text, spoiler)) },
+            onSubmit = onAdd,
         )
     }
 }
@@ -129,12 +133,18 @@ fun CommentsSection(
 @Composable
 fun CommentsReadOnly(comments: List<ReviewComment>) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        comments.forEach { comment -> key(comment.id) { CommentRow(comment, isMine = false, onAction = {}) } }
+        comments.forEach { comment -> key(comment.id) { CommentRow(comment, isMine = false, onEdit = { _, _ -> }, onDelete = {}) } }
     }
 }
 
 @Composable
-private fun CommentRow(comment: ReviewComment, isMine: Boolean, onAction: (ReviewsAction) -> Unit, modifier: Modifier = Modifier) {
+private fun CommentRow(
+    comment: ReviewComment,
+    isMine: Boolean,
+    onEdit: (content: String, spoiler: Boolean) -> Unit,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     var revealed by remember(comment.id) { mutableStateOf(!comment.spoiler || isMine) }
     var editing by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -143,7 +153,7 @@ private fun CommentRow(comment: ReviewComment, isMine: Boolean, onAction: (Revie
     LaunchedEffect(leaving) {
         if (leaving) {
             fade.animateTo(0f, tween(200))
-            onAction(ReviewsAction.DeleteComment(comment.id))
+            onDelete()
         }
     }
 
@@ -184,7 +194,7 @@ private fun CommentRow(comment: ReviewComment, isMine: Boolean, onAction: (Revie
                 confirmLabel = "Save",
                 onCancel = { editing = false },
                 onSubmit = { text, spoiler ->
-                    onAction(ReviewsAction.EditComment(comment.id, text, spoiler))
+                    onEdit(text, spoiler)
                     editing = false
                 },
             )

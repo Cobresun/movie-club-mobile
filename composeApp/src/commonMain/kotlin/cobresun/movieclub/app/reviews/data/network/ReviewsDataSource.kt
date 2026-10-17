@@ -37,7 +37,6 @@ interface ReviewsDataSource {
     suspend fun deleteScore(clubSlug: String, scoreId: String): Result<Unit, DataError.Remote>
     suspend fun getSharedReview(clubSlug: String, workId: String): Result<SharedReviewDto, DataError.Remote>
     suspend fun getWorkScores(clubSlug: String, workId: String): Result<Map<String, ScoreDto>, DataError.Remote>
-    suspend fun getWorkDetails(clubSlug: String, workId: String): Result<JsonElement, DataError.Remote>
     suspend fun getSettings(clubSlug: String): Result<ClubSettingsDto, DataError.Remote>
     suspend fun generateDiscussionQuestions(clubSlug: String, workId: String): Result<DiscussionQuestionsDto, DataError.Remote>
     suspend fun getComments(clubSlug: String, workId: String): Result<List<CommentDto>, DataError.Remote>
@@ -84,9 +83,6 @@ class KtorReviewsDataSource(
 
     override suspend fun getWorkScores(clubSlug: String, workId: String): Result<Map<String, ScoreDto>, DataError.Remote> =
         safeCall { httpClient.get("${reviews(clubSlug)}/$workId/scores") }
-
-    override suspend fun getWorkDetails(clubSlug: String, workId: String): Result<JsonElement, DataError.Remote> =
-        safeCall { httpClient.get("${club(clubSlug)}/work/$workId/details") }
 
     override suspend fun getSettings(clubSlug: String): Result<ClubSettingsDto, DataError.Remote> =
         safeCall { httpClient.get("${club(clubSlug)}/settings") }

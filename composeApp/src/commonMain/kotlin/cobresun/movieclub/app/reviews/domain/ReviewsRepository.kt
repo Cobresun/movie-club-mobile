@@ -40,9 +40,6 @@ interface ReviewsRepository {
     /** Deletes one of the signed-in member's own scores. */
     suspend fun deleteScore(clubSlug: String, scoreId: String): Result<Unit, DataError.Remote>
 
-    /** Full metadata including cast, or null when the work has no external data. */
-    suspend fun getWorkDetails(clubSlug: String, workId: String): Result<WorkDetails?, DataError.Remote>
-
     /** Whether the club has AI discussion questions switched on. */
     suspend fun isDiscussionQuestionsEnabled(clubSlug: String): Result<Boolean, DataError.Remote>
 

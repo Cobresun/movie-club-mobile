@@ -122,11 +122,12 @@ fun ClubScreenRoot(
                 is ListsEvent.Share -> shareSheet(event.url, event.title)
                 is ListsEvent.MovedToReviews -> {
                     reviewsViewModel.refreshQuietly()
+                    val onReviews = clubViewModel.selectedTab.value == ClubTab.REVIEWS
                     show(
                         UiMessage(
                             text = "Moved ${event.title} to Reviews",
-                            actionLabel = "View",
-                            onAction = { clubViewModel.selectTab(ClubTab.REVIEWS) },
+                            actionLabel = if (onReviews) null else "View",
+                            onAction = if (onReviews) null else ({ clubViewModel.selectTab(ClubTab.REVIEWS) }),
                         )
                     )
                 }
@@ -237,6 +238,12 @@ fun ClubScreenRoot(
                             addTarget = ClubTab.LISTS
                         },
                         hapticFeedback = hapticFeedback,
+                        onMarkFinished = { work, fromListId ->
+                            // Like web: the move shows on Reviews optimistically, so go there now.
+                            reviewsViewModel.onAction(ReviewsAction.ShowPending(work))
+                            listsViewModel.onAction(ListsAction.MoveToReviews(work, fromListId))
+                            clubViewModel.selectTab(ClubTab.REVIEWS)
+                        },
                     )
 
                     ClubTab.STATS -> {

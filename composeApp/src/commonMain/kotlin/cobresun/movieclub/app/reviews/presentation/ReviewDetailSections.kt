@@ -208,6 +208,8 @@ internal fun DetailsSection(
     tmdbHidden: Boolean,
     onRevealTmdb: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Letterboxd / IMDb / Rotten Tomatoes chips (the reviews sheet; web lists show none). */
+    showLinks: Boolean = true,
     below: @Composable () -> Unit = {},
 ) {
     val movie = work.details as? WorkDetails.Movie
@@ -241,7 +243,7 @@ internal fun DetailsSection(
             }
         }
         book?.subjects?.takeIf { it.isNotEmpty() }?.let { SubjectsFact(it) }
-        if (movie != null) {
+        if (movie != null && showLinks) {
             val uriHandler = LocalUriHandler.current
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 work.externalId?.takeIf { it.isNotBlank() }?.let { id ->
