@@ -64,6 +64,9 @@ import cobresun.movieclub.app.search.presentation.ListPick
 import cobresun.movieclub.app.search.presentation.ListPickSection
 import cobresun.movieclub.app.core.presentation.posterSubtitle
 import kotlinx.coroutines.launch
+import cobresun.movieclub.app.app.ClubSection
+import cobresun.movieclub.app.app.DeepLink
+import cobresun.movieclub.app.app.DeepLinks
 import cobresun.movieclub.app.core.domain.ShareLinks
 import cobresun.movieclub.app.member.presentation.platform.rememberShareSheet
 import org.koin.compose.koinInject
@@ -133,6 +136,22 @@ fun ClubScreenRoot(
                 is ReviewsEvent.Share -> shareSheet(event.url, event.title)
             }
         }
+    }
+
+    // Club / shared-review links for this club (ClubNavHost brought us here).
+    val pendingLink by DeepLinks.pending.collectAsStateWithLifecycle()
+    LaunchedEffect(pendingLink) {
+        val link = pendingLink as? DeepLink.Club ?: return@LaunchedEffect
+        if (link.slug != clubViewModel.clubSlug) return@LaunchedEffect
+        DeepLinks.consume(link)
+        when (link.section) {
+            ClubSection.REVIEWS -> clubViewModel.selectTab(ClubTab.REVIEWS)
+            ClubSection.LISTS -> clubViewModel.selectTab(ClubTab.LISTS)
+            ClubSection.STATISTICS -> clubViewModel.selectTab(ClubTab.STATS)
+            ClubSection.AWARDS -> clubViewModel.selectTab(ClubTab.AWARDS)
+            ClubSection.SETTINGS, null -> Unit
+        }
+        link.reviewWorkId?.let { reviewsViewModel.onAction(ReviewsAction.OpenDetail(it)) }
     }
 
     // Awards: movie clubs with the setting on (web clubSections.ts). Re-check on

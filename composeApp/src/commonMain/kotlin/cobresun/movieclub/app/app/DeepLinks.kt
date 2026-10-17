@@ -7,7 +7,20 @@ import kotlinx.coroutines.flow.asStateFlow
 /** A URL the app knows how to open. */
 sealed interface DeepLink {
     data class JoinClub(val token: String) : DeepLink
+
+    /**
+     * A club page: `/club/<slug>[/<section>]`, or a shared review/list/statistics
+     * link (`/share/club/<slug>/review/<workId>`). [reviewWorkId] opens that
+     * review's details; a null [section] keeps whatever tab the club shows.
+     */
+    data class Club(
+        val slug: String,
+        val section: ClubSection? = null,
+        val reviewWorkId: String? = null,
+    ) : DeepLink
 }
+
+enum class ClubSection { REVIEWS, LISTS, STATISTICS, AWARDS, SETTINGS }
 
 /**
  * Entry point for URLs handed to the app by the OS (Android intents, iOS `onOpenURL`).
@@ -51,6 +64,28 @@ object DeepLinks {
         }
         if (path.size == 2 && path[0] == "join-club" && path[1].isNotBlank()) {
             return DeepLink.JoinClub(path[1])
+        }
+        if (path.size >= 3 && path[0] == "share" && path[1] == "club") {
+            val slug = path[2]
+            return when (path.getOrNull(3)) {
+                "review" -> path.getOrNull(4)?.let { DeepLink.Club(slug, ClubSection.REVIEWS, reviewWorkId = it) }
+                "list" -> DeepLink.Club(slug, ClubSection.LISTS)
+                "statistics" -> DeepLink.Club(slug, ClubSection.STATISTICS)
+                else -> null
+            }
+        }
+        if (path.size >= 2 && path[0] == "club") {
+            // Web club sections; `watch-list` and `settings` are old links the web still redirects.
+            val section = when (path.getOrNull(2)) {
+                null -> null
+                "reviews" -> ClubSection.REVIEWS
+                "lists", "watch-list" -> ClubSection.LISTS
+                "statistics" -> ClubSection.STATISTICS
+                "awards" -> ClubSection.AWARDS
+                "club", "settings" -> ClubSection.SETTINGS
+                else -> null
+            }
+            return DeepLink.Club(path[1], section)
         }
         return null
     }

@@ -73,6 +73,8 @@ import cobresun.movieclub.app.member.presentation.CreateClubScreenRoot
 import cobresun.movieclub.app.member.presentation.JoinClubScreenRoot
 import cobresun.movieclub.app.app.DeepLink
 import cobresun.movieclub.app.app.DeepLinks
+import cobresun.movieclub.app.app.ClubSection
+import androidx.navigation.NavDestination.Companion.hasRoute
 import cobresun.movieclub.app.member.presentation.MemberViewModel
 import cobresun.movieclub.app.member.presentation.ProfileScreenRoot
 import cobresun.movieclub.app.member.presentation.components.ErrorMessage
@@ -253,6 +255,24 @@ private fun ClubNavHost(
             is DeepLink.JoinClub -> {
                 DeepLinks.consume(link)
                 navController.navigate(Route.JoinClub(link.token))
+            }
+            // Club and shared-review links: bring that club's screen up; ClubScreenRoot
+            // consumes the link once it shows (tab + review details).
+            is DeepLink.Club -> {
+                val memberSlugs = (memberViewModel.state.value.clubs as? AsyncResult.Success)?.data?.map { it.slug }
+                    ?: initialClubs.map { it.slug }
+                val entry = navController.currentBackStackEntry
+                val onClub = entry?.destination?.hasRoute<Route.Club>() == true &&
+                    entry.toRoute<Route.Club>().clubSlug == link.slug
+                when {
+                    link.slug !in memberSlugs -> DeepLinks.consume(link)
+                    link.section == ClubSection.SETTINGS -> {
+                        DeepLinks.consume(link)
+                        if (!onClub) onOpenClub(link.slug)
+                        navController.navigate(Route.ClubSettings(link.slug))
+                    }
+                    !onClub -> onOpenClub(link.slug)
+                }
             }
             null -> Unit
         }
