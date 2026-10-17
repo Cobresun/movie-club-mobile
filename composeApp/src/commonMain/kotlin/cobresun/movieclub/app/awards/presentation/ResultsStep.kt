@@ -40,8 +40,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cobresun.movieclub.app.awards.domain.AwardCategory
 import cobresun.movieclub.app.awards.domain.AwardsStep
-import cobresun.movieclub.app.awards.domain.Standing
-import cobresun.movieclub.app.awards.domain.standings
+import cobresun.movieclub.app.awards.domain.ScoredNomination
+import cobresun.movieclub.app.awards.domain.scoreAward
 import cobresun.movieclub.app.core.presentation.components.Avatar
 import cobresun.movieclub.app.core.presentation.components.Poster
 
@@ -110,7 +110,7 @@ private fun Envelope(onReveal: () -> Unit) {
 
 @Composable
 private fun Revealed(state: AwardsState, category: AwardCategory) {
-    val standings = category.standings()
+    val standings = scoreAward(category.nominations).results
     if (standings.isEmpty()) {
         Text(
             "No nominees in this category.",
@@ -120,10 +120,10 @@ private fun Revealed(state: AwardsState, category: AwardCategory) {
         )
         return
     }
-    val winners = standings.filter { it.isWinner }
+    val winners = standings.filter { it.winner }
     Column(Modifier.fillMaxWidth()) {
-        WinnerHero(winners)
-        val rest = standings.filterNot { it.isWinner }
+        if (winners.isNotEmpty()) WinnerHero(winners)
+        val rest = standings.filterNot { it.winner }
         if (rest.isNotEmpty() || state.members.isNotEmpty()) {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(horizontal = 16.dp))
             Text(
@@ -140,7 +140,7 @@ private fun Revealed(state: AwardsState, category: AwardCategory) {
 }
 
 @Composable
-private fun WinnerHero(winners: List<Standing>) {
+private fun WinnerHero(winners: List<ScoredNomination>) {
     val gold = MaterialTheme.colorScheme.tertiary
     Box(
         Modifier
@@ -184,7 +184,7 @@ private fun WinnerHero(winners: List<Standing>) {
 }
 
 @Composable
-private fun StandingRow(standing: Standing, state: AwardsState) {
+private fun StandingRow(standing: ScoredNomination, state: AwardsState) {
     Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         RankBadge(standing.place)
         Poster(standing.nomination.posterUrl, standing.nomination.title, Modifier.width(40.dp), MaterialTheme.shapes.extraSmall)
@@ -198,7 +198,7 @@ private fun StandingRow(standing: Standing, state: AwardsState) {
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    "${standing.points} pts",
+                    "${standing.score} pts",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -8,14 +8,13 @@ import cobresun.movieclub.app.awards.domain.AwardCategory
 import cobresun.movieclub.app.awards.domain.AwardsRepository
 import cobresun.movieclub.app.awards.domain.AwardsSeason
 import cobresun.movieclub.app.awards.domain.AwardsStep
-import cobresun.movieclub.app.awards.domain.CategoryTitleError
 import cobresun.movieclub.app.awards.domain.Nomination
 import cobresun.movieclub.app.awards.domain.NominationCandidate
 import cobresun.movieclub.app.awards.domain.allRevealed
-import cobresun.movieclub.app.awards.domain.canAdvance
+import cobresun.movieclub.app.awards.domain.categoryTitleError
 import cobresun.movieclub.app.awards.domain.rankingOrderFor
 import cobresun.movieclub.app.awards.domain.remainingNominationsFor
-import cobresun.movieclub.app.awards.domain.validateCategoryTitle
+import cobresun.movieclub.app.awards.domain.stepChangeError
 import cobresun.movieclub.app.club.domain.ClubRepository
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.ClubType
@@ -58,7 +57,13 @@ data class AwardsState(
     val loadedSeason: AwardsSeason? get() = (season as? AsyncResult.Success)?.data
     val memberIds: List<String> get() = members.map { it.id }
 
-    val canAdvance: Boolean get() = loadedSeason?.canAdvance(memberIds) == true
+    /** Why the season can't move on yet (web `PhaseControls`), or null when it can. */
+    val advanceBlocked: String?
+        get() {
+            val season = loadedSeason ?: return null
+            val next = season.step.manualNext ?: return null
+            return season.stepChangeError(next, memberIds)
+        }
 
     fun member(id: String): Member? = members.firstOrNull { it.id == id }
 
@@ -272,7 +277,7 @@ class AwardsViewModel(
         val s = _state.value
         val season = s.loadedSeason ?: return
         val next = season.step.manualNext ?: return
-        if (!season.canAdvance(s.memberIds)) return
+        if (season.stepChangeError(next, s.memberIds) != null) return
         _state.update { it.copy(isAdvancing = true) }
         viewModelScope.launch {
             awardsRepository.setStep(clubSlug, season.year, next)
@@ -292,15 +297,10 @@ class AwardsViewModel(
         }
     }
 
-    private fun validationMessage(error: CategoryTitleError) = when (error) {
-        CategoryTitleError.BLANK -> "Give the category a name."
-        CategoryTitleError.DUPLICATE -> "There's already a category with that name."
-    }
-
     private fun addCategory(raw: String) {
         val season = _state.value.loadedSeason ?: return
         val title = raw.trim()
-        season.validateCategoryTitle(title)?.let { message(validationMessage(it)); return }
+        season.categoryTitleError(title)?.let { message(it); return }
         mutate(
             action = "add $title",
             transform = { it.copy(categories = it.categories + AwardCategory(title, emptyList())) },
@@ -311,7 +311,7 @@ class AwardsViewModel(
         val season = _state.value.loadedSeason ?: return
         val to = raw.trim()
         if (to == from) return
-        season.validateCategoryTitle(to, except = from)?.let { message(validationMessage(it)); return }
+        season.categoryTitleError(to, except = from)?.let { message(it); return }
         val order = season.categories.map { it.title }
         mutate(
             action = "rename $from",

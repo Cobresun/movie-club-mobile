@@ -3,33 +3,114 @@ package cobresun.movieclub.app.awards.domain
 /** How many movies each member may nominate per category (web: `NOMINATIONS_PER_AWARD`). */
 const val NOMINATIONS_PER_MEMBER = 2
 
-/** A nomination's place in a category's final results. */
-data class Standing(
+/** Longest category title the server accepts (web: `AWARD_TITLE_MAX_LENGTH`). */
+const val AWARD_TITLE_MAX_LENGTH = 60
+
+/** A nominee's result in a category (web: `ScoredNomination`). */
+data class ScoredNomination(
     val nomination: Nomination,
-    /** Sum of every voter's rank; lower is better. */
-    val points: Int,
-    /** Competition ranking: ties share a place and the next place is skipped (1, 1, 3). */
+    /** Sum of every voter's rank for this nominee; lower is better. */
+    val score: Int,
+    val winner: Boolean,
+    /** Competition ranking by score: ties share a place and the next is skipped (1, 1, 3). */
     val place: Int,
-) {
-    val isWinner: Boolean get() = place == 1
-}
+)
+
+/** A category's results: everyone who voted in it, and the nominees best first. */
+data class ScoredAward(
+    val voters: List<String>,
+    val results: List<ScoredNomination>,
+)
 
 /**
- * Final results for a category, best first. Matches the web: a nomination's
- * score is the sum of all ranks it received, and the lowest total wins. Ties
- * are broken only for display order (by title) and share a place.
+ * Ranks a category's nominees by total rank across everyone who voted in it
+ * (web: `scoreAward`).
+ *
+ * A nominee a voter left unranked counts as their last place, so it cannot win
+ * on an empty column. Ties share the win. A winner is only declared once
+ * someone has voted, or when there is a single nominee.
  */
-fun AwardCategory.standings(): List<Standing> {
+fun scoreAward(nominations: List<Nomination>): ScoredAward {
+    val voters = nominations.flatMap { it.ranking.keys }.distinct()
+    val lastPlace = nominations.size
+
     val scored = nominations
-        .map { it to it.ranking.values.sum() }
-        .sortedWith(compareBy<Pair<Nomination, Int>> { it.second }.thenBy { it.first.title.lowercase() })
-    return scored.map { (nomination, points) ->
-        Standing(nomination, points, place = scored.indexOfFirst { it.second == points } + 1)
-    }
+        .map { nomination -> nomination to voters.sumOf { nomination.ranking[it] ?: lastPlace } }
+        .sortedBy { it.second }
+
+    val best = scored.firstOrNull()?.second
+    val decided = voters.isNotEmpty() || nominations.size == 1
+
+    return ScoredAward(
+        voters = voters,
+        results = scored.map { (nomination, score) ->
+            ScoredNomination(
+                nomination = nomination,
+                score = score,
+                winner = decided && score == best,
+                place = scored.indexOfFirst { it.second == score } + 1,
+            )
+        },
+    )
 }
 
-/** Every nomination with the best (lowest) total. Empty when there are no nominations. */
-fun AwardCategory.winners(): List<Nomination> = standings().filter { it.isWinner }.map { it.nomination }
+/** A category with a single nominee has nothing to rank: it wins by default. */
+fun AwardCategory.needsRanking(): Boolean = nominations.size > 1
+
+/** Whether [voterId] has ranked every nominee here (web: `hasRankedAward`). */
+fun AwardCategory.isRankedBy(voterId: String): Boolean =
+    nominations.all { it.ranking[voterId] != null }
+
+/** Whether [voterId] has ranked every category that needs ranking. */
+fun AwardsSeason.hasFinishedVoting(voterId: String): Boolean =
+    categories.filter { it.needsRanking() }.all { it.isRankedBy(voterId) }
+
+/**
+ * A member has finished nominating once they have a nominee in every category.
+ * Backing a movie someone else already nominated counts, so a member is never
+ * stuck on a category they have no fresh pick for.
+ */
+fun AwardsSeason.hasFinishedNominating(userId: String): Boolean =
+    categories.all { category -> category.nominations.any { userId in it.nominatedBy } }
+
+/**
+ * The members who still have their part of the current phase to do. Only
+ * nominations and voting ask something of every member; the other phases are
+ * run by the club as a whole.
+ */
+fun AwardsSeason.membersYetToFinish(memberIds: Collection<String>): List<String> = when (step) {
+    AwardsStep.NOMINATIONS -> memberIds.filter { !hasFinishedNominating(it) }
+    AwardsStep.RANKINGS -> memberIds.filter { !hasFinishedVoting(it) }
+    AwardsStep.CATEGORIES, AwardsStep.PRESENTATION, AwardsStep.COMPLETED -> emptyList()
+}
+
+/** What members are doing during the phases that ask something of each of them (web: `PHASE_WORK`). */
+val AwardsStep.work: String?
+    get() = when (this) {
+        AwardsStep.NOMINATIONS -> "nominating"
+        AwardsStep.RANKINGS -> "voting"
+        else -> null
+    }
+
+/**
+ * Why the season cannot move to [target], or null when it can (web:
+ * `stepChangeError`, which the server enforces). The season only ever moves
+ * forward, one phase at a time, and the club moves together: nobody can close
+ * a phase while a member still has their part of it to do.
+ */
+fun AwardsSeason.stepChangeError(target: AwardsStep, memberIds: Collection<String>): String? {
+    if (target.value != step.value + 1) {
+        return "Awards only move forward, one step at a time"
+    }
+    if (step == AwardsStep.CATEGORIES && categories.isEmpty()) {
+        return "Add at least one category before opening nominations"
+    }
+    val waiting = membersYetToFinish(memberIds).size
+    if (waiting > 0) {
+        return "Everyone has to finish ${step.work ?: "this step"} first ($waiting still to go)"
+    }
+    return null
+}
 
 /**
  * Nominations in [userId]'s ranked order: ranked ones by rank, then unranked
@@ -40,13 +121,6 @@ fun AwardCategory.rankingOrderFor(userId: String): List<Nomination> {
     return ranked.sortedBy { it.ranking.getValue(userId) } + unranked
 }
 
-/** Whether [userId] has ranked every nomination in this category. */
-fun AwardCategory.isRankedBy(userId: String): Boolean =
-    nominations.all { it.ranking[userId] != null }
-
-/** The members (by id) who have ranked every nomination here. */
-fun AwardCategory.votersDone(memberIds: Collection<String>): Int = memberIds.count { isRankedBy(it) }
-
 /** [userId]'s own nominations in this category. */
 fun AwardCategory.nominationsBy(userId: String): List<Nomination> =
     nominations.filter { userId in it.nominatedBy }
@@ -55,28 +129,23 @@ fun AwardCategory.nominationsBy(userId: String): List<Nomination> =
 fun AwardCategory.remainingNominationsFor(userId: String): Int =
     (NOMINATIONS_PER_MEMBER - nominationsBy(userId).size).coerceAtLeast(0)
 
-/** Whether every member has fully ranked every category (web's gate for leaving Rankings). */
-fun AwardsSeason.isRankingComplete(memberIds: Collection<String>): Boolean =
-    categories.all { category -> memberIds.all { category.isRankedBy(it) } }
-
-/** Whether the season may move on from its current step (mirrors the web's button gating). */
-fun AwardsSeason.canAdvance(memberIds: Collection<String>): Boolean = when (step) {
-    AwardsStep.CATEGORIES -> categories.isNotEmpty()
-    AwardsStep.RANKINGS -> isRankingComplete(memberIds)
-    AwardsStep.NOMINATIONS -> true
-    AwardsStep.PRESENTATION, AwardsStep.COMPLETED -> false
-}
-
 /** Whether every category title is in [revealed], i.e. the presentation is over. */
 fun AwardsSeason.allRevealed(revealed: Set<String>): Boolean =
     categories.all { it.title in revealed }
 
-/** Category titles are the server's keys: they must be non-blank and unique (case-insensitive). */
-fun AwardsSeason.validateCategoryTitle(title: String, except: String? = null): CategoryTitleError? {
-    val trimmed = title.trim()
-    if (trimmed.isEmpty()) return CategoryTitleError.BLANK
-    val taken = categories.any { it.title != except && it.title.equals(trimmed, ignoreCase = true) }
-    return if (taken) CategoryTitleError.DUPLICATE else null
-}
+/** Whether two category titles name the same category (web: `isSameCategoryTitle`). */
+fun isSameCategoryTitle(a: String, b: String): Boolean = a.trim().lowercase() == b.trim().lowercase()
 
-enum class CategoryTitleError { BLANK, DUPLICATE }
+/**
+ * Validates a new category title the way the web does (`awardTitleSchema`
+ * plus the uniqueness check). Returns the user-facing error, or null.
+ */
+fun AwardsSeason.categoryTitleError(title: String, except: String? = null): String? {
+    val trimmed = title.trim()
+    if (trimmed.isEmpty()) return "Give the category a name"
+    if (trimmed.length > AWARD_TITLE_MAX_LENGTH) return "Keep it under $AWARD_TITLE_MAX_LENGTH characters"
+    if (categories.any { it.title != except && isSameCategoryTitle(it.title, trimmed) }) {
+        return "\"$trimmed\" is already a category"
+    }
+    return null
+}

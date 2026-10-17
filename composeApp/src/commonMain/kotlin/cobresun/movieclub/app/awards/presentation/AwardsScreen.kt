@@ -233,7 +233,7 @@ private fun AdvanceBar(state: AwardsState, season: AwardsSeason, onAction: (Awar
                 modifier = Modifier.weight(1f),
             )
             Spacer(Modifier.width(12.dp))
-            Button(onClick = { confirming = true }, enabled = state.canAdvance && !state.isAdvancing) {
+            Button(onClick = { confirming = true }, enabled = state.advanceBlocked == null && !state.isAdvancing) {
                 if (state.isAdvancing) {
                     CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                 } else {

@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import cobresun.movieclub.app.awards.domain.AwardCategory
 import cobresun.movieclub.app.awards.domain.Nomination
 import cobresun.movieclub.app.awards.domain.isRankedBy
-import cobresun.movieclub.app.awards.domain.votersDone
 import cobresun.movieclub.app.awards.presentation.components.DragHandle
 import cobresun.movieclub.app.awards.presentation.components.Pill
 import cobresun.movieclub.app.awards.presentation.components.ReorderableColumn
@@ -65,7 +64,7 @@ private fun RankingCard(
                 Text(category.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 if (state.members.isNotEmpty() && category.nominations.isNotEmpty()) {
                     Text(
-                        "${category.votersDone(state.memberIds)} of ${state.members.size} members ranked",
+                        "${state.memberIds.count { category.isRankedBy(it) }} of ${state.members.size} members ranked",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

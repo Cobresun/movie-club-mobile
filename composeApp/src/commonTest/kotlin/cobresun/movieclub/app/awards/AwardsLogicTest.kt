@@ -8,18 +8,20 @@ import cobresun.movieclub.app.awards.data.mappers.toSeason
 import cobresun.movieclub.app.awards.domain.AwardCategory
 import cobresun.movieclub.app.awards.domain.AwardsSeason
 import cobresun.movieclub.app.awards.domain.AwardsStep
-import cobresun.movieclub.app.awards.domain.CategoryTitleError
 import cobresun.movieclub.app.awards.domain.Nomination
 import cobresun.movieclub.app.awards.domain.allRevealed
-import cobresun.movieclub.app.awards.domain.canAdvance
-import cobresun.movieclub.app.awards.domain.isRankingComplete
+import cobresun.movieclub.app.awards.domain.categoryTitleError
+import cobresun.movieclub.app.awards.domain.hasFinishedNominating
+import cobresun.movieclub.app.awards.domain.hasFinishedVoting
+import cobresun.movieclub.app.awards.domain.isRankedBy
+import cobresun.movieclub.app.awards.domain.isSameCategoryTitle
+import cobresun.movieclub.app.awards.domain.membersYetToFinish
+import cobresun.movieclub.app.awards.domain.needsRanking
 import cobresun.movieclub.app.awards.domain.nominationsBy
 import cobresun.movieclub.app.awards.domain.rankingOrderFor
 import cobresun.movieclub.app.awards.domain.remainingNominationsFor
-import cobresun.movieclub.app.awards.domain.standings
-import cobresun.movieclub.app.awards.domain.validateCategoryTitle
-import cobresun.movieclub.app.awards.domain.votersDone
-import cobresun.movieclub.app.awards.domain.winners
+import cobresun.movieclub.app.awards.domain.scoreAward
+import cobresun.movieclub.app.awards.domain.stepChangeError
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -35,41 +37,67 @@ class AwardsLogicTest {
         AwardsSeason(2025, step, categories.toList())
 
     @Test
-    fun standingsSumRanksLowestWins() {
-        val category = AwardCategory(
-            "Best Picture",
+    fun scoreSumsRanksAndLowestWins() {
+        val scored = scoreAward(
             listOf(
                 nom(1, "Alien", mapOf("a" to 2, "b" to 3)),
                 nom(2, "Brazil", mapOf("a" to 1, "b" to 1)),
                 nom(3, "Cars", mapOf("a" to 3, "b" to 2)),
             ),
         )
-        val standings = category.standings()
-        assertEquals(listOf(2, 1, 3), standings.map { it.nomination.movieId })
-        assertEquals(listOf(2, 5, 5), standings.map { it.points })
-        assertEquals(listOf(1, 2, 2), standings.map { it.place })
-        assertEquals(listOf("Brazil"), category.winners().map { it.title })
+        assertEquals(listOf("a", "b"), scored.voters)
+        assertEquals(listOf(2, 1, 3), scored.results.map { it.nomination.movieId })
+        assertEquals(listOf(2, 5, 5), scored.results.map { it.score })
+        assertEquals(listOf(1, 2, 2), scored.results.map { it.place })
+        assertEquals(listOf(true, false, false), scored.results.map { it.winner })
     }
 
     @Test
-    fun tiedWinnersShareFirstPlaceAndNextPlaceIsSkipped() {
-        val category = AwardCategory(
-            "Score",
+    fun tiesShareTheWinAndKeepNominationOrder() {
+        val scored = scoreAward(
             listOf(
                 nom(1, "Zodiac", mapOf("a" to 1, "b" to 2)),
                 nom(2, "Amelie", mapOf("a" to 2, "b" to 1)),
                 nom(3, "Heat", mapOf("a" to 3, "b" to 3)),
             ),
         )
-        val standings = category.standings()
-        assertEquals(listOf("Amelie", "Zodiac", "Heat"), standings.map { it.nomination.title })
-        assertEquals(listOf(1, 1, 3), standings.map { it.place })
-        assertEquals(2, category.winners().size)
+        // Stable sort, like the web: equal scores stay in nomination order.
+        assertEquals(listOf("Zodiac", "Amelie", "Heat"), scored.results.map { it.nomination.title })
+        assertEquals(listOf(true, true, false), scored.results.map { it.winner })
+        assertEquals(listOf(1, 1, 3), scored.results.map { it.place })
     }
 
     @Test
-    fun emptyCategoryHasNoWinners() {
-        assertTrue(AwardCategory("Empty", emptyList()).winners().isEmpty())
+    fun unrankedNomineeCountsAsThatVotersLastPlace() {
+        // "b" voted before "New" was nominated, so it has no rank from them.
+        val scored = scoreAward(
+            listOf(
+                nom(1, "Old", mapOf("a" to 2, "b" to 1)),
+                nom(2, "New", mapOf("a" to 1)),
+            ),
+        )
+        // Old: 2 + 1 = 3. New: 1 + last place (2) = 3. A tie, not a win on an empty column.
+        assertEquals(listOf(3, 3), scored.results.map { it.score })
+        assertTrue(scored.results.all { it.winner })
+    }
+
+    @Test
+    fun noWinnerUntilSomeoneVotesUnlessThereIsOneNominee() {
+        val unvoted = scoreAward(listOf(nom(1, "A"), nom(2, "B")))
+        assertTrue(unvoted.voters.isEmpty())
+        assertTrue(unvoted.results.none { it.winner })
+
+        val single = scoreAward(listOf(nom(1, "Only")))
+        assertTrue(single.results.single().winner)
+
+        assertTrue(scoreAward(emptyList()).results.isEmpty())
+    }
+
+    @Test
+    fun singleNomineeCategoriesNeedNoRanking() {
+        assertFalse(AwardCategory("A", listOf(nom(1, "One"))).needsRanking())
+        assertFalse(AwardCategory("B", emptyList()).needsRanking())
+        assertTrue(AwardCategory("C", listOf(nom(1, "One"), nom(2, "Two"))).needsRanking())
     }
 
     @Test
@@ -100,23 +128,66 @@ class AwardsLogicTest {
     }
 
     @Test
-    fun rankingCompletionRequiresEveryMemberOnEveryNomination() {
-        val members = listOf("a", "b")
-        val partial = AwardCategory("X", listOf(nom(1, "A", mapOf("a" to 1, "b" to 1)), nom(2, "B", mapOf("a" to 2))))
-        val full = AwardCategory("Y", listOf(nom(3, "C", mapOf("a" to 1, "b" to 1))))
-        assertEquals(1, partial.votersDone(members))
-        assertFalse(season(AwardsStep.RANKINGS, partial, full).isRankingComplete(members))
-        assertTrue(season(AwardsStep.RANKINGS, full).isRankingComplete(members))
-        assertFalse(season(AwardsStep.RANKINGS, partial).canAdvance(members))
-        assertTrue(season(AwardsStep.RANKINGS, full).canAdvance(members))
+    fun finishedVotingSkipsCategoriesThatNeedNoRanking() {
+        val ranked = AwardCategory("X", listOf(nom(1, "A", mapOf("a" to 1)), nom(2, "B", mapOf("a" to 2))))
+        val single = AwardCategory("Y", listOf(nom(3, "C")))
+        val unranked = AwardCategory("Z", listOf(nom(4, "D"), nom(5, "E")))
+        assertTrue(ranked.isRankedBy("a"))
+        assertFalse(ranked.isRankedBy("b"))
+        assertTrue(season(AwardsStep.RANKINGS, ranked, single).hasFinishedVoting("a"))
+        assertFalse(season(AwardsStep.RANKINGS, ranked, single, unranked).hasFinishedVoting("a"))
     }
 
     @Test
-    fun stepGating() {
-        assertFalse(season(AwardsStep.CATEGORIES).canAdvance(emptyList()))
-        assertTrue(season(AwardsStep.CATEGORIES, AwardCategory("A", emptyList())).canAdvance(emptyList()))
-        assertTrue(season(AwardsStep.NOMINATIONS).canAdvance(emptyList()))
-        assertFalse(season(AwardsStep.PRESENTATION).canAdvance(emptyList()))
+    fun finishedNominatingNeedsANomineeInEveryCategoryIncludingBackedOnes() {
+        val s = season(
+            AwardsStep.NOMINATIONS,
+            AwardCategory("X", listOf(nom(1, "A", by = listOf("a", "b")))),
+            AwardCategory("Y", listOf(nom(2, "B", by = listOf("a")))),
+        )
+        assertTrue(s.hasFinishedNominating("a"))
+        assertFalse(s.hasFinishedNominating("b"))
+        assertEquals(listOf("b", "c"), s.membersYetToFinish(listOf("a", "b", "c")))
+    }
+
+    @Test
+    fun onlyNominationsAndVotingWaitOnMembers() {
+        val category = AwardCategory("X", listOf(nom(1, "A"), nom(2, "B")))
+        assertEquals(emptyList(), season(AwardsStep.CATEGORIES, category).membersYetToFinish(listOf("a")))
+        assertEquals(listOf("a"), season(AwardsStep.RANKINGS, category).membersYetToFinish(listOf("a")))
+        assertEquals(emptyList(), season(AwardsStep.PRESENTATION, category).membersYetToFinish(listOf("a")))
+        assertEquals(emptyList(), season(AwardsStep.COMPLETED, category).membersYetToFinish(listOf("a")))
+    }
+
+    @Test
+    fun stepChangeErrors() {
+        val members = listOf("a", "b")
+        val empty = season(AwardsStep.CATEGORIES)
+        assertEquals("Awards only move forward, one step at a time", empty.stepChangeError(AwardsStep.RANKINGS, members))
+        assertEquals("Awards only move forward, one step at a time", empty.stepChangeError(AwardsStep.CATEGORIES, members))
+        assertEquals(
+            "Add at least one category before opening nominations",
+            empty.stepChangeError(AwardsStep.NOMINATIONS, members),
+        )
+        assertNull(season(AwardsStep.CATEGORIES, AwardCategory("A", emptyList())).stepChangeError(AwardsStep.NOMINATIONS, members))
+
+        val nominating = season(AwardsStep.NOMINATIONS, AwardCategory("A", listOf(nom(1, "One", by = listOf("a")))))
+        assertEquals(
+            "Everyone has to finish nominating first (1 still to go)",
+            nominating.stepChangeError(AwardsStep.RANKINGS, members),
+        )
+        assertNull(nominating.stepChangeError(AwardsStep.RANKINGS, listOf("a")))
+
+        val voting = season(AwardsStep.RANKINGS, AwardCategory("A", listOf(nom(1, "One"), nom(2, "Two"))))
+        assertEquals(
+            "Everyone has to finish voting first (2 still to go)",
+            voting.stepChangeError(AwardsStep.PRESENTATION, members),
+        )
+        assertNull(season(AwardsStep.PRESENTATION).stepChangeError(AwardsStep.COMPLETED, members))
+    }
+
+    @Test
+    fun stepOrder() {
         assertEquals(AwardsStep.NOMINATIONS, AwardsStep.CATEGORIES.manualNext)
         assertEquals(AwardsStep.PRESENTATION, AwardsStep.RANKINGS.manualNext)
         assertNull(AwardsStep.PRESENTATION.manualNext)
@@ -134,10 +205,13 @@ class AwardsLogicTest {
     @Test
     fun categoryTitleValidation() {
         val s = season(AwardsStep.CATEGORIES, AwardCategory("Best Picture", emptyList()))
-        assertEquals(CategoryTitleError.BLANK, s.validateCategoryTitle("   "))
-        assertEquals(CategoryTitleError.DUPLICATE, s.validateCategoryTitle(" best picture "))
-        assertNull(s.validateCategoryTitle("Best Picture", except = "Best Picture"))
-        assertNull(s.validateCategoryTitle("Best Score"))
+        assertEquals("Give the category a name", s.categoryTitleError("   "))
+        assertEquals("\"best picture\" is already a category", s.categoryTitleError(" best picture "))
+        assertEquals("Keep it under 60 characters", s.categoryTitleError("x".repeat(61)))
+        assertNull(s.categoryTitleError("x".repeat(60)))
+        assertNull(s.categoryTitleError("Best Picture", except = "Best Picture"))
+        assertNull(s.categoryTitleError("Best Score"))
+        assertTrue(isSameCategoryTitle(" Best Score", "best score "))
     }
 
     @Test
