@@ -348,17 +348,47 @@ class ListsViewModel(
 
     private fun removeWork(work: Work) {
         val listId = _state.value.selectedListId ?: return
-        val before = (_state.value.itemsByList[listId] as? AsyncResult.Success)?.data ?: return
-        setItems(listId, before.filter { it.id != work.id })
+        runItemOp(ListItemOp.Remove(work, listId))
+    }
+
+    /**
+     * Removes or moves an item out of [ListItemOp.sourceListId], optimistically.
+     * The op carries every id it needs, so Retry replays exactly the failed
+     * operation even if the user has since switched lists.
+     */
+    private fun runItemOp(op: ListItemOp) {
+        val work = op.work
+        val listId = op.sourceListId
+        val before = (_state.value.itemsByList[listId] as? AsyncResult.Success)?.data
+        before?.let { setItems(listId, it.filter { item -> item.id != work.id }) }
         viewModelScope.launch {
-            listsRepository.removeItem(clubSlug, listId, work.id)
+            val result = when (op) {
+                is ListItemOp.Remove -> listsRepository.removeItem(clubSlug, listId, work.id)
+                is ListItemOp.Move -> listsRepository.moveItem(clubSlug, listId, work.id, op.destinationListId)
+            }
+            result
                 .onSuccess {
-                    if (_state.value.upNextWorkId == work.id) _state.update { it.copy(upNextWorkId = null) }
-                    message("Removed ${work.title}")
+                    when (op) {
+                        is ListItemOp.Remove -> {
+                            if (_state.value.upNextWorkId == work.id) _state.update { it.copy(upNextWorkId = null) }
+                            message("Removed ${work.title}")
+                        }
+                        is ListItemOp.Move -> {
+                            val destName = (_state.value.lists as? AsyncResult.Success)?.data
+                                ?.firstOrNull { it.id == op.destinationListId }?.title ?: "the list"
+                            message("Moved ${work.title} to $destName")
+                            loadItems(op.destinationListId, showLoading = false)
+                        }
+                    }
                 }
                 .onError { error ->
-                    setItems(listId, before)
-                    emitError(error, "remove ${work.title}")
+                    // Roll back only what we changed, and only if nothing reloaded the list since.
+                    if (before != null) {
+                        val now = (_state.value.itemsByList[listId] as? AsyncResult.Success)?.data
+                        if (now != null && now.none { it.id == work.id }) setItems(listId, before)
+                    }
+                    val verb = if (op is ListItemOp.Move) "move" else "remove"
+                    emitError(error, "$verb ${work.title}") { runItemOp(op) }
                 }
         }
     }
@@ -379,21 +409,7 @@ class ListsViewModel(
     private fun moveWork(work: Work, destinationListId: String) {
         val listId = _state.value.selectedListId ?: return
         if (listId == destinationListId) return
-        val destName = (_state.value.lists as? AsyncResult.Success)?.data
-            ?.firstOrNull { it.id == destinationListId }?.title ?: "the list"
-        val before = (_state.value.itemsByList[listId] as? AsyncResult.Success)?.data ?: return
-        setItems(listId, before.filter { it.id != work.id })
-        viewModelScope.launch {
-            listsRepository.moveItem(clubSlug, listId, work.id, destinationListId)
-                .onSuccess {
-                    message("Moved ${work.title} to $destName")
-                    loadItems(destinationListId, showLoading = false)
-                }
-                .onError { error ->
-                    setItems(listId, before)
-                    emitError(error, "move ${work.title}")
-                }
-        }
+        runItemOp(ListItemOp.Move(work, listId, destinationListId))
     }
 
     private fun loadAllItems() {
@@ -431,7 +447,7 @@ class ListsViewModel(
                 is Result.Success -> r.data
                 is Result.Error -> {
                     rollback()
-                    emitError(r.error, "move ${work.title} to reviews")
+                    emitError(r.error, "move ${work.title} to reviews") { moveToReviews(work, listId) }
                     return@launch
                 }
             }
@@ -450,7 +466,7 @@ class ListsViewModel(
                 }
                 .onError { error ->
                     rollback()
-                    emitError(error, "move ${work.title} to reviews")
+                    emitError(error, "move ${work.title} to reviews") { moveToReviews(work, listId) }
                 }
         }
     }
@@ -514,3 +530,12 @@ class ListsViewModel(
 
 private fun AsyncResult<List<WorkList>>.mapLists(transform: (List<WorkList>) -> List<WorkList>): AsyncResult<List<WorkList>> =
     if (this is AsyncResult.Success) AsyncResult.Success(transform(data)) else this
+
+/** A list-item change captured with all its ids, so it can be replayed verbatim on Retry. */
+sealed interface ListItemOp {
+    val work: Work
+    val sourceListId: String
+
+    data class Remove(override val work: Work, override val sourceListId: String) : ListItemOp
+    data class Move(override val work: Work, override val sourceListId: String, val destinationListId: String) : ListItemOp
+}
