@@ -73,6 +73,7 @@ import org.koin.compose.viewmodel.koinViewModel
  *
  * @param title e.g. "Add to Watch List"
  * @param existingExternalIds works already at the destination (shown as added)
+ * @param statusLabels where other results already live in the club (e.g. "Reviewed")
  * @param fromLists works already on the club's lists to offer before search results
  * @param onPick called with the chosen result; the caller performs the add and dismisses
  */
@@ -86,6 +87,7 @@ fun AddWorkSheet(
     onDismiss: () -> Unit,
     /** Optional "From your lists" picks shown above search (Add review). */
     fromLists: ListPickSection? = null,
+    statusLabels: Map<String, String> = emptyMap(),
     viewModel: WorkSearchViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -233,6 +235,7 @@ fun AddWorkSheet(
                             SearchResultRow(
                                 result = item,
                                 alreadyAdded = item.externalId in existingExternalIds,
+                                status = statusLabels[item.externalId],
                                 onClick = { onPick(item) },
                                 modifier = Modifier.animateItem(),
                             )
@@ -306,6 +309,7 @@ private fun SearchResultRow(
     alreadyAdded: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    status: String? = null,
 ) {
     Row(
         modifier = modifier
@@ -320,6 +324,20 @@ private fun SearchResultRow(
             Text(result.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             result.subtitle?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (!alreadyAdded && status != null) {
+                Text(
+                    status,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .padding(top = 4.dp)
+                        .clip(MaterialTheme.shapes.extraSmall)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                )
             }
         }
         if (alreadyAdded) {

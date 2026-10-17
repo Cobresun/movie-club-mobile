@@ -239,11 +239,21 @@ fun ClubScreenRoot(
         } else {
             reviewsState.reviewedExternalIds
         }
-        if (!toLists) LaunchedEffect(Unit) { listsViewModel.onAction(ListsAction.LoadAllItems) }
+        LaunchedEffect(Unit) { listsViewModel.onAction(ListsAction.LoadAllItems) }
+        val statusLabels = remember(toLists, listsState.allItems, listsState.selectedListId, reviewsState.reviews) {
+            val listed = (listsState.allItems as? cobresun.movieclub.app.core.domain.AsyncResult.Success)?.data.orEmpty()
+                .mapNotNull { item -> item.work.externalId?.let { Triple(it, item.listId, item.listTitle) } }
+            workStatusLabels(
+                reviewedIds = if (toLists) reviewsState.reviewedExternalIds else emptySet(),
+                listed = listed,
+                destinationListId = if (toLists) listsState.selectedListId else null,
+            )
+        }
         AddWorkSheet(
             title = if (toLists) "Add to ${listsState.selectedList?.title ?: "list"}" else "Add a review",
             workType = workType,
             existingExternalIds = existing,
+            statusLabels = statusLabels,
             onPick = { result ->
                 val work = result.toNewWork()
                 if (toLists) listsViewModel.onAction(ListsAction.AddWork(work))
