@@ -5,9 +5,7 @@ import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import io.ktor.client.call.NoTransformationFoundException
 import io.ktor.client.call.body
-import io.ktor.client.network.sockets.SocketTimeoutException
 import io.ktor.client.statement.HttpResponse
-import io.ktor.util.network.UnresolvedAddressException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 
@@ -16,14 +14,11 @@ suspend inline fun <reified T> safeCall(
 ): Result<T, DataError.Remote> {
     val response = try {
         execute()
-    } catch (e: SocketTimeoutException) {
-        return Result.Error(DataError.Remote.REQUEST_TIMEOUT)
-    } catch (e: UnresolvedAddressException) {
-        return Result.Error(DataError.Remote.NO_INTERNET)
     } catch (e: Exception) {
+        // Rethrow if *our* coroutine was cancelled; Ktor's request timeout is also a
+        // CancellationException but leaves the caller active, so it's classified below.
         currentCoroutineContext().ensureActive()
-        println("Error: $e")
-        return Result.Error(DataError.Remote.UNKNOWN)
+        return Result.Error(classifyNetworkException(e))
     }
 
     return responseToResult(response)
