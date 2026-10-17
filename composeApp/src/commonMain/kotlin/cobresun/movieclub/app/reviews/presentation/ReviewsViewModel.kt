@@ -124,7 +124,7 @@ sealed interface ReviewsAction {
 }
 
 class ReviewsViewModel(
-    savedStateHandle: SavedStateHandle,
+    private val savedStateHandle: SavedStateHandle,
     private val reviewsRepository: ReviewsRepository,
     private val commentsRepository: ReviewCommentsRepository,
     private val memberRepository: MemberRepository,
@@ -133,7 +133,13 @@ class ReviewsViewModel(
 ) : ViewModel() {
     private val clubSlug = requireNotNull(savedStateHandle.get<String>("clubSlug"))
 
-    private val _state = MutableStateFlow(ReviewsState())
+    // The search text and open details sheet survive process death like the selected tab does.
+    private val _state = MutableStateFlow(
+        ReviewsState(
+            query = savedStateHandle.get<String>(KEY_QUERY).orEmpty(),
+            detail = savedStateHandle.get<String>(KEY_DETAIL)?.let { ReviewDetailState(it) },
+        )
+    )
     val state = _state.asStateFlow()
 
     private val _events = MutableSharedFlow<ReviewsEvent>(extraBufferCapacity = 8)
@@ -142,6 +148,7 @@ class ReviewsViewModel(
     init {
         loadContext()
         loadReviews(initial = true)
+        _state.value.detail?.let { loadDetail(it.workId) }
     }
 
     fun onAction(action: ReviewsAction) {
@@ -152,7 +159,10 @@ class ReviewsViewModel(
                 _state.value.detail?.let { loadDetail(it.workId) }
             }
 
-            is ReviewsAction.Search -> _state.update { it.copy(query = action.query) }
+            is ReviewsAction.Search -> {
+                savedStateHandle[KEY_QUERY] = action.query
+                _state.update { it.copy(query = action.query) }
+            }
             is ReviewsAction.Sort -> _state.update { s ->
                 val option = if (s.sortState.option == action.option) ReviewSortOption.None else action.option
                 s.copy(sortState = ReviewSortState(option, option.defaultDescending))
@@ -171,11 +181,15 @@ class ReviewsViewModel(
             }
 
             is ReviewsAction.OpenDetail -> {
+                savedStateHandle[KEY_DETAIL] = action.workId
                 _state.update { it.copy(detail = ReviewDetailState(action.workId)) }
                 loadDetail(action.workId)
             }
 
-            ReviewsAction.CloseDetail -> _state.update { it.copy(detail = null) }
+            ReviewsAction.CloseDetail -> {
+                savedStateHandle.remove<String>(KEY_DETAIL)
+                _state.update { it.copy(detail = null) }
+            }
             is ReviewsAction.SaveScore -> saveScore(action.workId, action.score)
             is ReviewsAction.SetReviewedDate -> setReviewedDate(action.workId, action.date)
             is ReviewsAction.DeleteScore -> deleteScore(action.workId)
@@ -442,3 +456,6 @@ class ReviewsViewModel(
 }
 
 private const val PENDING_SCORE_ID = "pending"
+
+private const val KEY_QUERY = "reviews_query"
+private const val KEY_DETAIL = "reviews_detail_work_id"
