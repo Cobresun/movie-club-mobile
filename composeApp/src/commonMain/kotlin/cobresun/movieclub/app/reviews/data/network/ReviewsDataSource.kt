@@ -14,6 +14,7 @@ import cobresun.movieclub.app.reviews.data.dto.MemberScoredWorkDto
 import cobresun.movieclub.app.reviews.data.dto.ReviewItemDto
 import cobresun.movieclub.app.reviews.data.dto.ReviewsListIdDto
 import cobresun.movieclub.app.reviews.data.dto.ScoreCreateDto
+import cobresun.movieclub.app.reviews.data.dto.ScoreDto
 import cobresun.movieclub.app.reviews.data.dto.ScoreUpdateDto
 import io.ktor.client.HttpClient
 import io.ktor.client.request.delete
@@ -33,6 +34,7 @@ interface ReviewsDataSource {
     suspend fun createScore(clubSlug: String, body: ScoreCreateDto): Result<Unit, DataError.Remote>
     suspend fun updateScore(clubSlug: String, scoreId: String, body: ScoreUpdateDto): Result<Unit, DataError.Remote>
     suspend fun deleteScore(clubSlug: String, scoreId: String): Result<Unit, DataError.Remote>
+    suspend fun getWorkScores(clubSlug: String, workId: String): Result<Map<String, ScoreDto>, DataError.Remote>
     suspend fun getWorkDetails(clubSlug: String, workId: String): Result<JsonElement, DataError.Remote>
     suspend fun getSettings(clubSlug: String): Result<ClubSettingsDto, DataError.Remote>
     suspend fun generateDiscussionQuestions(clubSlug: String, workId: String): Result<DiscussionQuestionsDto, DataError.Remote>
@@ -74,6 +76,9 @@ class KtorReviewsDataSource(
 
     override suspend fun deleteScore(clubSlug: String, scoreId: String): Result<Unit, DataError.Remote> =
         safeCall { httpClient.delete("${reviews(clubSlug)}/$scoreId") }
+
+    override suspend fun getWorkScores(clubSlug: String, workId: String): Result<Map<String, ScoreDto>, DataError.Remote> =
+        safeCall { httpClient.get("${reviews(clubSlug)}/$workId/scores") }
 
     override suspend fun getWorkDetails(clubSlug: String, workId: String): Result<JsonElement, DataError.Remote> =
         safeCall { httpClient.get("${club(clubSlug)}/work/$workId/details") }

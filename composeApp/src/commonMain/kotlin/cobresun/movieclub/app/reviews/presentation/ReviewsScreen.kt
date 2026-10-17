@@ -61,6 +61,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import cobresun.movieclub.app.core.domain.Work
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -150,7 +155,15 @@ fun ReviewsScreen(
                                     )
                                 }
                             }
-                            if (reviews.data.isEmpty()) {
+                            items(state.pendingWorks, key = { it.id }) { work ->
+                                PendingReviewCard(
+                                    work,
+                                    Modifier
+                                        .animateItem(fadeInSpec = tween(200), placementSpec = tween(300, easing = EmphasizedEasing))
+                                        .scaleInOnEnter(true),
+                                )
+                            }
+                            if (reviews.data.isEmpty() && state.pendingWorks.isEmpty()) {
                                 item(span = { GridItemSpan(maxLineSpan) }) {
                                     EmptyState(
                                         modifier = Modifier.fadeUpOnEnter(),
@@ -380,6 +393,23 @@ private fun ReviewCard(
                 }
             }
         }
+    }
+}
+
+/**
+ * A work still on its way onto the reviews list: there's nothing to score or
+ * open until the refetch replaces it, so it isn't selectable.
+ */
+@Composable
+private fun PendingReviewCard(work: Work, modifier: Modifier = Modifier) {
+    Column(modifier.semantics(mergeDescendants = true) { contentDescription = "Adding ${work.title}" }) {
+        Box(contentAlignment = Alignment.Center) {
+            Poster(work.imageUrl, work.title, Modifier.fillMaxWidth().alpha(0.5f))
+            CircularProgressIndicator(Modifier.size(32.dp), strokeWidth = 3.dp)
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(work.title, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text("Adding…", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

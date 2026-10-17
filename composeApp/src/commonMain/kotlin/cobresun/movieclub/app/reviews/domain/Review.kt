@@ -13,6 +13,8 @@ data class Review(
 ) {
     fun scoreOf(userId: String?): MemberScore? = userId?.let { scores[it] }
 
+    fun withScores(workScores: WorkScores): Review = copy(scores = workScores.scores, average = workScores.average)
+
     /** Copy with [userId]'s score replaced (or removed when null) and the average recomputed. */
     fun withScore(userId: String, score: MemberScore?): Review {
         val updated = if (score == null) scores - userId else scores + (userId to score)
@@ -22,6 +24,9 @@ data class Review(
         )
     }
 }
+
+/** One work's scores keyed by member user id, plus the club average (null when nobody scored). */
+data class WorkScores(val scores: Map<String, MemberScore>, val average: Double?)
 
 data class MemberScore(
     val id: String,

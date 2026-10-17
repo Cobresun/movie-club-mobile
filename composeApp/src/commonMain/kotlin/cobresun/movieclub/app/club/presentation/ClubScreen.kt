@@ -278,6 +278,7 @@ fun ClubScreenRoot(
                     },
                     onPick = { pick ->
                         listed.firstOrNull { it.work.id == pick.key }?.let { item ->
+                            reviewsViewModel.onAction(ReviewsAction.ShowPending(item.work))
                             listsViewModel.onAction(ListsAction.MoveToReviews(item.work, item.listId))
                         }
                         addTarget = null

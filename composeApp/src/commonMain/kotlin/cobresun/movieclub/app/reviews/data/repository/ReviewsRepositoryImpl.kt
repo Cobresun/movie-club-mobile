@@ -16,6 +16,8 @@ import cobresun.movieclub.app.reviews.data.dto.ListInsertBodyDto
 import cobresun.movieclub.app.reviews.data.dto.ScoreCreateDto
 import cobresun.movieclub.app.reviews.data.dto.ScoreUpdateDto
 import cobresun.movieclub.app.reviews.data.mappers.toReview
+import cobresun.movieclub.app.reviews.data.mappers.toWorkScores
+import cobresun.movieclub.app.reviews.domain.WorkScores
 import cobresun.movieclub.app.reviews.data.mappers.toScoredWork
 import cobresun.movieclub.app.reviews.domain.ScoredWork
 import cobresun.movieclub.app.reviews.data.mappers.toReviewComment
@@ -84,6 +86,9 @@ class ReviewsRepositoryImpl(
             dataSource.updateScore(clubSlug, existingScoreId, ScoreUpdateDto(score = clamped))
         }
     }
+
+    override suspend fun getWorkScores(clubSlug: String, workId: String): Result<WorkScores, DataError.Remote> =
+        dataSource.getWorkScores(clubSlug, workId).map { it.toWorkScores() }
 
     override suspend fun deleteScore(clubSlug: String, scoreId: String): Result<Unit, DataError.Remote> =
         dataSource.deleteScore(clubSlug, scoreId)

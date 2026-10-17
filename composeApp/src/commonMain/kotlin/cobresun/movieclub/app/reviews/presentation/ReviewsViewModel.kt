@@ -42,6 +42,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 data class ReviewsState(
@@ -65,6 +67,8 @@ data class ReviewsState(
     val listedWorks: List<ListedWork> = emptyList(),
     /** The Up Next work being moved into reviews; keeps its card up, pending, until it lands. */
     val startingUpNext: ListedWork? = null,
+    /** Works on their way onto the reviews list: shown as pending cards until the refetch lands. */
+    val pendingWorks: List<Work> = emptyList(),
 ) {
     /**
      * The Up Next card's work, or null when nothing is pinned or it's already
@@ -128,6 +132,8 @@ sealed interface ReviewsAction {
     data object ToggleSortDirection : ReviewsAction
 
     data class AddReview(val work: NewWork) : ReviewsAction
+    /** A work another tab is moving into reviews (e.g. picked from a list). */
+    data class ShowPending(val work: Work) : ReviewsAction
     data class RemoveReview(val work: Work) : ReviewsAction
     data class Share(val work: Work) : ReviewsAction
 
@@ -165,6 +171,8 @@ class ReviewsViewModel(
     )
     val state = _state.asStateFlow()
 
+    private val scorePolls = mutableMapOf<String, Job>()
+
     private val _events = MutableSharedFlow<ReviewsEvent>(extraBufferCapacity = 8)
     val events = _events.asSharedFlow()
 
@@ -199,6 +207,7 @@ class ReviewsViewModel(
             }
 
             is ReviewsAction.AddReview -> addReview(action.work)
+            is ReviewsAction.ShowPending -> showPending(action.work)
             is ReviewsAction.RemoveReview -> removeReview(action.work)
             is ReviewsAction.Share -> share(action.work)
             ReviewsAction.RetryComments -> _state.value.detail?.let { d ->
@@ -251,6 +260,7 @@ class ReviewsViewModel(
         val item = _state.value.upNext ?: return
         if (_state.value.startingUpNext != null) return
         _state.update { it.copy(startingUpNext = item) }
+        showPending(item.work)
         viewModelScope.launch {
             val moved = when (val listId = listsRepository.getReviewsListId(clubSlug)) {
                 is Result.Success -> listsRepository.moveItem(clubSlug, item.listId, item.work.id, listId.data)
@@ -262,7 +272,10 @@ class ReviewsViewModel(
                     fetchReviews()
                     if (_state.value.review(item.work.id) != null) onAction(ReviewsAction.OpenDetail(item.work.id))
                 }
-                is Result.Error -> message("Failed to add \"${item.work.title}\" to reviews. Please try again.")
+                is Result.Error -> {
+                    clearPending("$PENDING_WORK_PREFIX${item.work.externalId ?: item.work.title}")
+                    message("Failed to add \"${item.work.title}\" to reviews. Please try again.")
+                }
             }
             _state.update { it.copy(startingUpNext = null) }
         }
@@ -305,7 +318,13 @@ class ReviewsViewModel(
 
     private suspend fun fetchReviews() {
         when (val result = reviewsRepository.getReviews(clubSlug)) {
-            is Result.Success -> _state.update { it.copy(reviews = AsyncResult.Success(result.data)) }
+            is Result.Success -> _state.update { s ->
+                val landed = result.data.mapNotNull { it.work.externalId }.toSet()
+                s.copy(
+                    reviews = AsyncResult.Success(result.data),
+                    pendingWorks = s.pendingWorks.filter { it.externalId !in landed },
+                )
+            }
             is Result.Error -> if (_state.value.reviews is AsyncResult.Success) {
                 emitError(result.error, "refresh reviews") { loadReviews(initial = false) }
             } else {
@@ -355,7 +374,32 @@ class ReviewsViewModel(
         }
     }
 
+    /**
+     * Puts [work] at the top of the grid as a pending card until it shows up in
+     * a refetch (web `addPendingReview`). Expires on its own in case the write
+     * that adds it fails somewhere we don't hear about.
+     */
+    private fun showPending(work: Work) {
+        val pending = work.copy(id = "$PENDING_WORK_PREFIX${work.externalId ?: work.title}")
+        _state.update { s -> s.copy(pendingWorks = listOf(pending) + s.pendingWorks.filter { it.id != pending.id }) }
+        viewModelScope.launch {
+            delay(PENDING_EXPIRY_MS)
+            clearPending(pending.id)
+        }
+    }
+
+    private fun clearPending(id: String) {
+        _state.update { s -> s.copy(pendingWorks = s.pendingWorks.filter { it.id != id }) }
+    }
+
     private fun addReview(work: NewWork) {
+        val pendingId = "$PENDING_WORK_PREFIX${work.externalId}"
+        showPending(
+            Work(
+                id = "", type = work.type, title = work.title, addedAt = "", addedDate = null,
+                imageUrl = work.imageUrl, externalId = work.externalId, addedByUserId = null, details = null,
+            )
+        )
         viewModelScope.launch {
             reviewsRepository.addReview(clubSlug, work)
                 .onSuccess {
@@ -363,6 +407,7 @@ class ReviewsViewModel(
                     loadReviews(initial = false)
                 }
                 .onError { error ->
+                    clearPending(pendingId)
                     if (error == DataError.Remote.UNKNOWN) message("Couldn't add ${work.title}. It may already be reviewed.")
                     else emitError(error, "add ${work.title}") { addReview(work) }
                 }
@@ -409,6 +454,7 @@ class ReviewsViewModel(
                 .onSuccess {
                     message("Score saved: ${ScoreScale.format(score)}")
                     loadMyScoredWorks()
+                    startScorePoll(workId)
                 }
                 .onError { error ->
                     updateReview(workId) { review }
@@ -417,6 +463,28 @@ class ReviewsViewModel(
             updateDetail(workId) { it.copy(isSavingScore = false) }
             loadReviews(initial = false) // pick up the server's score id & average
         }
+    }
+
+    /**
+     * After you score, briefly poll the work's scores so everyone else's (scored
+     * around the same time in a synchronized session) stream in without a manual
+     * refresh. Mirrors web `startScorePoll`: up to 10 tries 500ms apart, stopping
+     * early once every member has scored; a new save on the work restarts it.
+     */
+    private fun startScorePoll(workId: String) {
+        scorePolls.remove(workId)?.cancel()
+        scorePolls[workId] = viewModelScope.launch {
+            repeat(SCORE_POLL_ATTEMPTS) {
+                delay(SCORE_POLL_INTERVAL_MS)
+                val result = reviewsRepository.getWorkScores(clubSlug, workId)
+                if (result is Result.Success) {
+                    updateReview(workId) { it.withScores(result.data) }
+                    val members = _state.value.members
+                    if (members.isNotEmpty() && members.all { it.id in result.data.scores }) return@launch
+                }
+                // A failed tick is transient; a later one may succeed.
+            }
+        }.also { job -> job.invokeOnCompletion { if (scorePolls[workId] === job) scorePolls.remove(workId) } }
     }
 
     private fun setReviewedDate(workId: String, date: LocalDate) {
@@ -443,6 +511,8 @@ class ReviewsViewModel(
             message("Still saving your score. Try again in a moment.")
             return
         }
+        // A poll left over from an earlier save would write server snapshots over the removal.
+        scorePolls.remove(workId)?.cancel()
         updateReview(workId) { it.withScore(userId, null) }
         viewModelScope.launch {
             reviewsRepository.deleteScore(clubSlug, existing.id)
@@ -524,6 +594,10 @@ class ReviewsViewModel(
 }
 
 private const val PENDING_SCORE_ID = "pending"
+private const val PENDING_WORK_PREFIX = "pending-work:"
+private const val PENDING_EXPIRY_MS = 15_000L
+private const val SCORE_POLL_ATTEMPTS = 10
+private const val SCORE_POLL_INTERVAL_MS = 500L
 
 private const val KEY_QUERY = "reviews_query"
 private const val KEY_DETAIL = "reviews_detail_work_id"

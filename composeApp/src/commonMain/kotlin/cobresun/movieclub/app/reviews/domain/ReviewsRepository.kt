@@ -31,6 +31,9 @@ interface ReviewsRepository {
         score: Double,
     ): Result<Unit, DataError.Remote>
 
+    /** Just one work's scores: a cheap poll for other members' scores landing. */
+    suspend fun getWorkScores(clubSlug: String, workId: String): Result<WorkScores, DataError.Remote>
+
     /** Deletes one of the signed-in member's own scores. */
     suspend fun deleteScore(clubSlug: String, scoreId: String): Result<Unit, DataError.Remote>
 

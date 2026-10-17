@@ -5,6 +5,8 @@ import cobresun.movieclub.app.core.data.mappers.parseLocalDate
 import cobresun.movieclub.app.core.data.mappers.toWork
 import cobresun.movieclub.app.reviews.data.dto.CommentDto
 import cobresun.movieclub.app.reviews.data.dto.ReviewItemDto
+import cobresun.movieclub.app.reviews.data.dto.ScoreDto
+import cobresun.movieclub.app.reviews.domain.WorkScores
 import cobresun.movieclub.app.reviews.domain.MemberScore
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.domain.ReviewComment
@@ -47,18 +49,17 @@ fun ReviewItemDto.toReview(timeZone: TimeZone = TimeZone.currentSystemDefault())
         externalData = externalData,
     ).toWork(timeZone)
 
-    val memberScores = scores
-        .filterKeys { it != AVERAGE_KEY }
+    val workScores = scores.toWorkScores()
+    return Review(work = work, scores = workScores.scores, average = workScores.average)
+}
+
+/** A per-work score map (member ids plus a synthetic `"average"`) as domain scores. */
+fun Map<String, ScoreDto>.toWorkScores(): WorkScores {
+    val memberScores = filterKeys { it != AVERAGE_KEY }
         .mapValues { (userId, dto) -> MemberScore(id = dto.id, userId = userId, value = dto.score, createdAt = dto.createdDate) }
-
-    val average = scores[AVERAGE_KEY]?.score
+    val average = this[AVERAGE_KEY]?.score
         ?: memberScores.values.takeIf { it.isNotEmpty() }?.map { it.value }?.average()
-
-    return Review(
-        work = work,
-        scores = memberScores,
-        average = average?.takeIf { memberScores.isNotEmpty() },
-    )
+    return WorkScores(memberScores, average?.takeIf { memberScores.isNotEmpty() })
 }
 
 fun CommentDto.toReviewComment(timeZone: TimeZone = TimeZone.currentSystemDefault()): ReviewComment =
