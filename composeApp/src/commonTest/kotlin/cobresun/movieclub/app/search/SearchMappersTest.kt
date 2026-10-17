@@ -50,3 +50,16 @@ class SearchMappersTest {
         assertNull(result.subtitle)
     }
 }
+
+class SimilarToReasonTest {
+    @Test
+    fun formatsLikeIntlListFormat() {
+        assertNull(cobresun.movieclub.app.search.data.mappers.similarToReason(emptyList()))
+        assertEquals("Similar to Alien", cobresun.movieclub.app.search.data.mappers.similarToReason(listOf("Alien")))
+        assertEquals("Similar to Alien and Heat", cobresun.movieclub.app.search.data.mappers.similarToReason(listOf("Alien", "Heat")))
+        assertEquals(
+            "Similar to Alien, Heat, and Up",
+            cobresun.movieclub.app.search.data.mappers.similarToReason(listOf("Alien", "Heat", "Up")),
+        )
+    }
+}

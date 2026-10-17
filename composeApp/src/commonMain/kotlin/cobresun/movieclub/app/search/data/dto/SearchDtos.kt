@@ -6,6 +6,18 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class TmdbMoviesDto(
     val results: List<TmdbMovieDto> = emptyList(),
+    val page: Int = 1,
+    @SerialName("total_pages") val totalPages: Int = 1,
+)
+
+/** One entry of `GET /api/club/:slug/recommendations`. */
+@Serializable
+data class WorkRecommendationDto(
+    val externalId: String,
+    val title: String,
+    val subtitle: String? = null,
+    val imageUrl: String? = null,
+    val similarTo: List<String> = emptyList(),
 )
 
 @Serializable

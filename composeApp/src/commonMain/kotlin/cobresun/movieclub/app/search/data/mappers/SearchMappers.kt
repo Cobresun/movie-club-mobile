@@ -5,6 +5,8 @@ import cobresun.movieclub.app.core.domain.WorkType
 import cobresun.movieclub.app.search.data.dto.GoogleBooksVolumeDto
 import cobresun.movieclub.app.search.data.dto.TmdbMovieDto
 import cobresun.movieclub.app.search.domain.WorkSearchResult
+import cobresun.movieclub.app.search.domain.WorkRecommendation
+import cobresun.movieclub.app.search.data.dto.WorkRecommendationDto
 
 fun TmdbMovieDto.toSearchResult(): WorkSearchResult = WorkSearchResult(
     type = WorkType.MOVIE,
@@ -33,3 +35,24 @@ fun secureGoogleImageUrl(url: String): String =
     url.replaceFirst("http://", "https://")
         .replace("&edge=curl", "")
         .replace("edge=curl&", "")
+
+/** Recommendations are TMDB movies; "Similar to A and B" is built from [WorkRecommendationDto.similarTo]. */
+fun WorkRecommendationDto.toRecommendation(): WorkRecommendation = WorkRecommendation(
+    work = WorkSearchResult(
+        type = WorkType.MOVIE,
+        externalId = externalId,
+        title = title,
+        subtitle = subtitle,
+        imageUrl = imageUrl,
+        reason = similarToReason(similarTo),
+    ),
+    similarTo = similarTo,
+)
+
+/** Web: `Similar to ${Intl.ListFormat("en", conjunction)}`, e.g. "Similar to A, B, and C". */
+fun similarToReason(titles: List<String>): String? = when (titles.size) {
+    0 -> null
+    1 -> "Similar to ${titles[0]}"
+    2 -> "Similar to ${titles[0]} and ${titles[1]}"
+    else -> "Similar to ${titles.dropLast(1).joinToString(", ")}, and ${titles.last()}"
+}

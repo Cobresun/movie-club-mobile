@@ -3,12 +3,14 @@ package cobresun.movieclub.app.search.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cobresun.movieclub.app.core.domain.AsyncResult
+import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.WorkType
 import cobresun.movieclub.app.core.presentation.toUserMessage
-import cobresun.movieclub.app.core.domain.DataError
+import cobresun.movieclub.app.search.domain.BrowseTab
 import cobresun.movieclub.app.search.domain.WorkSearchRepository
 import cobresun.movieclub.app.search.domain.WorkSearchResult
+import cobresun.movieclub.app.search.domain.browseTabs
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,16 +22,33 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/** A browse tab's pages so far (web `useBrowse`'s infinite query). */
+data class BrowseState(
+    val results: AsyncResult<List<WorkSearchResult>> = AsyncResult.Loading,
+    val nextPage: Int? = null,
+    val isLoadingMore: Boolean = false,
+)
+
 data class WorkSearchState(
     val workType: WorkType? = null,
     val query: String = "",
-    val suggestions: AsyncResult<List<WorkSearchResult>> = AsyncResult.Loading,
-    /** Null while the query is blank (suggestions are shown instead). */
+    /** Browse tabs for this media type; empty when the sheet doesn't browse (Add review). */
+    val tabs: List<BrowseTab> = emptyList(),
+    val selectedTab: String? = null,
+    val browse: Map<String, BrowseState> = emptyMap(),
+    /** Null while the query is blank. */
     val results: AsyncResult<List<WorkSearchResult>>? = null,
     val errorMessage: String? = null,
-)
+) {
+    val selectedBrowse: BrowseState? get() = selectedTab?.let { browse[it] }
 
-/** Debounced search against TMDB / Google Books for the add-work sheet. */
+    val selectedTabLabel: String? get() = tabs.firstOrNull { it.key == selectedTab }?.label
+}
+
+/**
+ * The add sheet's catalogue (web `AddWorkModal` + `WorkSearchPrompt`): browse
+ * tabs paged from TMDB / Google Books, plus debounced search as you type.
+ */
 @OptIn(FlowPreview::class)
 class WorkSearchViewModel(
     private val repository: WorkSearchRepository,
@@ -51,12 +70,31 @@ class WorkSearchViewModel(
         }
     }
 
-    /** Prepares the sheet for a club's media type; loads suggestions once per type. */
-    fun start(type: WorkType) {
-        val previous = _state.value.workType
-        _state.update { it.copy(workType = type, query = "", results = null, errorMessage = null) }
+    /**
+     * Prepares the sheet for a club's media type. [browsing] shows the browse
+     * tabs (adding to a list); Add review only searches, like web.
+     */
+    fun start(type: WorkType, browsing: Boolean) {
+        val tabs = if (browsing) browseTabs(type) else emptyList()
+        val keepBrowse = _state.value.workType == type
+        _state.update {
+            it.copy(
+                workType = type,
+                query = "",
+                results = null,
+                errorMessage = null,
+                tabs = tabs,
+                selectedTab = it.selectedTab?.takeIf { key -> keepBrowse && tabs.any { t -> t.key == key } } ?: tabs.firstOrNull()?.key,
+                browse = if (keepBrowse) it.browse else emptyMap(),
+            )
+        }
         queries.value = ""
-        if (previous != type || _state.value.suggestions !is AsyncResult.Success) loadSuggestions(type)
+        _state.value.selectedTab?.let { ensureLoaded(it) }
+    }
+
+    fun selectTab(key: String) {
+        _state.update { it.copy(selectedTab = key) }
+        ensureLoaded(key)
     }
 
     fun onQueryChange(query: String) {
@@ -64,24 +102,59 @@ class WorkSearchViewModel(
         queries.value = query
     }
 
-    fun retry() {
-        val type = _state.value.workType ?: return
-        if (_state.value.query.isBlank()) loadSuggestions(type) else runSearch(_state.value.query.trim())
+    /** The next page of the selected tab (infinite scroll; web "Load More"). */
+    fun loadMore() {
+        val key = _state.value.selectedTab ?: return
+        val tab = _state.value.browse[key] ?: return
+        val next = tab.nextPage ?: return
+        if (tab.isLoadingMore || tab.results !is AsyncResult.Success) return
+        loadPage(key, next)
     }
 
-    private fun loadSuggestions(type: WorkType) {
+    fun retry() {
+        val query = _state.value.query.trim()
+        if (query.isNotEmpty()) runSearch(query)
+        _state.value.selectedTab?.let { key ->
+            if (_state.value.browse[key]?.results is AsyncResult.Error) {
+                _state.update { it.copy(browse = it.browse - key) }
+                ensureLoaded(key)
+            }
+        }
+    }
+
+    private fun ensureLoaded(key: String) {
+        if (_state.value.browse[key]?.results is AsyncResult.Success) return
+        loadPage(key, 1)
+    }
+
+    private fun loadPage(key: String, page: Int) {
+        val type = _state.value.workType ?: return
+        updateBrowse(key) { if (page == 1) BrowseState() else it.copy(isLoadingMore = true) }
         viewModelScope.launch {
-            _state.update { it.copy(suggestions = AsyncResult.Loading) }
-            when (val result = repository.suggestions(type)) {
-                is Result.Success -> _state.update { it.copy(suggestions = AsyncResult.Success(result.data)) }
-                is Result.Error -> _state.update {
-                    it.copy(
-                        suggestions = AsyncResult.Error(dataError = result.error),
-                        errorMessage = result.error.message(type, "load suggestions"),
+            when (val result = repository.browse(type, key, page)) {
+                is Result.Success -> updateBrowse(key) { current ->
+                    val before = if (page == 1) emptyList() else (current.results as? AsyncResult.Success)?.data.orEmpty()
+                    val seen = before.mapTo(HashSet()) { it.externalId }
+                    BrowseState(
+                        // TMDB pages can repeat a title across pages; keep grid keys unique.
+                        results = AsyncResult.Success(before + result.data.results.filter { seen.add(it.externalId) }),
+                        nextPage = result.data.nextPage,
                     )
+                }
+                is Result.Error -> {
+                    if (page == 1) {
+                        updateBrowse(key) { BrowseState(results = AsyncResult.Error(dataError = result.error)) }
+                    } else {
+                        updateBrowse(key) { it.copy(isLoadingMore = false) }
+                    }
+                    _state.update { it.copy(errorMessage = result.error.message(type, "load more")) }
                 }
             }
         }
+    }
+
+    private fun updateBrowse(key: String, transform: (BrowseState) -> BrowseState) {
+        _state.update { it.copy(browse = it.browse + (key to transform(it.browse[key] ?: BrowseState()))) }
     }
 
     private fun runSearch(query: String) {
