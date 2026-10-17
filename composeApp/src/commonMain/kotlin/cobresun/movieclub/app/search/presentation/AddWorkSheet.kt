@@ -115,6 +115,8 @@ fun AddWorkSheet(
     /** Optional "From your lists" picks shown above search (Add review). */
     fromLists: ListPickSection? = null,
     statusLabels: Map<String, String> = emptyMap(),
+    /** The club, for its Recommended tab (movie clubs adding to a list). */
+    clubSlug: String? = null,
     viewModel: WorkSearchViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -122,7 +124,7 @@ fun AddWorkSheet(
     val focusManager = LocalFocusManager.current
     val gridState = rememberLazyGridState()
 
-    LaunchedEffect(workType) { viewModel.start(workType, browsing = fromLists == null) }
+    LaunchedEffect(workType, clubSlug) { viewModel.start(workType, browsing = fromLists == null, clubSlug = clubSlug) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -167,10 +169,15 @@ fun AddWorkSheet(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.padding(top = 12.dp),
                 ) {
+                    if (state.offersRecommendations) {
+                        item(key = "recommended") {
+                            TabPill(label = "Recommended", selected = state.showingRecommendations, onClick = viewModel::selectRecommended)
+                        }
+                    }
                     items(state.tabs, key = { it.key }) { tab ->
                         TabPill(
                             label = tab.label,
-                            selected = tab.key == state.selectedTab,
+                            selected = !state.showingRecommendations && tab.key == state.selectedTab,
                             onClick = { viewModel.selectTab(tab.key) },
                         )
                     }
@@ -192,6 +199,9 @@ fun AddWorkSheet(
 
             val browse = state.selectedBrowse
             val browseItems = (browse?.results as? AsyncResult.Success)?.data.orEmpty()
+                .filter { it.title.contains(query, ignoreCase = true) }
+            val recommendations = state.recommendations.takeIf { state.showingRecommendations }
+            val recommendedItems = (recommendations as? AsyncResult.Success)?.data.orEmpty()
                 .filter { it.title.contains(query, ignoreCase = true) }
             val searchItems = (state.results as? AsyncResult.Success)?.data.orEmpty()
             val loadingSearch = state.results is AsyncResult.Loading
@@ -260,6 +270,21 @@ fun AddWorkSheet(
                     }
                 }
 
+                // Recommended for the club, filtered by what's typed.
+                if (recommendations is AsyncResult.Loading) fullSpan("recommended-loading") { CardSkeleton() }
+                if (recommendedItems.isNotEmpty()) {
+                    fullSpan("recommended-header") { SectionLabel("Recommended for your club", Modifier.padding(horizontal = 4.dp)) }
+                    itemsIndexed(recommendedItems, key = { _, it -> "recommended-" + it.externalId }) { index, item ->
+                        SearchCard(
+                            result = item,
+                            alreadyAdded = item.externalId in existingExternalIds,
+                            status = statusLabels[item.externalId],
+                            onClick = { onPick(item) },
+                            modifier = stagger.modifier("recommended-${item.externalId}", index, 0),
+                        )
+                    }
+                }
+
                 // The selected browse tab, filtered by what's typed.
                 if (browse != null) {
                     when (browse.results) {
@@ -319,7 +344,7 @@ fun AddWorkSheet(
                 }
 
                 val noResults = query.isNotEmpty() && !loadingSearch && state.results !is AsyncResult.Error &&
-                    matchingPicks.isEmpty() && browseItems.isEmpty() && searchItems.isEmpty()
+                    matchingPicks.isEmpty() && browseItems.isEmpty() && recommendedItems.isEmpty() && searchItems.isEmpty()
                 if (noResults) fullSpan("no-results") {
                     EmptyState(
                         icon = Icons.Outlined.SearchOff,
@@ -329,13 +354,16 @@ fun AddWorkSheet(
                 }
                 // Nothing on screen yet: the club type's search hint (web `searchHint`).
                 val nothingShown = query.isEmpty() && !loadingBrowse && browse?.results !is AsyncResult.Error &&
-                    browseItems.isEmpty() && matchingPicks.isEmpty() && lists?.items !is AsyncResult.Loading
+                    recommendations !is AsyncResult.Loading && browseItems.isEmpty() && recommendedItems.isEmpty() &&
+                    matchingPicks.isEmpty() && lists?.items !is AsyncResult.Loading
                 if (nothingShown) fullSpan("hint") {
-                    EmptyState(
-                        icon = if (workType == WorkType.BOOK) Icons.AutoMirrored.Outlined.MenuBook else Icons.Outlined.Movie,
-                        title = "Find a ${workType.noun}",
-                        message = "Search for a ${workType.noun} to add.",
-                    )
+                    // Web's hint: why Recommended is empty, or the club type's search hint.
+                    val hint = when {
+                        !state.showingRecommendations -> "Search for a ${workType.noun} to add."
+                        recommendations is AsyncResult.Error -> "Recommendations couldn't be loaded. Try again later."
+                        else -> "No recommendations yet. They're drawn from the ${workType.noun}s your club has scored."
+                    }
+                    SearchHint(icon = if (workType == WorkType.BOOK) Icons.AutoMirrored.Outlined.MenuBook else Icons.Outlined.Movie, message = hint)
                 }
             }
         }
@@ -374,6 +402,19 @@ private fun Modifier.riseIn(delayMillis: Int): Modifier = composed {
     graphicsLayer {
         alpha = progress.value
         translationY = (1f - progress.value) * 8.dp.toPx()
+    }
+}
+
+/** Web's empty hint: a faded club-type icon over a line of grey text. */
+@Composable
+private fun SearchHint(icon: androidx.compose.ui.graphics.vector.ImageVector, message: String) {
+    Column(
+        Modifier.fillMaxWidth().padding(top = 40.dp, start = 24.dp, end = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(48.dp))
+        Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
     }
 }
 

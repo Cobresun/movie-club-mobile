@@ -11,6 +11,7 @@ import cobresun.movieclub.app.search.domain.BrowseTab
 import cobresun.movieclub.app.search.domain.WorkSearchRepository
 import cobresun.movieclub.app.search.domain.WorkSearchResult
 import cobresun.movieclub.app.search.domain.browseTabs
+import cobresun.movieclub.app.search.domain.supportsRecommendations
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,12 +36,20 @@ data class WorkSearchState(
     /** Browse tabs for this media type; empty when the sheet doesn't browse (Add review). */
     val tabs: List<BrowseTab> = emptyList(),
     val selectedTab: String? = null,
+    /** Movie clubs adding to a list get a Recommended tab first (web `supportsRecommendations`). */
+    val offersRecommendations: Boolean = false,
+    val recommendedSelected: Boolean = false,
+    /** Null until the Recommended tab is first shown. */
+    val recommendations: AsyncResult<List<WorkSearchResult>>? = null,
     val browse: Map<String, BrowseState> = emptyMap(),
     /** Null while the query is blank. */
     val results: AsyncResult<List<WorkSearchResult>>? = null,
     val errorMessage: String? = null,
 ) {
-    val selectedBrowse: BrowseState? get() = selectedTab?.let { browse[it] }
+    val showingRecommendations: Boolean get() = offersRecommendations && recommendedSelected
+
+    /** The browse tab on screen, or null while Recommended is. */
+    val selectedBrowse: BrowseState? get() = if (showingRecommendations) null else selectedTab?.let { browse[it] }
 
     val selectedTabLabel: String? get() = tabs.firstOrNull { it.key == selectedTab }?.label
 }
@@ -74,9 +83,12 @@ class WorkSearchViewModel(
      * Prepares the sheet for a club's media type. [browsing] shows the browse
      * tabs (adding to a list); Add review only searches, like web.
      */
-    fun start(type: WorkType, browsing: Boolean) {
+    fun start(type: WorkType, browsing: Boolean, clubSlug: String? = null) {
         val tabs = if (browsing) browseTabs(type) else emptyList()
         val keepBrowse = _state.value.workType == type
+        val recommends = browsing && clubSlug != null && type.supportsRecommendations
+        if (clubSlug != this.clubSlug) _state.update { it.copy(recommendations = null) }
+        this.clubSlug = clubSlug
         _state.update {
             it.copy(
                 workType = type,
@@ -86,15 +98,42 @@ class WorkSearchViewModel(
                 tabs = tabs,
                 selectedTab = it.selectedTab?.takeIf { key -> keepBrowse && tabs.any { t -> t.key == key } } ?: tabs.firstOrNull()?.key,
                 browse = if (keepBrowse) it.browse else emptyMap(),
+                offersRecommendations = recommends,
+                // Like web, the sheet opens on Recommended when it's offered.
+                recommendedSelected = recommends,
             )
         }
         queries.value = ""
-        _state.value.selectedTab?.let { ensureLoaded(it) }
+        if (recommends) ensureRecommendations() else _state.value.selectedTab?.let { ensureLoaded(it) }
     }
 
     fun selectTab(key: String) {
-        _state.update { it.copy(selectedTab = key) }
+        _state.update { it.copy(selectedTab = key, recommendedSelected = false) }
         ensureLoaded(key)
+    }
+
+    fun selectRecommended() {
+        _state.update { it.copy(recommendedSelected = true) }
+        ensureRecommendations()
+    }
+
+    private var clubSlug: String? = null
+
+    private fun ensureRecommendations() {
+        val slug = clubSlug ?: return
+        if (_state.value.recommendations is AsyncResult.Success || _state.value.recommendations is AsyncResult.Loading) return
+        _state.update { it.copy(recommendations = AsyncResult.Loading) }
+        viewModelScope.launch {
+            val result = repository.recommendations(slug)
+            _state.update {
+                it.copy(
+                    recommendations = when (result) {
+                        is Result.Success -> AsyncResult.Success(result.data.map { r -> r.work })
+                        is Result.Error -> AsyncResult.Error(dataError = result.error)
+                    }
+                )
+            }
+        }
     }
 
     fun onQueryChange(query: String) {
@@ -112,6 +151,10 @@ class WorkSearchViewModel(
     }
 
     fun retry() {
+        if (_state.value.showingRecommendations && _state.value.recommendations is AsyncResult.Error) {
+            _state.update { it.copy(recommendations = null) }
+            ensureRecommendations()
+        }
         val query = _state.value.query.trim()
         if (query.isNotEmpty()) runSearch(query)
         _state.value.selectedTab?.let { key ->

@@ -307,6 +307,7 @@ fun ClubScreenRoot(
             workType = workType,
             existingExternalIds = existing,
             statusLabels = statusLabels,
+            clubSlug = clubViewModel.clubSlug,
             onPick = { result ->
                 val work = result.toNewWork()
                 if (toLists) addListId?.let { listsViewModel.onAction(ListsAction.AddWork(work, it)) }
