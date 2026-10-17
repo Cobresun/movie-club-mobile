@@ -109,7 +109,7 @@ fun ForgotPasswordDialog(
             } else {
                 TextButton(
                     onClick = { viewModel.send(email) },
-                    enabled = !state.isSending && email.contains('@'),
+                    enabled = !state.isSending && isPlausibleEmail(email),
                 ) {
                     if (state.isSending) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                     else Text("Send link", fontWeight = FontWeight.SemiBold)

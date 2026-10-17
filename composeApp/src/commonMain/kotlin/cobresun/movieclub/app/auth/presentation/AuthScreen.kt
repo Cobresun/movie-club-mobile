@@ -296,6 +296,7 @@ private fun SignupForm(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
+    val emailInvalid = email.isNotBlank() && !isPlausibleEmail(email)
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -316,6 +317,10 @@ private fun SignupForm(
             label = { Text("Email") },
             enabled = !isLoading,
             singleLine = true,
+            isError = emailInvalid,
+            supportingText = if (emailInvalid) {
+                { Text("Enter a valid email address") }
+            } else null,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             modifier = Modifier.fillMaxWidth()
         )
@@ -343,7 +348,7 @@ private fun SignupForm(
                     fullName = fullName.trim()
                 ))
             },
-            enabled = !isLoading && email.isNotBlank() && password.length >= 6 && fullName.isNotBlank(),
+            enabled = !isLoading && isPlausibleEmail(email) && password.length >= 6 && fullName.isNotBlank(),
             modifier = Modifier.fillMaxWidth()
         ) {
             if (isLoading) {
