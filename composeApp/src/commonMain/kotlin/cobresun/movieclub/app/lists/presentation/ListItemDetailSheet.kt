@@ -1,5 +1,7 @@
 package cobresun.movieclub.app.lists.presentation
 
+import cobresun.movieclub.app.core.presentation.components.AppBottomSheet
+import cobresun.movieclub.app.core.presentation.components.rememberAppSheetState
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -35,9 +37,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -97,7 +97,7 @@ fun ListItemDetailSheet(
     onMarkFinished: (Work) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberAppSheetState()
     val scope = rememberCoroutineScope()
     var confirmRemove by remember { mutableStateOf(false) }
     val otherLists = lists.filter { it.id != detail.listId }
@@ -111,13 +111,12 @@ fun ListItemDetailSheet(
         }
     }
 
-    ModalBottomSheet(
+    AppBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        dragHandle = null,
+        transparentHandle = true,
     ) {
-        Box(Modifier.fillMaxHeight(0.96f).imePadding()) {
+        Box(Modifier.fillMaxHeight().imePadding()) {
             Column(Modifier.fillMaxSize()) {
                 Column(
                     Modifier

@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.reviews.presentation
 
+import cobresun.movieclub.app.core.presentation.components.AppBottomSheet
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -28,7 +29,6 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -182,7 +182,7 @@ private fun CastTile(member: CastMember, avatarSize: Int, modifier: Modifier = M
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CastSheet(cast: List<CastMember>, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+    AppBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surfaceContainer) {
         Text("Cast", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp))
         Spacer(Modifier.height(12.dp))
         LazyVerticalGrid(

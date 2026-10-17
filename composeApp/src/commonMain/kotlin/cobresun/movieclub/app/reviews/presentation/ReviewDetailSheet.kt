@@ -1,5 +1,7 @@
 package cobresun.movieclub.app.reviews.presentation
 
+import cobresun.movieclub.app.core.presentation.components.AppBottomSheet
+import cobresun.movieclub.app.core.presentation.components.rememberAppSheetState
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -69,11 +71,9 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -127,7 +127,7 @@ fun ReviewDetailSheet(
     onAction: (ReviewsAction) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberAppSheetState()
     var confirmRemove by remember { mutableStateOf(false) }
     var scoring by remember(review.work.id) { mutableStateOf(false) }
     var poppedAt by remember(review.work.id) { mutableIntStateOf(0) }
@@ -136,13 +136,12 @@ fun ReviewDetailSheet(
     val myScore = review.scoreOf(currentUserId)
     val noun = if (work.type == cobresun.movieclub.app.core.domain.WorkType.BOOK) "book" else "movie"
 
-    ModalBottomSheet(
+    AppBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        dragHandle = null,
+        transparentHandle = true,
     ) {
-        Box(Modifier.fillMaxHeight(0.96f).imePadding()) {
+        Box(Modifier.fillMaxHeight().imePadding()) {
         Column(Modifier.fillMaxSize()) {
         Column(
             Modifier

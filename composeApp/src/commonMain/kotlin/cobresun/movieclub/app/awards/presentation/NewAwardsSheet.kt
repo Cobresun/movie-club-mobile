@@ -1,5 +1,7 @@
 package cobresun.movieclub.app.awards.presentation
 
+import cobresun.movieclub.app.core.presentation.components.AppBottomSheet
+import cobresun.movieclub.app.core.presentation.components.rememberAppSheetState
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.border
@@ -27,11 +29,9 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -94,10 +94,9 @@ fun NewAwardsSheet(
     }
     val selected = start.takeIf { s -> options.any { it.value == s } } ?: Start.SUGGESTED
 
-    ModalBottomSheet(
+    AppBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        sheetState = rememberAppSheetState(),
     ) {
         Column(
             Modifier

@@ -1,5 +1,7 @@
 package cobresun.movieclub.app.member.presentation
 
+import cobresun.movieclub.app.core.presentation.components.AppBottomSheet
+import cobresun.movieclub.app.core.presentation.components.rememberAppSheetState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -21,10 +23,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -72,14 +72,13 @@ fun PhotoCropSheet(
 ) {
     val size = remember(image) { ImageSize(image.width, image.height) }
     var crop by remember(image) { mutableStateOf(AvatarCrop.centered(size)) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberAppSheetState()
 
-    ModalBottomSheet(
+    AppBottomSheet(
         onDismissRequest = onCancel,
         sheetState = sheetState,
         // The photo takes the drags: the sheet closes with Cancel, back, or a scrim tap.
         sheetGesturesEnabled = false,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
         Column(
             Modifier
