@@ -36,7 +36,7 @@ expect fun PlatformTabBar(
 )
 
 /**
- * False while something drawn by Compose (e.g. the club drawer) covers the screen.
+ * False while something drawn by Compose covers the screen in the same layer.
  * Native views layered over Compose (the iOS tab bar) hide themselves then, since
  * they would otherwise draw on top of it.
  */

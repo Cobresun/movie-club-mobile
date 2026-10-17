@@ -25,6 +25,12 @@ class ClubViewModel(
 
     val selectedTab: StateFlow<ClubTab> = savedStateHandle.getStateFlow(KEY_TAB, ClubTab.REVIEWS)
 
+    init {
+        // A tab named by the route (switching clubs keeps the section) beats the remembered one.
+        val routeTab = savedStateHandle.get<String>("tab")?.let { name -> ClubTab.entries.firstOrNull { it.name == name } }
+        if (routeTab != null && !savedStateHandle.contains(KEY_TAB)) savedStateHandle[KEY_TAB] = routeTab
+    }
+
     private val _tabResolved = MutableStateFlow(savedStateHandle.contains(KEY_TAB))
 
     /** False until the tab last used in this club has been restored (a few ms on open). */

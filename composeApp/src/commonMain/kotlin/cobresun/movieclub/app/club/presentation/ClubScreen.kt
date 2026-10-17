@@ -8,7 +8,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Alignment
+import cobresun.movieclub.app.core.presentation.components.AccountButton
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
@@ -92,6 +95,8 @@ fun ClubScreenRoot(
 ) {
     val selectedTab by clubViewModel.selectedTab.collectAsStateWithLifecycle()
     val tabResolved by clubViewModel.tabResolved.collectAsStateWithLifecycle()
+    val reportTab = LocalClubTabShown.current
+    LaunchedEffect(selectedTab, tabResolved) { if (tabResolved) reportTab(selectedTab) }
     val listsState by listsViewModel.state.collectAsStateWithLifecycle()
     val reviewsState by reviewsViewModel.state.collectAsStateWithLifecycle()
     val awardsState by awardsViewModel.state.collectAsStateWithLifecycle()
@@ -206,6 +211,7 @@ fun ClubScreenRoot(
         },
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
+        Box(Modifier.fillMaxSize()) {
         AnimatedContent(
             targetState = selectedTab,
             transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(160)) },
@@ -266,6 +272,13 @@ fun ClubScreenRoot(
                 }
               }
             }
+        }
+        // Floats level with each tab's club-name eyebrow (web nav-bar AccountMenu).
+        AccountButton(
+            Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = padding.calculateTopPadding(), end = 12.dp)
+        )
         }
     }
 

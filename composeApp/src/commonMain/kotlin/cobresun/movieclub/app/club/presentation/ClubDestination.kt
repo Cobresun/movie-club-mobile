@@ -28,7 +28,10 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.derivedStateOf
-import cobresun.movieclub.app.core.presentation.components.LocalNativeChromeVisible
+import cobresun.movieclub.app.core.presentation.components.AccountButton
+import cobresun.movieclub.app.core.platform.HapticFeedback
+import cobresun.movieclub.app.core.domain.ClubType
+import org.koin.compose.koinInject
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -88,13 +91,22 @@ import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Opens the club switcher drawer. Screens inside the club shell (e.g. a top-bar
- * menu button in ClubScreen) can call `LocalClubSwitcher.current()`.
+ * Opens the club switcher sheet. Screens inside the club shell (e.g. the club
+ * name above each tab's title) can call `LocalClubSwitcher.current()`.
  */
 val LocalClubSwitcher = staticCompositionLocalOf<() -> Unit> { {} }
 
-/** Name of the club selected in the drawer, known before each tab loads its own context. */
+/** Opens the account sheet (avatar, profile, log out). */
+val LocalAccountMenu = staticCompositionLocalOf<() -> Unit> { {} }
+
+/** The signed-in member, for the account button. */
+val LocalCurrentMember = compositionLocalOf<Member?> { null }
+
+/** Name of the current club, known before each tab loads its own context. */
 val LocalCurrentClubName = compositionLocalOf { "" }
+
+/** Club screens report the tab they show, so switching clubs can keep the section. */
+internal val LocalClubTabShown = staticCompositionLocalOf<(ClubTab) -> Unit> { {} }
 
 @Composable
 fun ClubsScreenRoot(
@@ -131,21 +143,22 @@ fun ClubsScreen(
     isLoggingOut: Boolean = false,
 ) {
     val navController = rememberNavController()
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val coroutineScope = rememberCoroutineScope()
+    val haptics = koinInject<HapticFeedback>()
 
     var currentClubSlug by rememberSaveable { mutableStateOf<String?>(null) }
-
-    fun closeDrawer() = coroutineScope.launch { drawerState.close() }
+    var currentTab by rememberSaveable { mutableStateOf<ClubTab?>(null) }
+    var showSwitcher by rememberSaveable { mutableStateOf(false) }
+    var showAccount by rememberSaveable { mutableStateOf(false) }
 
     fun selectClub(slug: String?) {
         currentClubSlug = slug
         if (slug != null) memberViewModel.rememberClub(slug)
     }
 
-    fun openClub(slug: String) {
+    /** [tab] null reopens the tab last used in that club. */
+    fun openClub(slug: String, tab: ClubTab? = null) {
         selectClub(slug)
-        navController.navigateClearingStack(Route.Club(slug))
+        navController.navigateClearingStack(Route.Club(slug, tab?.name))
     }
 
     // Keep the selection valid when the club list changes (left, removed, renamed slug).
@@ -164,52 +177,17 @@ fun ClubsScreen(
         }
     }
 
-    ModalNavigationDrawer(
-        drawerContent = {
-            ClubSwitcherDrawer(
-                clubs = clubs,
-                me = me,
-                currentClubSlug = currentClubSlug,
-                onClubClick = { clubSlug ->
-                    if (clubSlug != currentClubSlug) openClub(clubSlug)
-                    closeDrawer()
-                },
-                onSettingsClick = { clubSlug ->
-                    navController.navigate(Route.ClubSettings(clubSlug))
-                    closeDrawer()
-                },
-                onCreateClubClick = {
-                    navController.navigate(Route.CreateClub)
-                    closeDrawer()
-                },
-                onJoinClubClick = {
-                    navController.navigate(Route.JoinClub())
-                    closeDrawer()
-                },
-                onProfileClick = {
-                    navController.navigate(Route.Profile)
-                    closeDrawer()
-                },
-                onLogout = onLogout,
-                isLoggingOut = isLoggingOut,
-            )
-        },
-        modifier = Modifier.background(color = MaterialTheme.colorScheme.surface),
-        drawerState = drawerState,
+    val clubList = (clubs as? AsyncResult.Success)?.data.orEmpty()
+    val currentClub = clubList.firstOrNull { it.slug == currentClubSlug }
+
+    CompositionLocalProvider(
+        LocalClubSwitcher provides { showSwitcher = true },
+        LocalAccountMenu provides { showAccount = true },
+        LocalCurrentMember provides me,
+        LocalCurrentClubName provides currentClub?.name.orEmpty(),
+        LocalClubTabShown provides { currentTab = it },
     ) {
-        val drawerClosed by remember {
-            derivedStateOf {
-                drawerState.currentValue == DrawerValue.Closed &&
-                    drawerState.targetValue == DrawerValue.Closed &&
-                    !drawerState.isAnimationRunning
-            }
-        }
-        CompositionLocalProvider(
-            LocalClubSwitcher provides { coroutineScope.launch { drawerState.open() } },
-            LocalCurrentClubName provides (clubs as? AsyncResult.Success)?.data
-                ?.firstOrNull { it.slug == currentClubSlug }?.name.orEmpty(),
-            LocalNativeChromeVisible provides drawerClosed,
-        ) {
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
             when (clubs) {
                 is AsyncResult.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
@@ -225,13 +203,42 @@ fun ClubsScreen(
                     lastClubSlug = lastClubSlug,
                     navController = navController,
                     memberViewModel = memberViewModel,
-                    onOpenClub = ::openClub,
+                    onOpenClub = { openClub(it) },
                     onSlugChanged = { selectClub(it) },
                     onLogout = onLogout,
                     isLoggingOut = isLoggingOut,
                 )
             }
         }
+    }
+
+    if (showSwitcher) {
+        ClubSwitcherSheet(
+            clubs = clubList,
+            current = currentClub,
+            meta = currentClub?.type?.label().orEmpty(),
+            onDismiss = { showSwitcher = false },
+            onSelectClub = { club ->
+                haptics.performTick()
+                // Switching keeps the section you were reading (web ClubSwitcher); Awards
+                // has no equivalent in a book club, so that lands on Reviews.
+                val tab = currentTab?.takeUnless { it == ClubTab.AWARDS && club.type != ClubType.MOVIE }
+                    ?: ClubTab.REVIEWS
+                openClub(club.slug, tab)
+            },
+            onSettings = { club -> navController.navigate(Route.ClubSettings(club.slug)) },
+            onCreateClub = { navController.navigate(Route.CreateClub) },
+            onJoinClub = { navController.navigate(Route.JoinClub()) },
+        )
+    }
+    if (showAccount) {
+        AccountSheet(
+            me = me,
+            isLoggingOut = isLoggingOut,
+            onDismiss = { showAccount = false },
+            onProfile = { navController.navigate(Route.Profile) },
+            onLogout = onLogout,
+        )
     }
 }
 
@@ -303,7 +310,6 @@ private fun ClubNavHost(
             EmptyClubsScreen(
                 onCreateClick = { navController.navigate(Route.CreateClub) },
                 onJoinClick = { navController.navigate(Route.JoinClub()) },
-                onProfileClick = { navController.navigate(Route.Profile) },
             )
         }
 
@@ -371,7 +377,6 @@ private fun ClubNavHost(
 private fun EmptyClubsScreen(
     onCreateClick: () -> Unit,
     onJoinClick: () -> Unit,
-    onProfileClick: () -> Unit,
 ) {
     Box(
         Modifier
@@ -380,9 +385,7 @@ private fun EmptyClubsScreen(
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
-        IconButton(onClick = onProfileClick, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)) {
-            Icon(Icons.Default.Settings, contentDescription = "Account")
-        }
+        AccountButton(Modifier.align(Alignment.TopEnd).padding(8.dp))
         StatusMessage(
             icon = Icons.Default.Groups,
             title = "No clubs yet",
@@ -391,208 +394,5 @@ private fun EmptyClubsScreen(
             secondaryAction = "Join with invite link" to onJoinClick,
             modifier = Modifier.align(Alignment.Center),
         )
-    }
-}
-
-@Composable
-private fun ClubSwitcherDrawer(
-    clubs: AsyncResult<List<Club>>,
-    me: Member?,
-    currentClubSlug: String?,
-    onClubClick: (String) -> Unit,
-    onSettingsClick: (String) -> Unit,
-    onCreateClubClick: () -> Unit,
-    onJoinClubClick: () -> Unit,
-    onProfileClick: () -> Unit,
-    onLogout: () -> Unit,
-    isLoggingOut: Boolean,
-) {
-    ModalDrawerSheet(
-        drawerContainerColor = MaterialTheme.colorScheme.surface,
-        drawerShape = RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp),
-    ) {
-        Column(Modifier.fillMaxHeight()) {
-            // Account header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onProfileClick)
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                MemberAvatar(me?.name.orEmpty(), me?.imageUrl, size = 44.dp)
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        me?.name ?: "Account",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        me?.email ?: "Profile & settings",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Icon(
-                    Icons.Default.Settings,
-                    contentDescription = "Account settings",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-
-            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                Text(
-                    "YOUR CLUBS",
-                    style = MaterialTheme.typography.labelMedium,
-                    letterSpacing = 1.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 8.dp),
-                )
-                when (clubs) {
-                    is AsyncResult.Loading -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
-                    }
-                    is AsyncResult.Error -> Text(
-                        "Couldn't load clubs",
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-                    )
-                    is AsyncResult.Success -> {
-                        if (clubs.data.isEmpty()) {
-                            Text(
-                                "You're not in any clubs yet.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-                            )
-                        }
-                        clubs.data.forEach { club ->
-                            ClubRow(
-                                club = club,
-                                selected = club.slug == currentClubSlug,
-                                onClick = { onClubClick(club.slug) },
-                                onSettingsClick = { onSettingsClick(club.slug) },
-                            )
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(8.dp))
-                DrawerAction(Icons.Default.Add, "Create a club", onCreateClubClick)
-                DrawerAction(Icons.Default.Link, "Join with invite link", onJoinClubClick)
-            }
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(enabled = !isLoggingOut, onClick = onLogout)
-                    .padding(horizontal = 20.dp, vertical = 16.dp)
-                    .navigationBarsPadding(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                if (isLoggingOut) {
-                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                } else {
-                    Icon(Icons.AutoMirrored.Filled.Logout, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
-                }
-                Text(
-                    if (isLoggingOut) "Signing out…" else "Sign out",
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyLarge,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ClubRow(
-    club: Club,
-    selected: Boolean,
-    onClick: () -> Unit,
-    onSettingsClick: () -> Unit,
-) {
-    val accent = MaterialTheme.colorScheme.primary
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 2.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (selected) accent.copy(alpha = 0.14f) else Color.Transparent)
-            .clickable(onClick = onClick)
-            .padding(start = 10.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Box(
-            Modifier
-                .size(38.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(if (selected) accent else MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                club.type.icon(),
-                contentDescription = club.type.label(),
-                tint = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
-            )
-        }
-        Column(Modifier.weight(1f)) {
-            Text(
-                club.name,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                club.type.label(),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-            )
-        }
-        if (selected) {
-            Icon(Icons.Default.Check, contentDescription = "Current club", tint = accent, modifier = Modifier.size(20.dp))
-        }
-        IconButton(onClick = onSettingsClick) {
-            Icon(
-                Icons.Default.Settings,
-                contentDescription = "${club.name} settings",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                modifier = Modifier.size(20.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun DrawerAction(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 2.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Box(
-            Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-        }
-        Text(label, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
     }
 }

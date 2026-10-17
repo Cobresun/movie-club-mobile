@@ -12,9 +12,11 @@ sealed interface Route {
     @Serializable
     data object ClubGraph: Route
 
+    /** [tab] (a `ClubTab` name) opens that tab; null reopens the one last used in this club. */
     @Serializable
     data class Club(
-        val clubSlug: String
+        val clubSlug: String,
+        val tab: String? = null,
     ) : Route
 
     @Serializable
