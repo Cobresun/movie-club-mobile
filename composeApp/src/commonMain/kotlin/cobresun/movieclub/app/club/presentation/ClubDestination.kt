@@ -310,11 +310,17 @@ private fun ClubNavHost(
         composable<Route.CreateClub> {
             CreateClubScreenRoot(
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToClub = { clubSlug ->
+                onNavigateToClub = { clubSlug, name, type ->
                     memberViewModel.refresh()
                     onOpenClub(clubSlug)
+                    // The club sits underneath, so "Go to the club" (or back) lands there.
+                    navController.navigate(Route.ClubInvite(clubSlug, name, type.value))
                 }
             )
+        }
+
+        composable<Route.ClubInvite> {
+            ClubInviteScreenRoot(onGoToClub = { navController.popBackStack() })
         }
 
         composable<Route.JoinClub> {

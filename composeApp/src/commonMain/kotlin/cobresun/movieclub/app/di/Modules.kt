@@ -16,6 +16,7 @@ import cobresun.movieclub.app.club.data.network.KtorClubDataSource
 import cobresun.movieclub.app.club.data.repository.ClubRepositoryImpl
 import cobresun.movieclub.app.club.domain.ClubRepository
 import cobresun.movieclub.app.club.presentation.ClubSettingsViewModel
+import cobresun.movieclub.app.club.presentation.ClubInviteViewModel
 import cobresun.movieclub.app.club.presentation.ClubViewModel
 import cobresun.movieclub.app.core.data.HttpClientFactory
 import cobresun.movieclub.app.core.data.SessionCookieStorage
@@ -91,6 +92,7 @@ val sharedModule = module {
     single { ClubRepositoryImpl(get()) }.bind<ClubRepository>()
     viewModelOf(::ClubViewModel)
     viewModelOf(::ClubSettingsViewModel)
+    viewModelOf(::ClubInviteViewModel)
 
     // Reviews (one implementation serves scores and comments)
     single { KtorReviewsDataSource(get()) }.bind<ReviewsDataSource>()

@@ -53,14 +53,14 @@ import org.koin.compose.viewmodel.koinViewModel
 fun CreateClubScreenRoot(
     viewModel: CreateClubViewModel = koinViewModel(),
     onNavigateBack: () -> Unit,
-    onNavigateToClub: (String) -> Unit
+    onNavigateToClub: (slug: String, name: String, type: ClubType) -> Unit
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
         viewModel.navigationEvents.collect { event ->
             when (event) {
-                is CreateClubNavigationEvent.NavigateToClub -> onNavigateToClub(event.clubSlug)
+                is CreateClubNavigationEvent.NavigateToClub -> onNavigateToClub(event.clubSlug, event.clubName, event.type)
             }
         }
     }

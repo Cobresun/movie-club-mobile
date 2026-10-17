@@ -23,6 +23,14 @@ sealed interface Route {
     @Serializable
     data object CreateClub : Route
 
+    /** The invite handoff right after creating a club; [clubType] is a `ClubType.value`. */
+    @Serializable
+    data class ClubInvite(
+        val clubSlug: String,
+        val clubName: String,
+        val clubType: String,
+    ) : Route
+
     @Serializable
     data class ClubSettings(
         val clubSlug: String
