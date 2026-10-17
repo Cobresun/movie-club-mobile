@@ -49,6 +49,7 @@ class ListGridDrag internal constructor(
 
     internal lateinit var visibleIds: (listId: String) -> List<String>
     internal lateinit var upNextId: () -> String?
+    internal lateinit var isPending: (workId: String) -> Boolean
     internal lateinit var onDrop: (listId: String, order: List<String>, droppedId: String) -> Unit
 
     /** How far the lifted card is drawn from its slot, so it stays under the finger. */
@@ -62,7 +63,7 @@ class ListGridDrag internal constructor(
         val (list, work) = parse(item) ?: return
         val ids = visibleIds(list)
         val upNext = upNextId()
-        if (work == upNext) return
+        if (work == upNext || isPending(work)) return
         listId = list
         draggedId = work
         order = ids
@@ -163,14 +164,17 @@ fun rememberListGridDrag(
     haptics: HapticFeedback,
     visibleIds: (listId: String) -> List<String>,
     upNextId: () -> String?,
+    isPending: (workId: String) -> Boolean,
     onDrop: (listId: String, order: List<String>, droppedId: String) -> Unit,
 ): ListGridDrag {
     val drag = remember(gridState, haptics) { ListGridDrag(gridState, haptics) }
     val currentVisible by rememberUpdatedState(visibleIds)
     val currentUpNext by rememberUpdatedState(upNextId)
+    val currentPending by rememberUpdatedState(isPending)
     val currentDrop by rememberUpdatedState(onDrop)
     drag.visibleIds = { currentVisible(it) }
     drag.upNextId = { currentUpNext() }
+    drag.isPending = { currentPending(it) }
     drag.onDrop = { l, o, d -> currentDrop(l, o, d) }
 
     // Scroll while a card is held near the top or bottom edge.

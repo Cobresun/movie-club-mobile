@@ -87,7 +87,8 @@ class WorkSearchViewModel(
         val tabs = if (browsing) browseTabs(type) else emptyList()
         val keepBrowse = _state.value.workType == type
         val recommends = browsing && clubSlug != null && type.supportsRecommendations
-        if (clubSlug != this.clubSlug) _state.update { it.copy(recommendations = null) }
+        // Refetch each time the sheet opens (web invalidates them after every add).
+        _state.update { it.copy(recommendations = null) }
         this.clubSlug = clubSlug
         _state.update {
             it.copy(

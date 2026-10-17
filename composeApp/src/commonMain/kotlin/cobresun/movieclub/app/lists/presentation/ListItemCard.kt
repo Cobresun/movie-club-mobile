@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.Icon
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,6 +57,8 @@ fun ListItemCard(
     pulse: Int?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Still being added: dimmed under a spinner and not tappable (web `loading`). */
+    pending: Boolean = false,
     lifted: Boolean = false,
 ) {
     val progress = remember { Animatable(1f) }
@@ -77,7 +80,7 @@ fun ListItemCard(
             }
             .then(if (lifted) Modifier.shadow(16.dp, shape, clip = false) else Modifier)
             .clip(shape)
-            .clickable(onClick = onClick),
+            .clickable(enabled = !pending, onClick = onClick),
     ) {
         Box(
             Modifier.drawBehind {
@@ -100,6 +103,14 @@ fun ListItemCard(
                 modifier = Modifier.fillMaxWidth().then(if (isUpNext) Modifier.border(3.dp, ring, shape) else Modifier),
             )
             if (isUpNext) UpNextBadge(Modifier.align(Alignment.TopStart).padding(6.dp))
+            if (pending) {
+                Box(
+                    Modifier.matchParentSize().clip(shape).background(MaterialTheme.colorScheme.background.copy(alpha = 0.5f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 3.dp)
+                }
+            }
         }
         Spacer(Modifier.height(8.dp))
         Text(

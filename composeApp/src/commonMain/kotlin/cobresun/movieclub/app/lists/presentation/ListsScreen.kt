@@ -98,6 +98,7 @@ fun ListsScreen(
         haptics = hapticFeedback,
         visibleIds = { listId -> state.visibleItems(listId).map { it.id } },
         upNextId = { state.upNextWorkId },
+        isPending = { workId -> workId.startsWith(PENDING_PREFIX) },
         onDrop = { listId, order, droppedId -> onAction(ListsAction.Reorder(listId, order, droppedId)) },
     )
 
@@ -328,7 +329,8 @@ private fun LazyGridScope.listSection(
                     addedBy = work.addedByUserId?.let { state.members[it] },
                     isUpNext = work.id == state.upNextWorkId,
                     pulse = state.pulse?.takeIf { it.workId == work.id }?.id,
-                    onClick = { onOpen(work) },
+                    onClick = { if (!work.isPending) onOpen(work) },
+                    pending = work.isPending,
                     lifted = lifted,
                     modifier = Modifier
                         .animateItem(

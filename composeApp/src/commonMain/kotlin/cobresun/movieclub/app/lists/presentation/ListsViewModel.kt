@@ -373,21 +373,46 @@ class ListsViewModel(
 
     // region items
 
+    /**
+     * Like web, the work shows up at the end of the list right away as a
+     * pending card (not openable or draggable) until the add settles and the
+     * list reloads with its real id.
+     */
     private fun addWork(work: NewWork, listId: String) {
-        val listName = _state.value.list(listId)?.title ?: "the list"
+        val pending = Work(
+            id = "$PENDING_PREFIX${++pendingCount}",
+            type = work.type,
+            title = work.title,
+            addedAt = Clock.System.now().toString(),
+            addedDate = null,
+            imageUrl = work.imageUrl,
+            externalId = work.externalId,
+            addedByUserId = _state.value.currentUserId,
+            details = null,
+        )
+        (_state.value.itemsByList[listId] as? AsyncResult.Success)?.data?.let { setItems(listId, it + pending) }
         viewModelScope.launch {
             listsRepository.addItem(clubSlug, listId, work)
-                .onSuccess {
-                    message("Added ${work.title} to $listName")
-                    loadItems(listId, showLoading = false)
-                }
+                .onSuccess { message("Added \"${work.title}\" to the list") }
                 .onError { error ->
-                    if (error == DataError.Remote.UNKNOWN) {
-                        message("Couldn't add ${work.title}. It may already be on $listName.")
-                    } else {
-                        emitError(error, "add ${work.title}") { addWork(work, listId) }
-                    }
+                    val retry = { addWork(work, listId) }
+                    _events.tryEmit(
+                        ListsEvent.Message(
+                            UiMessage(
+                                text = "Failed to add \"${work.title}\". Please try again.",
+                                actionLabel = if (error.isRetryable) "Retry" else null,
+                                onAction = if (error.isRetryable) retry else null,
+                            )
+                        )
+                    )
                 }
+            // Settled either way: reload so the pending card becomes the real one (or goes).
+            when (val reloaded = listsRepository.getItems(clubSlug, listId)) {
+                is Result.Success -> setItems(listId, reloaded.data)
+                is Result.Error -> _state.value.itemsOrEmpty(listId).let { items ->
+                    setItems(listId, items.filter { it.id != pending.id })
+                }
+            }
         }
     }
 
@@ -641,7 +666,7 @@ class ListsViewModel(
 
     private fun shuffle(listId: String) {
         // Like web, any shown item can win, Up Next included.
-        val items = _state.value.visibleItems(listId)
+        val items = _state.value.visibleItems(listId).filterNot { it.isPending }
         if (items.isEmpty()) {
             message("Add something to this list first, then shuffle.")
             return
@@ -650,6 +675,8 @@ class ListsViewModel(
     }
 
     // endregion
+
+    private var pendingCount = 0
 
     private var pulseCount = 0
 
@@ -677,6 +704,12 @@ class ListsViewModel(
 
 private fun AsyncResult<List<WorkList>>.mapLists(transform: (List<WorkList>) -> List<WorkList>): AsyncResult<List<WorkList>> =
     if (this is AsyncResult.Success) AsyncResult.Success(transform(data)) else this
+
+/** Id prefix of a work still being added (web `OPTIMISTIC_WORK_ID`); acting on it would send a fake id. */
+internal const val PENDING_PREFIX = "pending-"
+
+/** Whether this card is a work still being added. */
+val Work.isPending: Boolean get() = id.startsWith(PENDING_PREFIX)
 
 /** A list-item change captured with all its ids, so it can be replayed verbatim on Retry. */
 sealed interface ListItemOp {

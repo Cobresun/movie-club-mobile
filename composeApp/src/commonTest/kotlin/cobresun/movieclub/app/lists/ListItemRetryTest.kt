@@ -24,6 +24,7 @@ import cobresun.movieclub.app.lists.domain.WorkList
 import cobresun.movieclub.app.lists.presentation.ListsAction
 import cobresun.movieclub.app.lists.presentation.ListsEvent
 import cobresun.movieclub.app.lists.presentation.ListsViewModel
+import cobresun.movieclub.app.lists.presentation.isPending
 import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.member.domain.MemberRepository
 import kotlinx.coroutines.Dispatchers
@@ -64,7 +65,10 @@ class ListItemRetryTest {
         override suspend fun deleteList(clubSlug: String, listId: String) = ok(Unit)
         override suspend fun reorderLists(clubSlug: String, listIds: List<String>) = ok(Unit)
         override suspend fun getAllItems(clubSlug: String) = ok(emptyList<ListedWork>())
-        override suspend fun addItem(clubSlug: String, listId: String, work: NewWork) = ok(Unit)
+        override suspend fun addItem(clubSlug: String, listId: String, work: NewWork): Result<Unit, DataError.Remote> {
+            items.getValue(listId) += Work("w-${work.externalId}", work.type, work.title, "", null, null, work.externalId, null, null)
+            return ok(Unit)
+        }
         override suspend fun removeItem(clubSlug: String, listId: String, workId: String): Result<Unit, DataError.Remote> {
             removeCalls += listId to workId
             if (fail) return Result.Error(DataError.Remote.NO_INTERNET)
@@ -194,6 +198,20 @@ class ListItemRetryTest {
 
         assertEquals(listOf("1", "4", "3", "2"), vm.items("a"))
         assertEquals(listOf("a" to listOf("4", "2")), repo.reorderCalls)
+    }
+
+    @Test
+    fun addedWorkShowsAsPendingUntilTheListReloads() = runTest(dispatcher) {
+        val repo = FakeLists(mutableMapOf("a" to mutableListOf(work("1"))))
+        val vm = setUpViewModel(repo)
+
+        vm.onAction(ListsAction.AddWork(NewWork(WorkType.MOVIE, "Alien", "348", null), "a"))
+        val pending = vm.state.value.itemsOrEmpty("a")
+        assertEquals(2, pending.size)
+        assertTrue(pending.last().isPending)
+
+        advanceUntilIdle()
+        assertEquals(listOf("1", "w-348"), vm.items("a"))
     }
 
     private fun <T> TestScope.async(block: suspend () -> T) =
