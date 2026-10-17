@@ -38,7 +38,10 @@ object HttpClientFactory {
                         println(message)
                     }
                 }
-                level = LogLevel.ALL
+                // Method, URL and status only: bodies carry passwords and headers carry the
+                // session cookie, neither of which may reach device logs.
+                level = LogLevel.INFO
+                sanitizeHeader { it.equals("Cookie", true) || it.equals("Set-Cookie", true) }
             }
 
             install(HttpCookies) {
