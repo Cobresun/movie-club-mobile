@@ -42,6 +42,7 @@ import cobresun.movieclub.app.reviews.data.repository.ReviewsRepositoryImpl
 import cobresun.movieclub.app.reviews.domain.ReviewCommentsRepository
 import cobresun.movieclub.app.reviews.domain.ReviewsRepository
 import cobresun.movieclub.app.reviews.presentation.ReviewsViewModel
+import cobresun.movieclub.app.reviews.presentation.SharedReviewViewModel
 import cobresun.movieclub.app.search.data.network.KtorSearchDataSource
 import cobresun.movieclub.app.search.data.network.SearchDataSource
 import cobresun.movieclub.app.search.data.repository.WorkSearchRepositoryImpl
@@ -93,6 +94,7 @@ val sharedModule = module {
     single { KtorReviewsDataSource(get()) }.bind<ReviewsDataSource>()
     single { ReviewsRepositoryImpl(get()) }.binds(arrayOf(ReviewsRepository::class, ReviewCommentsRepository::class))
     viewModelOf(::ReviewsViewModel)
+    viewModelOf(::SharedReviewViewModel)
 
     // Lists
     single { KtorListsDataSource(get()) }.bind<ListsDataSource>()

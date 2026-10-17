@@ -74,6 +74,7 @@ import cobresun.movieclub.app.member.presentation.JoinClubScreenRoot
 import cobresun.movieclub.app.app.DeepLink
 import cobresun.movieclub.app.app.DeepLinks
 import cobresun.movieclub.app.app.ClubSection
+import cobresun.movieclub.app.reviews.presentation.SharedReviewScreenRoot
 import androidx.navigation.NavDestination.Companion.hasRoute
 import cobresun.movieclub.app.member.presentation.MemberViewModel
 import cobresun.movieclub.app.member.presentation.ProfileScreenRoot
@@ -266,7 +267,11 @@ private fun ClubNavHost(
                 val onClub = entry?.destination?.hasRoute<Route.Club>() == true &&
                     entry.toRoute<Route.Club>().clubSlug == link.slug
                 when {
-                    link.slug !in memberSlugs -> DeepLinks.consume(link)
+                    link.slug !in memberSlugs -> {
+                        DeepLinks.consume(link)
+                        // Not in that club: a shared review still opens as its public page.
+                        link.reviewWorkId?.let { navController.navigate(Route.SharedReview(link.slug, it)) }
+                    }
                     link.section == ClubSection.SETTINGS -> {
                         DeepLinks.consume(link)
                         if (!onClub) onOpenClub(link.slug)
@@ -322,6 +327,10 @@ private fun ClubNavHost(
                     onOpenClub(clubSlug)
                 }
             )
+        }
+
+        composable<Route.SharedReview> {
+            SharedReviewScreenRoot(onBack = { navController.popBackStack() })
         }
 
         composable<Route.Profile> {

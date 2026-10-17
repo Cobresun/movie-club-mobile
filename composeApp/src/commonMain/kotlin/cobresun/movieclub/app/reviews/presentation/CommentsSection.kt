@@ -125,6 +125,14 @@ fun CommentsSection(
     }
 }
 
+/** Comments without the composer or edit controls (shared review page). */
+@Composable
+fun CommentsReadOnly(comments: List<ReviewComment>) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        comments.forEach { comment -> key(comment.id) { CommentRow(comment, isMine = false, onAction = {}) } }
+    }
+}
+
 @Composable
 private fun CommentRow(comment: ReviewComment, isMine: Boolean, onAction: (ReviewsAction) -> Unit, modifier: Modifier = Modifier) {
     var revealed by remember(comment.id) { mutableStateOf(!comment.spoiler || isMine) }

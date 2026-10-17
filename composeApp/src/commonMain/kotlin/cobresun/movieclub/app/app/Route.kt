@@ -31,6 +31,13 @@ sealed interface Route {
     @Serializable
     data object Profile : Route
 
+    /** A shared review link for a club the user isn't in (the public page). */
+    @Serializable
+    data class SharedReview(
+        val clubSlug: String,
+        val workId: String,
+    ) : Route
+
     /** A club's year-in-review story. [year] 0 opens the latest released year. */
     @Serializable
     data class Wrapped(

@@ -83,3 +83,35 @@ data class MemberScoredWorkDto(
     val score: Double,
     val scoredDate: String = "",
 )
+
+/** `GET /api/club/:slug/reviews/:workId/shared` (public). */
+@Serializable
+data class SharedReviewDto(
+    /** Review rows left-joined on the work: `user_id`/`score` are null when nobody scored. */
+    val reviews: List<SharedReviewRowDto> = emptyList(),
+    val members: List<SharedMemberDto> = emptyList(),
+    val comments: List<CommentDto> = emptyList(),
+    val work: SharedWorkDto,
+    val clubName: String = "Movie Club",
+)
+
+@Serializable
+data class SharedReviewRowDto(
+    @SerialName("user_id") val userId: String? = null,
+    /** Numeric, but tolerated as a string in case the driver serialises it that way. */
+    val score: JsonElement? = null,
+    @SerialName("created_date") val createdDate: String? = null,
+)
+
+@Serializable
+data class SharedMemberDto(val id: String, val name: String = "", val image: String? = null)
+
+@Serializable
+data class SharedWorkDto(
+    val id: String,
+    val title: String,
+    val type: String = "movie",
+    val imageUrl: String? = null,
+    val externalId: String? = null,
+    val externalData: JsonElement? = null,
+)

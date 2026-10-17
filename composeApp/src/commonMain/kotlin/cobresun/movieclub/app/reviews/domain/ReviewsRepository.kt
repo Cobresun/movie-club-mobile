@@ -31,6 +31,9 @@ interface ReviewsRepository {
         score: Double,
     ): Result<Unit, DataError.Remote>
 
+    /** A review as its public share link shows it; works for clubs you're not in. */
+    suspend fun getSharedReview(clubSlug: String, workId: String): Result<SharedReview, DataError.Remote>
+
     /** Just one work's scores: a cheap poll for other members' scores landing. */
     suspend fun getWorkScores(clubSlug: String, workId: String): Result<WorkScores, DataError.Remote>
 
