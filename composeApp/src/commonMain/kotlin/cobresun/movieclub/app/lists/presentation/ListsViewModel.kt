@@ -136,7 +136,8 @@ sealed interface ListsAction {
 
     data class Shuffle(val listId: String) : ListsAction
     data class ShareList(val listId: String) : ListsAction
-    data object ShuffleFinished : ListsAction
+    /** The random picker closed (its choices dispatch their own actions). */
+    data object CloseShuffle : ListsAction
 
     data class OpenDetail(val listId: String, val workId: String) : ListsAction
     data object CloseDetail : ListsAction
@@ -203,7 +204,7 @@ class ListsViewModel(
             is ListsAction.ShareList -> _state.value.list(action.listId)?.let { list ->
                 _events.tryEmit(ListsEvent.Share(ShareLinks.list(clubSlug, list.id), list.title))
             }
-            ListsAction.ShuffleFinished -> finishShuffle()
+            ListsAction.CloseShuffle -> _state.update { it.copy(shuffle = null) }
             ListsAction.PulseShown -> _state.update { it.copy(pulse = null) }
             is ListsAction.OpenDetail -> {
                 _state.update { it.copy(detail = ListItemDetailState(action.listId, action.workId)) }
@@ -639,19 +640,13 @@ class ListsViewModel(
     // region shuffle
 
     private fun shuffle(listId: String) {
+        // Like web, any shown item can win, Up Next included.
         val items = _state.value.visibleItems(listId)
-        val candidates = items.filter { it.id != _state.value.upNextWorkId }.ifEmpty { items }
-        if (candidates.isEmpty()) {
+        if (items.isEmpty()) {
             message("Add something to this list first, then shuffle.")
             return
         }
-        _state.update { it.copy(shuffle = ShuffleState(listId, candidates = items, selected = candidates.random())) }
-    }
-
-    private fun finishShuffle() {
-        val picked = _state.value.shuffle?.selected ?: return
-        _state.update { it.copy(shuffle = null) }
-        setUpNext(picked.id, "The pick is ${picked.title}! It's now up next.")
+        _state.update { it.copy(shuffle = ShuffleState(listId, candidates = items, selected = items.random())) }
     }
 
     // endregion

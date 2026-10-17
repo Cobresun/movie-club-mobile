@@ -164,14 +164,19 @@ fun ListsScreen(
             }
         }
 
-        state.shuffle?.let { shuffle ->
-            ShuffleOverlay(
-                candidates = shuffle.candidates,
-                selected = shuffle.selected,
-                onFinished = { onAction(ListsAction.ShuffleFinished) },
-                hapticFeedback = hapticFeedback,
-            )
-        }
+    }
+
+    state.shuffle?.let { shuffle ->
+        RandomPickerSheet(
+            candidates = shuffle.candidates,
+            winner = shuffle.selected,
+            noun = state.clubType.workType.noun,
+            otherLists = state.listsOrEmpty.filter { it.id != shuffle.listId },
+            hapticFeedback = hapticFeedback,
+            onMakeUpNext = { onAction(ListsAction.SetUpNext(it)) },
+            onMoveToList = { work, listId -> onAction(ListsAction.MoveWork(work, shuffle.listId, listId)) },
+            onDismiss = { onAction(ListsAction.CloseShuffle) },
+        )
     }
 
     state.detail?.let { detail ->
