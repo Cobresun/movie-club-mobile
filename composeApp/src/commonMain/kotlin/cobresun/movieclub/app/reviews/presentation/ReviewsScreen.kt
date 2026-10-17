@@ -75,6 +75,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import cobresun.movieclub.app.core.domain.Work
+import cobresun.movieclub.app.core.domain.WorkType
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -87,7 +88,6 @@ import cobresun.movieclub.app.core.presentation.components.EmptyState
 import cobresun.movieclub.app.core.presentation.components.ErrorState
 import cobresun.movieclub.app.core.presentation.components.GridSkeleton
 import cobresun.movieclub.app.core.presentation.components.Poster
-import cobresun.movieclub.app.core.presentation.finishedVerb
 import cobresun.movieclub.app.core.presentation.formatShort
 import cobresun.movieclub.app.core.presentation.noun
 import cobresun.movieclub.app.core.presentation.toUserMessage
@@ -178,8 +178,8 @@ fun ReviewsScreen(
                                         modifier = Modifier.fadeUpOnEnter(),
                                         icon = Icons.Outlined.RateReview,
                                         title = "No reviews yet",
-                                        message = "Once the club has ${workType.finishedVerb} something, add it here so everyone can score it.",
-                                        actionLabel = "Add a review",
+                                        message = "Start building your club's ${workType.noun} collection by adding your first review",
+                                        actionLabel = "Add review",
                                         onAction = onAddClick,
                                     )
                                 }
@@ -188,8 +188,10 @@ fun ReviewsScreen(
                                     EmptyState(
                                         modifier = Modifier.fadeUpOnEnter(),
                                         icon = Icons.Outlined.SearchOff,
-                                        title = "No matches",
-                                        message = "No reviewed ${workType.noun}s match \"${state.query}\".",
+                                        title = "No results found",
+                                        message = "Try adjusting your search. You can search by " +
+                                            if (workType == WorkType.BOOK) "title, author, subject, or published year"
+                                            else "title, genre, director, or release year",
                                     )
                                 }
                             }
