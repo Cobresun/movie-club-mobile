@@ -1,0 +1,30 @@
+<!-- The clapperboard logo from the web's public/logo.svg, without its app-icon tile. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <group android:translateY="16">
+        <!-- Clapper arm, hinged open at the top-left of the slate -->
+        <group android:rotation="-14" android:pivotX="96" android:pivotY="190">
+            <clip-path android:pathData="M108,120h296a12,12 0,0 1,12,12v36a12,12 0,0 1,-12,12h-296a12,12 0,0 1,-12,-12v-36a12,12 0,0 1,12,-12z" />
+            <path android:fillColor="#6FBAFF" android:pathData="M96,120h320v60h-320z" />
+            <path android:fillColor="#222831" android:pathData="M142,120h52l-34,60h-52zM246,120h52l-34,60h-52zM350,120h52l-34,60h-52z" />
+        </group>
+        <!-- Slate body -->
+        <path android:fillColor="#2196F3" android:pathData="M96,200h320v168a28,28 0,0 1,-28,28H124a28,28 0,0 1,-28,-28z" />
+        <group>
+            <clip-path android:pathData="M96,200h320v60h-320z" />
+            <path android:fillColor="#6FBAFF" android:pathData="M96,200h320v60h-320z" />
+            <path android:fillColor="#222831" android:pathData="M142,200h52l-34,60h-52zM246,200h52l-34,60h-52zM350,200h52l-34,60h-52z" />
+        </group>
+        <!-- Review star -->
+        <group android:translateX="256" android:translateY="330">
+            <group android:scaleX="0.78" android:scaleY="0.78">
+                <group android:translateX="-256" android:translateY="-342">
+                    <path android:fillColor="#FFFFFF" android:pathData="M256,274l23.5,47.6 52.5,7.6 -38,37 9,52.3 -47,-24.7 -47,24.7 9,-52.3 -38,-37 52.5,-7.6z" />
+                </group>
+            </group>
+        </group>
+    </group>
+</vector>
