@@ -35,6 +35,8 @@ import cobresun.movieclub.app.lists.data.network.KtorListsDataSource
 import cobresun.movieclub.app.lists.data.network.ListsDataSource
 import cobresun.movieclub.app.lists.data.repository.ListsRepositoryImpl
 import cobresun.movieclub.app.lists.domain.ListsRepository
+import cobresun.movieclub.app.lists.data.CollapsedListsStoreImpl
+import cobresun.movieclub.app.lists.domain.CollapsedListsStore
 import cobresun.movieclub.app.lists.presentation.ListsViewModel
 import cobresun.movieclub.app.reviews.data.network.KtorReviewsDataSource
 import cobresun.movieclub.app.reviews.data.network.ReviewsDataSource
@@ -99,6 +101,7 @@ val sharedModule = module {
     // Lists
     single { KtorListsDataSource(get()) }.bind<ListsDataSource>()
     single { ListsRepositoryImpl(get()) }.bind<ListsRepository>()
+    single { CollapsedListsStoreImpl(get()) }.bind<CollapsedListsStore>()
     viewModelOf(::ListsViewModel)
 
     // Awards

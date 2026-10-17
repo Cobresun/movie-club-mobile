@@ -14,6 +14,7 @@ import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.Work
 import cobresun.movieclub.app.core.domain.WorkType
 import cobresun.movieclub.app.lists.domain.ListedWork
+import cobresun.movieclub.app.lists.domain.CollapsedListsStore
 import cobresun.movieclub.app.lists.domain.ListsRepository
 import cobresun.movieclub.app.lists.domain.WorkList
 import cobresun.movieclub.app.lists.presentation.ListsAction
@@ -97,10 +98,13 @@ class ListItemRetryTest {
         override suspend fun joinClub(token: String): Result<Unit, ApiError> = throw NotImplementedError()
     }
 
+    private object NoCollapsed : CollapsedListsStore {
+        override suspend fun get(clubSlug: String) = emptySet<String>()
+        override suspend fun set(clubSlug: String, listIds: Set<String>) = Unit
+    }
+
     private fun TestScope.setUpViewModel(repo: FakeLists): ListsViewModel {
-        val vm = ListsViewModel(SavedStateHandle(mapOf("clubSlug" to "club")), repo, Members, Clubs)
-        advanceUntilIdle()
-        vm.onAction(ListsAction.SelectList("a"))
+        val vm = ListsViewModel(SavedStateHandle(mapOf("clubSlug" to "club")), repo, Members, Clubs, NoCollapsed)
         advanceUntilIdle()
         return vm
     }
@@ -114,13 +118,11 @@ class ListItemRetryTest {
         val vm = setUpViewModel(repo)
         val event = async { vm.events.first { it is ListsEvent.Message } as ListsEvent.Message }
 
-        vm.onAction(ListsAction.RemoveWork(work("1")))
+        vm.onAction(ListsAction.RemoveWork(work("1"), "a"))
         advanceUntilIdle()
         assertEquals(listOf("1", "2"), vm.items("a"), "optimistic removal is rolled back")
         val retry = assertNotNull(event.await().message.onAction, "failure offers Retry")
 
-        vm.onAction(ListsAction.SelectList("b"))
-        advanceUntilIdle()
         repo.fail = false
         retry()
         advanceUntilIdle()
@@ -136,13 +138,11 @@ class ListItemRetryTest {
         val vm = setUpViewModel(repo)
         val event = async { vm.events.first { it is ListsEvent.Message } as ListsEvent.Message }
 
-        vm.onAction(ListsAction.MoveWork(work("1"), "b"))
+        vm.onAction(ListsAction.MoveWork(work("1"), "a", "b"))
         advanceUntilIdle()
         assertEquals(listOf("1"), vm.items("a"))
         val retry = assertNotNull(event.await().message.onAction)
 
-        vm.onAction(ListsAction.SelectList("c"))
-        advanceUntilIdle()
         repo.fail = false
         retry()
         advanceUntilIdle()

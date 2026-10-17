@@ -58,7 +58,7 @@ fun ListItemDetailSheet(
     work: Work,
     isUpNext: Boolean,
     addedByName: String?,
-    currentListId: String?,
+    currentListId: String,
     lists: List<WorkList>,
     onAction: (ListsAction) -> Unit,
     onDismiss: () -> Unit,
@@ -143,7 +143,7 @@ fun ListItemDetailSheet(
                                     text = { Text(list.title) },
                                     onClick = {
                                         moveMenuOpen = false
-                                        act(ListsAction.MoveWork(work, list.id))
+                                        act(ListsAction.MoveWork(work, currentListId, list.id))
                                     },
                                 )
                             }
@@ -174,7 +174,7 @@ fun ListItemDetailSheet(
             title = "Remove ${work.title}?",
             message = "It will be removed from $listName for everyone in the club.",
             confirmLabel = "Remove",
-            onConfirm = { act(ListsAction.RemoveWork(work)) },
+            onConfirm = { act(ListsAction.RemoveWork(work, currentListId)) },
             onDismiss = { confirmRemove = false },
         )
     }
@@ -184,7 +184,7 @@ fun ListItemDetailSheet(
             message = "Mark ${work.title} as ${work.type.finishedVerb} so members can score it.",
             confirmLabel = "Move",
             destructive = false,
-            onConfirm = { act(ListsAction.MoveToReviews(work)) },
+            onConfirm = { act(ListsAction.MoveToReviews(work, currentListId)) },
             onDismiss = { confirmReview = false },
         )
     }

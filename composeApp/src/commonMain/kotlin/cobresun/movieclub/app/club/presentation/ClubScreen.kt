@@ -99,6 +99,7 @@ fun ClubScreenRoot(
     val scope = rememberCoroutineScope()
     val shareSheet = rememberShareSheet()
     var addTarget by remember { mutableStateOf<ClubTab?>(null) }
+    var addListId by remember { mutableStateOf<String?>(null) }
 
     fun show(message: UiMessage) {
         scope.launch {
@@ -225,7 +226,10 @@ fun ClubScreenRoot(
                     ClubTab.LISTS -> ListsScreen(
                         state = listsState,
                         onAction = listsViewModel::onAction,
-                        onAddClick = { addTarget = ClubTab.LISTS },
+                        onAddClick = { listId ->
+                            addListId = listId
+                            addTarget = ClubTab.LISTS
+                        },
                         hapticFeedback = hapticFeedback,
                     )
 
@@ -256,29 +260,28 @@ fun ClubScreenRoot(
         val toLists = target == ClubTab.LISTS
         val workType = (if (toLists) listsState.clubType else reviewsState.clubType).workType
         val existing = if (toLists) {
-            (listsState.selectedItems as? cobresun.movieclub.app.core.domain.AsyncResult.Success)
-                ?.data.orEmpty().mapNotNull { it.externalId }.toSet()
+            addListId?.let { id -> listsState.itemsOrEmpty(id).mapNotNull { it.externalId }.toSet() }.orEmpty()
         } else {
             reviewsState.reviewedExternalIds
         }
         LaunchedEffect(Unit) { listsViewModel.onAction(ListsAction.LoadAllItems) }
-        val statusLabels = remember(toLists, listsState.allItems, listsState.selectedListId, reviewsState.reviews) {
+        val statusLabels = remember(toLists, listsState.allItems, addListId, reviewsState.reviews) {
             val listed = (listsState.allItems as? cobresun.movieclub.app.core.domain.AsyncResult.Success)?.data.orEmpty()
                 .mapNotNull { item -> item.work.externalId?.let { Triple(it, item.listId, item.listTitle) } }
             workStatusLabels(
                 reviewedIds = if (toLists) reviewsState.reviewedExternalIds else emptySet(),
                 listed = listed,
-                destinationListId = if (toLists) listsState.selectedListId else null,
+                destinationListId = if (toLists) addListId else null,
             )
         }
         AddWorkSheet(
-            title = if (toLists) "Add to ${listsState.selectedList?.title ?: "list"}" else "Add a review",
+            title = if (toLists) "Add to ${listsState.list(addListId)?.title ?: "list"}" else "Add a review",
             workType = workType,
             existingExternalIds = existing,
             statusLabels = statusLabels,
             onPick = { result ->
                 val work = result.toNewWork()
-                if (toLists) listsViewModel.onAction(ListsAction.AddWork(work))
+                if (toLists) addListId?.let { listsViewModel.onAction(ListsAction.AddWork(work, it)) }
                 else reviewsViewModel.onAction(ReviewsAction.AddReview(work))
                 addTarget = null
             },
