@@ -10,6 +10,8 @@ import cobresun.movieclub.app.auth.data.dto.SignUpResponseDto
 import cobresun.movieclub.app.auth.data.dto.SocialSignInRequestDto
 import cobresun.movieclub.app.auth.data.dto.SocialSignInResponseDto
 import cobresun.movieclub.app.core.data.classifyNetworkException
+import cobresun.movieclub.app.club.data.network.apiCall
+import cobresun.movieclub.app.club.domain.ApiError
 import cobresun.movieclub.app.core.data.safeCall
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -35,12 +37,13 @@ class KtorBetterAuthDataSource(
     override suspend fun signUp(
         email: String,
         password: String,
-        name: String
-    ): Result<BetterAuthUserDto, DataError.Remote> {
-        return safeCall<SignUpResponseDto> {
+        name: String,
+        callbackURL: String,
+    ): Result<BetterAuthUserDto, ApiError> {
+        return apiCall<SignUpResponseDto> {
             httpClient.post("$BASE_URL/api/auth/sign-up/email") {
                 contentType(ContentType.Application.Json)
-                setBody(SignUpRequestDto(email, password, name))
+                setBody(SignUpRequestDto(email, password, name, callbackURL))
             }
         }.map { response -> response.user }
     }
@@ -48,8 +51,8 @@ class KtorBetterAuthDataSource(
     override suspend fun signIn(
         email: String,
         password: String
-    ): Result<BetterAuthUserDto, DataError.Remote> {
-        return safeCall<SignInResponseDto> {
+    ): Result<BetterAuthUserDto, ApiError> {
+        return apiCall<SignInResponseDto> {
             httpClient.post("$BASE_URL/api/auth/sign-in/email") {
                 contentType(ContentType.Application.Json)
                 setBody(SignInRequestDto(email, password))
@@ -112,11 +115,11 @@ class KtorBetterAuthDataSource(
         }
     }
 
-    override suspend fun sendVerificationEmail(email: String): Result<Unit, DataError.Remote> {
+    override suspend fun sendVerificationEmail(email: String, callbackURL: String): Result<Unit, DataError.Remote> {
         return safeCall<Unit> {
             httpClient.post("$BASE_URL/api/auth/send-verification-email") {
                 contentType(ContentType.Application.Json)
-                setBody(SendVerificationEmailRequestDto(email))
+                setBody(SendVerificationEmailRequestDto(email, callbackURL))
             }
         }
     }

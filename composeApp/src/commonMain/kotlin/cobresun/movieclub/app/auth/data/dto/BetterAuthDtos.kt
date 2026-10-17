@@ -42,7 +42,9 @@ data class GetSessionResponseDto(
 data class SignUpRequestDto(
     val email: String,
     val password: String,
-    val name: String
+    val name: String,
+    /** Where the verification email's link lands once verified (web AuthModal). */
+    val callbackURL: String? = null,
 )
 
 @Serializable
@@ -54,7 +56,7 @@ data class SignInRequestDto(
 @Serializable
 data class SendVerificationEmailRequestDto(
     val email: String,
-    val callbackURL: String = "/"
+    val callbackURL: String
 )
 
 @Serializable

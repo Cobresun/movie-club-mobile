@@ -1,16 +1,21 @@
 package cobresun.movieclub.app.auth.domain
 
+import cobresun.movieclub.app.club.domain.ApiError
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.EmptyResult
 import cobresun.movieclub.app.core.domain.Result
 
 interface AuthRepository {
-    suspend fun login(email: String, password: String): Result<User, DataError.Remote>
+    /** Errors carry Better Auth's own message when it sends one. */
+    suspend fun login(email: String, password: String): Result<User, ApiError>
+
+    /** [callbackURL] is where the verification email's link lands once verified. */
     suspend fun register(
         email: String,
         password: String,
-        fullName: String
-    ): Result<User, DataError.Remote>
+        fullName: String,
+        callbackURL: String,
+    ): Result<User, ApiError>
     /**
      * Signs in with a native Sign in with Apple credential, creating the account
      * on first use. The session cookie is captured like email sign-in.
@@ -36,5 +41,5 @@ interface AuthRepository {
     /**
      * Resends email verification link to the specified email address.
      */
-    suspend fun sendVerificationEmail(email: String): EmptyResult<DataError.Remote>
+    suspend fun sendVerificationEmail(email: String, callbackURL: String): EmptyResult<DataError.Remote>
 }

@@ -185,7 +185,7 @@ private fun AuthLandingScreen(
                         enabled = !isLoading,
                         modifier = Modifier.padding(top = 4.dp)
                     ) {
-                        Text("Resend Verification Email")
+                        Text("Resend verification email")
                     }
                 }
             }
@@ -206,7 +206,7 @@ private fun ModeToggle(
         FilterChip(
             selected = selectedMode == AuthMode.LOGIN,
             onClick = { onModeChange(AuthMode.LOGIN) },
-            label = { Text("Login") },
+            label = { Text("Sign In") },
             enabled = enabled,
             modifier = Modifier.weight(1f)
         )
@@ -237,6 +237,7 @@ private fun LoginForm(
             value = email,
             onValueChange = { email = it },
             label = { Text("Email") },
+            placeholder = { Text("your@email.com") },
             enabled = !isLoading,
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
@@ -279,9 +280,9 @@ private fun LoginForm(
                     color = MaterialTheme.colorScheme.onPrimary
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Logging in...")
+                Text("Signing in…")
             } else {
-                Text("Log In")
+                Text("Sign In")
             }
         }
     }
@@ -305,7 +306,8 @@ private fun SignupForm(
         OutlinedTextField(
             value = fullName,
             onValueChange = { fullName = it },
-            label = { Text("Full Name") },
+            label = { Text("Name") },
+            placeholder = { Text("Your name") },
             enabled = !isLoading,
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
@@ -315,6 +317,7 @@ private fun SignupForm(
             value = email,
             onValueChange = { email = it },
             label = { Text("Email") },
+            placeholder = { Text("your@email.com") },
             enabled = !isLoading,
             singleLine = true,
             isError = emailInvalid,
@@ -357,7 +360,7 @@ private fun SignupForm(
                     color = MaterialTheme.colorScheme.onPrimary
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Creating account...")
+                Text("Creating account…")
             } else {
                 Text("Sign Up")
             }
@@ -379,6 +382,7 @@ fun PasswordTextField(
         onValueChange = onValueChange,
         modifier = modifier.fillMaxWidth(),
         label = { Text("Password") },
+        placeholder = { Text("Min $MIN_PASSWORD_LENGTH characters") },
         enabled = enabled,
         singleLine = true,
         visualTransformation = if (showPassword) {

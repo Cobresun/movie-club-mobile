@@ -7,6 +7,7 @@ import cobresun.movieclub.app.auth.domain.AppleCredential
 import cobresun.movieclub.app.auth.domain.AuthRepository
 import cobresun.movieclub.app.auth.domain.User
 import cobresun.movieclub.app.core.data.SessionCookieStorage
+import cobresun.movieclub.app.club.domain.ApiError
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.map
@@ -15,7 +16,7 @@ class AuthRepositoryImpl(
     private val betterAuthDataSource: BetterAuthDataSource,
     private val cookieStorage: SessionCookieStorage
 ) : AuthRepository {
-    override suspend fun login(email: String, password: String): Result<User, DataError.Remote> {
+    override suspend fun login(email: String, password: String): Result<User, ApiError> {
         return betterAuthDataSource.signIn(email, password)
             .map { userDto -> userDto.toUser() }
     }
@@ -23,9 +24,10 @@ class AuthRepositoryImpl(
     override suspend fun register(
         email: String,
         password: String,
-        fullName: String
-    ): Result<User, DataError.Remote> {
-        return betterAuthDataSource.signUp(email, password, fullName)
+        fullName: String,
+        callbackURL: String,
+    ): Result<User, ApiError> {
+        return betterAuthDataSource.signUp(email, password, fullName, callbackURL)
             .map { userDto -> userDto.toUser() }
     }
 
@@ -57,7 +59,7 @@ class AuthRepositoryImpl(
         return result
     }
 
-    override suspend fun sendVerificationEmail(email: String): Result<Unit, DataError.Remote> {
-        return betterAuthDataSource.sendVerificationEmail(email)
+    override suspend fun sendVerificationEmail(email: String, callbackURL: String): Result<Unit, DataError.Remote> {
+        return betterAuthDataSource.sendVerificationEmail(email, callbackURL)
     }
 }

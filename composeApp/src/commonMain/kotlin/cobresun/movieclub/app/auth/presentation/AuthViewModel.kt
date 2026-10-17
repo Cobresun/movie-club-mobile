@@ -9,6 +9,9 @@ import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
 import kotlinx.coroutines.Job
+import cobresun.movieclub.app.app.DeepLink
+import cobresun.movieclub.app.app.DeepLinks
+import cobresun.movieclub.app.core.domain.Constants.BASE_URL
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -102,7 +105,8 @@ class AuthViewModel(
             .onSuccess { user ->
                 _state.update { it.copy(user = AsyncResult.Success(Unit)) }
             }
-            .onError { error ->
+            .onError { apiError ->
+                val error = apiError.remote
                 _state.update { it.copy(user = AsyncResult.Error(dataError = error)) }
                 _errorMessage.update {
                     when (error) {
@@ -114,10 +118,8 @@ class AuthViewModel(
                             "Request timed out. Please try again."
                         DataError.Remote.SERVER ->
                             "Server error. Please try again later."
-                        DataError.Remote.SERIALIZATION ->
-                            "Invalid credentials. Please check your email and password."
-                        else ->
-                            "Login failed. Please check your credentials and try again."
+                        // Better Auth's own message, e.g. "Invalid email or password" (web AuthModal).
+                        else -> apiError.serverMessage?.takeIf { m -> m.isNotBlank() } ?: "Failed to sign in"
                     }
                 }
             }
@@ -158,17 +160,18 @@ class AuthViewModel(
         _state.update { it.copy(user = AsyncResult.Loading, confirmationMessage = null, lastEmail = email) }
         _errorMessage.update { null }
 
-        authRepository.register(email, password, fullName)
+        authRepository.register(email, password, fullName, verificationCallbackUrl())
             .onSuccess { user ->
                 // Better Auth requires email verification before session is created
                 _state.update {
                     it.copy(
                         user = AsyncResult.Error(dataError = null),
-                        confirmationMessage = "Account created! Please check your email to verify your account before signing in."
+                        confirmationMessage = "Account created! Please check your email to verify your account."
                     )
                 }
             }
-            .onError { error ->
+            .onError { apiError ->
+                val error = apiError.remote
                 _state.update { it.copy(user = AsyncResult.Error(dataError = error)) }
                 _errorMessage.update {
                     when (error) {
@@ -176,10 +179,8 @@ class AuthViewModel(
                             "No internet connection. Please check your connection and try again."
                         DataError.Remote.REQUEST_TIMEOUT ->
                             "Request timed out. Please try again."
-                        DataError.Remote.SERVER ->
-                            "Server error. Please try again later."
-                        else ->
-                            "Sign-up failed. Please try again or log in if you already have an account."
+                        // e.g. "User already exists. Use another email." (web AuthModal)
+                        else -> apiError.serverMessage?.takeIf { m -> m.isNotBlank() } ?: "Failed to sign up"
                     }
                 }
             }
@@ -204,7 +205,7 @@ class AuthViewModel(
     private fun resendVerificationEmail(email: String) = viewModelScope.launch {
         _errorMessage.update { null }
 
-        authRepository.sendVerificationEmail(email)
+        authRepository.sendVerificationEmail(email, verificationCallbackUrl())
             .onSuccess {
                 _state.update {
                     it.copy(confirmationMessage = "Verification email sent! Please check your inbox.")
@@ -221,6 +222,16 @@ class AuthViewModel(
                 }
             }
     }
+
+    /**
+     * Where the verification email's link lands (web AuthModal `getRedirectUrl`):
+     * the invite being joined when sign-up started from one, otherwise the site root.
+     */
+    private fun verificationCallbackUrl(): String =
+        when (val link = DeepLinks.pending.value) {
+            is DeepLink.JoinClub -> "$BASE_URL/join-club/${link.token}"
+            else -> "$BASE_URL/"
+        }
 
     private fun clearError() {
         _errorMessage.update { null }
