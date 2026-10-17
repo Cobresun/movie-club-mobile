@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
@@ -68,7 +70,6 @@ import cobresun.movieclub.app.core.platform.HapticFeedback
 import cobresun.movieclub.app.core.presentation.components.ClubNameLabel
 import cobresun.movieclub.app.core.presentation.components.EmptyState
 import cobresun.movieclub.app.core.presentation.components.ErrorState
-import cobresun.movieclub.app.core.presentation.components.GridSkeleton
 import cobresun.movieclub.app.core.presentation.components.LocalTabBarInset
 import cobresun.movieclub.app.core.presentation.components.ShimmerBox
 import cobresun.movieclub.app.core.presentation.noun
@@ -113,7 +114,7 @@ fun ListsScreen(
         Column(Modifier.fillMaxSize()) {
             ListsHeader(clubName = state.clubName, onManage = { showManage = true })
             when (val lists = state.lists) {
-                is AsyncResult.Loading -> GridSkeleton()
+                is AsyncResult.Loading -> ListsSkeleton()
                 is AsyncResult.Error -> ErrorState(
                     message = (lists.dataError as? DataError.Remote)?.toUserMessage("load your lists")
                         ?: "Couldn't load your lists.",
@@ -231,6 +232,38 @@ private fun rememberEnteringKeys(state: ListsState): Set<String> {
     return entering
 }
 
+/** Web `WatchListSkeleton`: the search bar, then two list sections with their header and posters. */
+@Composable
+private fun ListsSkeleton() {
+    Column(
+        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
+    ) {
+        ShimmerBox(Modifier.fillMaxWidth().height(52.dp), MaterialTheme.shapes.extraLarge)
+        repeat(2) {
+            Row(
+                Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium)
+                    .background(MaterialTheme.colorScheme.surfaceContainer).padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                ShimmerBox(Modifier.size(24.dp))
+                ShimmerBox(Modifier.width(140.dp).height(18.dp))
+                Spacer(Modifier.weight(1f))
+                repeat(3) { ShimmerBox(Modifier.size(24.dp)) }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                repeat(3) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ShimmerBox(Modifier.fillMaxWidth().aspectRatio(2f / 3f))
+                        ShimmerBox(Modifier.fillMaxWidth(0.8f).height(12.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun ListsHeader(clubName: String, onManage: () -> Unit) {
     Row(
@@ -274,7 +307,7 @@ private fun LazyGridScope.listSection(
     when (val items = state.items(list.id)) {
         is AsyncResult.Loading -> items(3, key = { "skeleton-${list.id}-$it" }, contentType = { "skeleton" }) {
             Column(Modifier.animateItem(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                ShimmerBox(Modifier.fillMaxWidth().height(156.dp))
+                ShimmerBox(Modifier.fillMaxWidth().aspectRatio(2f / 3f))
                 ShimmerBox(Modifier.fillMaxWidth(0.8f).height(12.dp))
             }
         }
