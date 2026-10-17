@@ -9,7 +9,10 @@ import cobresun.movieclub.app.auth.data.dto.SignUpRequestDto
 import cobresun.movieclub.app.auth.data.dto.SignUpResponseDto
 import cobresun.movieclub.app.auth.data.dto.SocialSignInRequestDto
 import cobresun.movieclub.app.auth.data.dto.SocialSignInResponseDto
+import cobresun.movieclub.app.core.data.classifyNetworkException
 import cobresun.movieclub.app.core.data.safeCall
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import cobresun.movieclub.app.core.domain.Constants.BASE_URL
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
@@ -22,6 +25,8 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.serialization.json.Json
+
+private val sessionJson = Json { ignoreUnknownKeys = true }
 
 class KtorBetterAuthDataSource(
     private val httpClient: HttpClient
@@ -74,22 +79,36 @@ class KtorBetterAuthDataSource(
         }
     }
 
+    /**
+     * Success(null) only when the server says there is no session; anything that
+     * stops us from asking (offline, timeout, server error) is an Error, so a cold
+     * start without a connection doesn't read as "signed out".
+     */
     override suspend fun getSession(): Result<BetterAuthUserDto?, DataError.Remote> {
-        return try {
-            val response = httpClient.get("$BASE_URL/api/auth/get-session")
-            val bodyText = response.body<String>()
-
-            // Better Auth returns literal "null" when no session exists
-            if (bodyText.trim() == "null") {
-                Result.Success(null)
-            } else {
-                // Parse the response as GetSessionResponseDto
-                val json = Json { ignoreUnknownKeys = true }
-                val sessionResponse = json.decodeFromString<GetSessionResponseDto>(bodyText)
-                Result.Success(sessionResponse.user)
-            }
+        val response = try {
+            httpClient.get("$BASE_URL/api/auth/get-session")
         } catch (e: Exception) {
-            Result.Error(DataError.Remote.UNKNOWN)
+            currentCoroutineContext().ensureActive()
+            return Result.Error(classifyNetworkException(e))
+        }
+        return when (response.status.value) {
+            in 200..299 -> try {
+                val bodyText = response.body<String>().trim()
+                // Better Auth returns a literal "null" when no session exists.
+                if (bodyText.isEmpty() || bodyText == "null") {
+                    Result.Success(null)
+                } else {
+                    Result.Success(sessionJson.decodeFromString<GetSessionResponseDto>(bodyText).user)
+                }
+            } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
+                Result.Error(DataError.Remote.SERIALIZATION)
+            }
+            401, 403 -> Result.Success(null)
+            408 -> Result.Error(DataError.Remote.REQUEST_TIMEOUT)
+            429 -> Result.Error(DataError.Remote.TOO_MANY_REQUESTS)
+            in 500..599 -> Result.Error(DataError.Remote.SERVER)
+            else -> Result.Error(DataError.Remote.UNKNOWN)
         }
     }
 

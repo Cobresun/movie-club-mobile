@@ -109,6 +109,8 @@ The app uses **BetterAuth** for authentication with HTTP cookie-based sessions:
 - Server sets HTTP-only session cookies on successful authentication
 - Ktor HttpCookies plugin automatically includes cookies in all requests
 - `SessionCookieStorage` persists cookies to DataStore for cross-app-launch persistence
+- Cookie rules live in `core/data/CookieJar.kt` (pure, unit-tested): `Max-Age` is stored as an absolute expiry, `Max-Age=0`/past `Expires` delete, and cookies only go back to their own host
+- Launch: a stored session cookie is the signed-in hint (`AuthRepository.hasStoredSession`), so the club shell paints at once while `AuthViewModel` confirms the session in the background. Offline/server errors keep the user signed in and retry; only the server answering "no session" signs out
 - Platform-specific DataStore paths:
   - Android: `androidx.datastore.preferences` with "session_cookies" name
   - iOS: `~/Documents/session_cookies.preferences_pb`

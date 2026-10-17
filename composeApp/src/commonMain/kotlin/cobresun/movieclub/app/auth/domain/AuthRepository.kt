@@ -19,6 +19,16 @@ interface AuthRepository {
     suspend fun getUser(): Result<User, DataError.Remote>
 
     /**
+     * Asks the server for the current session: a [User] when signed in, null when
+     * the server says there is none. An Error means it couldn't be asked (offline,
+     * timeout, server trouble), which is not the same as being signed out.
+     */
+    suspend fun getSession(): Result<User?, DataError.Remote>
+
+    /** Whether a session is stored on this device (unverified): the launch-time signed-in hint. */
+    suspend fun hasStoredSession(): Boolean
+
+    /**
      * Logs out the current user by clearing session cookies.
      */
     suspend fun logout(): EmptyResult<DataError.Remote>

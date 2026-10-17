@@ -8,50 +8,41 @@ import io.ktor.http.Cookie
 import io.ktor.http.Url
 import io.ktor.http.parseServerSetCookieHeader
 import io.ktor.http.renderSetCookieHeader
+import io.ktor.util.date.getTimeMillis
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 
+/**
+ * Persists cookies (the Better Auth session) in DataStore so a session survives app
+ * restarts. Every response's `Set-Cookie` lands here through Ktor's HttpCookies
+ * plugin, including the refreshed session cookie `get-session` sends back.
+ */
 class SessionCookieStorageImpl(
-    private val dataStore: DataStore<Preferences>
+    private val dataStore: DataStore<Preferences>,
+    private val now: () -> Long = ::getTimeMillis,
 ) : SessionCookieStorage {
 
     private val cookieKey = stringPreferencesKey("session_cookies")
 
-    override suspend fun get(requestUrl: Url): List<Cookie> {
-        val cookiesString = dataStore.data.map { prefs ->
-            prefs[cookieKey] ?: ""
-        }.first()
-
-        if (cookiesString.isEmpty()) return emptyList()
-
-        // Parse stored cookies (separated by ||)
-        return cookiesString.split(COOKIE_SEPARATOR)
+    private fun decode(raw: String?): List<Cookie> =
+        raw.orEmpty().split(COOKIE_SEPARATOR)
             .filter { it.isNotEmpty() }
-            .mapNotNull { cookieString ->
-                try {
-                    parseServerSetCookieHeader(cookieString)
-                } catch (e: Exception) {
-                    null // Skip invalid cookies
-                }
-            }
-    }
+            .mapNotNull { runCatching { parseServerSetCookieHeader(it) }.getOrNull() }
+
+    private fun encode(cookies: List<Cookie>): String = cookies.joinToString(COOKIE_SEPARATOR) { renderSetCookieHeader(it) }
+
+    private suspend fun stored(): List<Cookie> = runCatching { decode(dataStore.data.first()[cookieKey]) }.getOrDefault(emptyList())
+
+    override suspend fun get(requestUrl: Url): List<Cookie> = CookieJar.select(stored(), requestUrl, now())
 
     override suspend fun addCookie(requestUrl: Url, cookie: Cookie) {
         dataStore.edit { prefs ->
-            val existing = prefs[cookieKey]
-                ?.split(COOKIE_SEPARATOR)
-                ?.toMutableList()
-                ?: mutableListOf()
-
-            // Remove existing cookie with same name
-            existing.removeAll { it.startsWith("${cookie.name}=") }
-
-            // Add new cookie
-            existing.add(renderSetCookieHeader(cookie))
-
-            prefs[cookieKey] = existing.joinToString(COOKIE_SEPARATOR)
+            val updated = CookieJar.add(decode(prefs[cookieKey]), cookie, requestUrl, now())
+            if (updated.isEmpty()) prefs.remove(cookieKey) else prefs[cookieKey] = encode(updated)
         }
     }
+
+    override suspend fun hasSession(): Boolean =
+        stored().any { it.name.contains(SESSION_COOKIE) && !CookieJar.isExpired(it, now()) }
 
     override fun close() {
         // DataStore handles cleanup
@@ -65,5 +56,8 @@ class SessionCookieStorageImpl(
 
     companion object {
         private const val COOKIE_SEPARATOR = "||"
+
+        /** Better Auth's session cookie (`better-auth.session_token`, `__Secure-` prefixed over https). */
+        private const val SESSION_COOKIE = "session_token"
     }
 }

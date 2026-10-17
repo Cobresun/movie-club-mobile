@@ -34,20 +34,18 @@ class AuthRepositoryImpl(
             .map { userDto -> userDto.toUser() }
     }
 
-    override suspend fun getUser(): Result<User, DataError.Remote> {
-        return when (val result = betterAuthDataSource.getSession()) {
-            is Result.Success -> {
-                val userDto = result.data
-                if (userDto != null) {
-                    Result.Success(userDto.toUser())
-                } else {
-                    // No active session - not an error, just not authenticated
-                    Result.Error(DataError.Remote.UNKNOWN)
-                }
-            }
+    override suspend fun getUser(): Result<User, DataError.Remote> =
+        when (val result = getSession()) {
+            is Result.Success -> result.data?.let { Result.Success(it) }
+                // No active session - not authenticated
+                ?: Result.Error(DataError.Remote.UNKNOWN)
             is Result.Error -> result
         }
-    }
+
+    override suspend fun getSession(): Result<User?, DataError.Remote> =
+        betterAuthDataSource.getSession().map { it?.toUser() }
+
+    override suspend fun hasStoredSession(): Boolean = cookieStorage.hasSession()
 
     override suspend fun logout(): Result<Unit, DataError.Remote> {
         // Sign out on server (clears server-side session)

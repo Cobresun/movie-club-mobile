@@ -8,7 +8,9 @@ import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -44,18 +46,52 @@ class AuthViewModel(
         data object NavigateToLandingPage : AuthNavigationEvent
     }
 
+    private var verifyJob: Job? = null
+
+    /**
+     * A stored session paints the signed-in app straight away (web `useSessionHint`)
+     * and is confirmed in the background. Being offline or the server being down
+     * keeps you signed in and retries; only the server saying "no session" signs out.
+     */
     private fun checkAuthentication() {
         viewModelScope.launch {
+            if (authRepository.hasStoredSession()) {
+                _state.update { it.copy(user = AsyncResult.Success(Unit)) }
+                verifySession()
+                return@launch
+            }
             _state.update { it.copy(user = AsyncResult.Loading) }
-            when (val result = authRepository.getUser()) {
-                is Result.Success -> {
-                    _state.update { it.copy(user = AsyncResult.Success(Unit)) }
+            when (val result = authRepository.getSession()) {
+                is Result.Success -> _state.update {
+                    it.copy(user = if (result.data != null) AsyncResult.Success(Unit) else AsyncResult.Error(dataError = null))
                 }
-                is Result.Error -> {
-                    _state.update { it.copy(user = AsyncResult.Error(dataError = result.error)) }
+                is Result.Error -> _state.update { it.copy(user = AsyncResult.Error(dataError = result.error)) }
+            }
+        }
+    }
+
+    private fun verifySession() {
+        verifyJob?.cancel()
+        verifyJob = viewModelScope.launch {
+            for (attempt in 0 until VERIFY_RETRY_DELAYS_MS.size + 1) {
+                when (val result = authRepository.getSession()) {
+                    is Result.Success -> {
+                        if (result.data == null) sessionEnded()
+                        return@launch
+                    }
+                    // Can't reach the server: stay signed in (screens show their own offline
+                    // states with retry) and check again in a while.
+                    is Result.Error -> VERIFY_RETRY_DELAYS_MS.getOrNull(attempt)?.let { delay(it) } ?: return@launch
                 }
             }
         }
+    }
+
+    /** The server no longer knows this session (expired or revoked elsewhere). */
+    private suspend fun sessionEnded() {
+        authRepository.logout()
+        _state.update { it.copy(user = AsyncResult.Error(dataError = null)) }
+        _navigationEvents.send(AuthNavigationEvent.NavigateToLandingPage)
     }
 
     private fun login(email: String, password: String) = viewModelScope.launch {
@@ -150,6 +186,7 @@ class AuthViewModel(
     }
 
     private fun logout() = viewModelScope.launch {
+        verifyJob?.cancel()
         _state.update { it.copy(isLoggingOut = true) }
 
         authRepository.logout()
@@ -189,6 +226,8 @@ class AuthViewModel(
         _errorMessage.update { null }
     }
 }
+
+private val VERIFY_RETRY_DELAYS_MS = listOf(3_000L, 10_000L, 30_000L, 60_000L, 120_000L, 300_000L)
 
 data class AuthState(
     val user: AsyncResult<Unit> = AsyncResult.Loading,

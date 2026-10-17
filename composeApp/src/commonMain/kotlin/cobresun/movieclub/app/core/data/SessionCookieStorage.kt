@@ -11,4 +11,10 @@ interface SessionCookieStorage : CookiesStorage {
      * Clears all stored cookies (used on logout).
      */
     suspend fun clearAll()
+
+    /**
+     * Whether an unexpired session cookie is stored: the signed-in hint used at
+     * launch, before the server has confirmed the session (web `useSessionHint`).
+     */
+    suspend fun hasSession(): Boolean
 }
