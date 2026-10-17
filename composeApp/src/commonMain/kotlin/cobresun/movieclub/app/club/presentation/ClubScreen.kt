@@ -82,6 +82,8 @@ import org.koin.compose.viewmodel.koinViewModel
  */
 @Composable
 fun ClubScreenRoot(
+    /** Opens Club Wrapped at a year (0 for the latest). */
+    onOpenWrapped: (year: Int) -> Unit = {},
     clubViewModel: ClubViewModel = koinViewModel(),
     listsViewModel: ListsViewModel = koinViewModel(),
     reviewsViewModel: ReviewsViewModel = koinViewModel(),
@@ -234,6 +236,7 @@ fun ClubScreenRoot(
                             state = statsState,
                             onAction = statsViewModel::onAction,
                             onGoToReviews = { clubViewModel.selectTab(ClubTab.REVIEWS) },
+                            onOpenWrapped = onOpenWrapped,
                             onShare = {
                                 shareSheet(ShareLinks.statistics(clubViewModel.clubSlug), "${statsState.clubName} statistics")
                             },

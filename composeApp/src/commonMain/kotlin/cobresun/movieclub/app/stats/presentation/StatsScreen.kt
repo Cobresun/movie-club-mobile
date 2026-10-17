@@ -48,6 +48,7 @@ fun StatsScreen(
     onGoToReviews: () -> Unit,
     onShare: () -> Unit,
     modifier: Modifier = Modifier,
+    onOpenWrapped: (year: Int) -> Unit = {},
 ) {
     Column(modifier.fillMaxSize()) {
         Row(
@@ -73,14 +74,14 @@ fun StatsScreen(
                 onRefresh = { onAction(StatsAction.Refresh) },
                 modifier = Modifier.fillMaxSize(),
             ) {
-                StatsContent(state, data.data, onGoToReviews)
+                StatsContent(state, data.data, onGoToReviews, onOpenWrapped)
             }
         }
     }
 }
 
 @Composable
-private fun StatsContent(state: StatsState, data: StatsData, onGoToReviews: () -> Unit) {
+private fun StatsContent(state: StatsState, data: StatsData, onGoToReviews: () -> Unit, onOpenWrapped: (Int) -> Unit) {
     val reviews = data.reviews
     val members = data.members
     val type = state.clubType

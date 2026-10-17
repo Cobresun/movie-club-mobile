@@ -51,6 +51,7 @@ import org.koin.core.module.Module
 import cobresun.movieclub.app.stats.data.StatsRepositoryImpl
 import cobresun.movieclub.app.stats.domain.StatsRepository
 import cobresun.movieclub.app.stats.presentation.StatsViewModel
+import cobresun.movieclub.app.stats.presentation.WrappedViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
 import cobresun.movieclub.app.providers.presentation.WatchProvidersViewModel
@@ -115,4 +116,5 @@ val sharedModule = module {
     // Statistics (reuses the reviews and club repositories)
     single { StatsRepositoryImpl(get()) }.bind<StatsRepository>()
     viewModelOf(::StatsViewModel)
+    viewModelOf(::WrappedViewModel)
 }

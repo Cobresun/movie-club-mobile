@@ -107,3 +107,20 @@ val MovieClubDarkColorScheme = darkColorScheme(
 
     scrim = Black
 )
+
+/**
+ * Club Wrapped story cards: fixed gradients (the web's tailwind from/via/to
+ * stops) with white type, so a shared card looks the same everywhere.
+ */
+object WrappedColors {
+    val Ink = White
+    val Backdrop = DarkGray10
+    private val Slate900 = Color(0xFF0F172A)
+
+    val Violet = listOf(Color(0xFF7C3AED), Color(0xFF86198F), Slate900)   // violet-600, fuchsia-800
+    val Blue = listOf(Blue80, Color(0xFF1E40AF), Slate900)                // primary, blue-800
+    val Emerald = listOf(Color(0xFF10B981), Color(0xFF115E59), Slate900)  // emerald-500, teal-800
+    val Rose = listOf(Color(0xFFF43F5E), Color(0xFF9F1239), Slate900)     // rose-500, rose-800
+    val Amber = listOf(Color(0xFFF59E0B), Color(0xFFC2410C), Slate900)    // amber-500, orange-700
+    val Sky = listOf(Color(0xFF0EA5E9), Color(0xFF3730A3), Slate900)      // sky-500, indigo-800
+}

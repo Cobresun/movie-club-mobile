@@ -77,6 +77,7 @@ import cobresun.movieclub.app.app.ClubSection
 import androidx.navigation.NavDestination.Companion.hasRoute
 import cobresun.movieclub.app.member.presentation.MemberViewModel
 import cobresun.movieclub.app.member.presentation.ProfileScreenRoot
+import cobresun.movieclub.app.stats.presentation.WrappedScreenRoot
 import cobresun.movieclub.app.member.presentation.components.ErrorMessage
 import cobresun.movieclub.app.member.presentation.components.MemberAvatar
 import cobresun.movieclub.app.member.presentation.components.StatusMessage
@@ -278,8 +279,19 @@ private fun ClubNavHost(
         }
     }
     NavHost(navController = navController, startDestination = startDestination) {
-        composable<Route.Club> {
-            ClubScreenRoot()
+        composable<Route.Club> { entry ->
+            val slug = entry.toRoute<Route.Club>().clubSlug
+            ClubScreenRoot(onOpenWrapped = { year -> navController.navigate(Route.Wrapped(slug, year)) })
+        }
+
+        composable<Route.Wrapped> {
+            WrappedScreenRoot(
+                onClose = { navController.popBackStack() },
+                onGoToReviews = {
+                    navController.previousBackStackEntry?.savedStateHandle?.set(ClubViewModel.KEY_TAB, ClubTab.REVIEWS)
+                    navController.popBackStack()
+                },
+            )
         }
 
         composable<Route.EmptyClubs> {

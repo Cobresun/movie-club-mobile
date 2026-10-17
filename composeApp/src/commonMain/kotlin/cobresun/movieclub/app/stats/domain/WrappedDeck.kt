@@ -109,10 +109,10 @@ private const val MIN_PERSON_WORKS = 2
 private fun countNoun(type: ClubType): String = if (type == ClubType.BOOK) "books" else "movies"
 private fun countLabel(type: ClubType): String = if (type == ClubType.BOOK) "books read" else "movies watched"
 
-/** JavaScript's `toFixed(1)` for the non-negative values cards show. */
-private fun oneDecimal(value: Double): String {
-    val tenths = (abs(value) * 10).roundToLong()
-    val sign = if (value < 0 && tenths != 0L) "-" else ""
+/** JavaScript's `toFixed(1)`: always one decimal place ("7.0", "-2.5"). */
+fun Double.toFixed1(): String {
+    val tenths = (abs(this) * 10).roundToLong()
+    val sign = if (this < 0 && tenths != 0L) "-" else ""
     return "$sign${tenths / 10}.${tenths % 10}"
 }
 
@@ -188,7 +188,7 @@ private val hoursWatched = CardDef("hours-watched", "Time together", WrappedTone
             unit = VolumeUnit.HOURS,
             value = (minutes / 60.0).roundToInt().toLong(),
             unitLabel = "hours watched",
-            detail = if (days >= 1) "${movies.size} movies, or ${oneDecimal(days)} days of non-stop viewing."
+            detail = if (days >= 1) "${movies.size} movies, or ${days.toFixed1()} days of non-stop viewing."
             else "Across ${movies.size} movies.",
         )
     )

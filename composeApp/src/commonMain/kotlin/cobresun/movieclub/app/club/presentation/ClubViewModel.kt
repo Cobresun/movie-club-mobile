@@ -23,7 +23,8 @@ class ClubViewModel(
         savedStateHandle[KEY_TAB] = tab
     }
 
-    private companion object {
+    companion object {
+        /** Saved-state key of the selected tab; other screens may set it to switch tabs on return. */
         const val KEY_TAB = "club_tab"
     }
 }

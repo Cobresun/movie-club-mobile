@@ -31,6 +31,13 @@ sealed interface Route {
     @Serializable
     data object Profile : Route
 
+    /** A club's year-in-review story. [year] 0 opens the latest released year. */
+    @Serializable
+    data class Wrapped(
+        val clubSlug: String,
+        val year: Int = 0,
+    ) : Route
+
     /** [token] pre-fills the invite (e.g. from a join-club link). */
     @Serializable
     data class JoinClub(
