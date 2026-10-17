@@ -21,24 +21,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -59,7 +58,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cobresun.movieclub.app.core.domain.AsyncResult
@@ -72,7 +70,6 @@ import cobresun.movieclub.app.core.presentation.components.EmptyState
 import cobresun.movieclub.app.core.presentation.components.ErrorState
 import cobresun.movieclub.app.core.presentation.components.GridSkeleton
 import cobresun.movieclub.app.core.presentation.components.LocalTabBarInset
-import cobresun.movieclub.app.core.presentation.components.Poster
 import cobresun.movieclub.app.core.presentation.components.ShimmerBox
 import cobresun.movieclub.app.core.presentation.noun
 import cobresun.movieclub.app.core.presentation.toUserMessage
@@ -95,6 +92,14 @@ fun ListsScreen(
     var detailWorkId by rememberSaveable { mutableStateOf<String?>(null) }
     var showManage by rememberSaveable { mutableStateOf(false) }
     val enteringKeys = rememberEnteringKeys(state)
+    val gridState = rememberLazyGridState()
+    val drag = rememberListGridDrag(
+        gridState = gridState,
+        haptics = hapticFeedback,
+        visibleIds = { listId -> state.visibleItems(listId).map { it.id } },
+        upNextId = { state.upNextWorkId },
+        onDrop = { listId, order, droppedId -> onAction(ListsAction.Reorder(listId, order, droppedId)) },
+    )
 
     state.pulse?.let { pulse ->
         LaunchedEffect(pulse) {
@@ -115,13 +120,6 @@ fun ListsScreen(
                 )
 
                 is AsyncResult.Success -> when {
-                    state.reorderDraft != null -> ReorderList(
-                        items = state.reorderDraft.items,
-                        onMove = { from, to -> onAction(ListsAction.MoveItem(from, to)) },
-                        onCancel = { onAction(ListsAction.CancelReorder) },
-                        onSave = { onAction(ListsAction.SaveReorder) },
-                    )
-
                     lists.data.isEmpty() -> EmptyState(
                         icon = Icons.AutoMirrored.Outlined.FormatListBulleted,
                         title = "No lists yet",
@@ -136,11 +134,12 @@ fun ListsScreen(
                         modifier = Modifier.fillMaxSize(),
                     ) {
                         LazyVerticalGrid(
+                            state = gridState,
                             columns = GridCells.Adaptive(minSize = 104.dp),
                             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp + LocalTabBarInset.current),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalArrangement = Arrangement.spacedBy(18.dp),
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxSize().listGridDrag(drag),
                         ) {
                             item(span = { GridItemSpan(maxLineSpan) }, key = "filter") {
                                 FilterField(
@@ -159,6 +158,7 @@ fun ListsScreen(
                                         detailWorkId = work.id
                                     },
                                     enteringKeys = enteringKeys,
+                                    drag = drag,
                                 )
                             }
                         }
@@ -252,6 +252,7 @@ private fun LazyGridScope.listSection(
     onAdd: () -> Unit,
     onOpen: (Work) -> Unit,
     enteringKeys: Set<String>,
+    drag: ListGridDrag,
 ) {
     val collapsed = state.isCollapsed(list.id)
     item(span = { GridItemSpan(maxLineSpan) }, key = "header-${list.id}", contentType = "header") {
@@ -260,7 +261,6 @@ private fun LazyGridScope.listSection(
             collapsed = collapsed,
             onToggle = { onAction(ListsAction.ToggleCollapsed(list.id)) },
             onShuffle = { onAction(ListsAction.Shuffle(list.id)) },
-            onReorder = { onAction(ListsAction.StartReorder(list.id)) },
             onShare = { onAction(ListsAction.ShareList(list.id)) },
             onAdd = onAdd,
             modifier = Modifier.animateItem(),
@@ -289,7 +289,14 @@ private fun LazyGridScope.listSection(
         }
 
         is AsyncResult.Success -> {
-            val visible = state.visibleItems(list.id)
+            val shown = state.visibleItems(list.id)
+            // While a card of this list is lifted, lay the list out in the live drag order.
+            val visible = if (drag.listId == list.id) {
+                val byId = shown.associateBy { it.id }
+                drag.order.mapNotNull { byId[it] }
+            } else {
+                shown
+            }
             if (items.data.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }, key = "empty-${list.id}") {
                     EmptyState(
@@ -311,17 +318,35 @@ private fun LazyGridScope.listSection(
                     )
                 }
             }
-            items(visible, key = { "${list.id}/${it.id}" }, contentType = { "work" }) { work ->
-                val key = "${list.id}/${work.id}"
+            items(visible, key = { cardKey(list.id, it.id) }, contentType = { "work" }) { work ->
+                val key = cardKey(list.id, work.id)
                 val entering = remember { key in enteringKeys }
+                val lifted = drag.listId == list.id && drag.draggedId == work.id
                 ListItemCard(
                     work = work,
                     addedBy = work.addedByUserId?.let { state.members[it] },
                     isUpNext = work.id == state.upNextWorkId,
                     pulse = state.pulse?.takeIf { it.workId == work.id }?.id,
                     onClick = { onOpen(work) },
+                    lifted = lifted,
                     modifier = Modifier
-                        .animateItem(fadeInSpec = tween(200), fadeOutSpec = tween(200), placementSpec = tween(300, easing = EmphasizedEasing))
+                        .animateItem(
+                            fadeInSpec = tween(200),
+                            fadeOutSpec = tween(200),
+                            // The lifted card follows the finger; the others glide aside.
+                            placementSpec = if (lifted) null else tween(200, easing = EmphasizedEasing),
+                        )
+                        .then(
+                            if (lifted) {
+                                Modifier.zIndex(1f).graphicsLayer {
+                                    val d = drag.displacement()
+                                    translationX = d.x
+                                    translationY = d.y
+                                }
+                            } else {
+                                Modifier
+                            }
+                        )
                         .scaleInOnEnter(entering, from = 0.9f),
                 )
             }
@@ -335,7 +360,6 @@ private fun ListSectionHeader(
     collapsed: Boolean,
     onToggle: () -> Unit,
     onShuffle: () -> Unit,
-    onReorder: () -> Unit,
     onShare: () -> Unit,
     onAdd: () -> Unit,
     modifier: Modifier = Modifier,
@@ -358,26 +382,24 @@ private fun ListSectionHeader(
             modifier = Modifier.rotate(chevron),
         )
         Spacer(Modifier.width(6.dp))
-        Text(
-            list.title,
-            style = MaterialTheme.typography.titleMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f, fill = false),
-        )
-        Spacer(Modifier.width(6.dp))
-        Text(
-            "(${list.itemCount})",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.weight(1f))
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                list.title,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                "(${list.itemCount})",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         if (list.itemCount > 1) {
             IconButton(onClick = onShuffle) {
                 Icon(Icons.Default.Casino, contentDescription = "Random pick")
-            }
-            IconButton(onClick = onReorder) {
-                Icon(Icons.Outlined.SwapVert, contentDescription = "Reorder items")
             }
         }
         IconButton(onClick = onShare) {
@@ -412,61 +434,4 @@ private fun FilterField(query: String, onQueryChange: (String) -> Unit) {
         ),
         modifier = Modifier.fillMaxWidth(),
     )
-}
-
-@Composable
-private fun ReorderList(
-    items: List<Work>,
-    onMove: (Int, Int) -> Unit,
-    onCancel: () -> Unit,
-    onSave: () -> Unit,
-) {
-    Column(Modifier.fillMaxSize()) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = onCancel) { Text("Cancel") }
-            Text(
-                "Reorder",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f),
-                textAlign = TextAlign.Center,
-            )
-            Button(onClick = onSave) { Text("Save") }
-        }
-        LazyColumn(
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp + LocalTabBarInset.current),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            itemsIndexed(items, key = { _, w -> w.id }) { index, work ->
-                Row(
-                    modifier = Modifier
-                        .animateItem()
-                        .fillMaxWidth()
-                        .clip(MaterialTheme.shapes.small)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text(
-                        "${index + 1}",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.width(24.dp),
-                        textAlign = TextAlign.Center,
-                    )
-                    Poster(work.imageUrl, work.title, Modifier.width(40.dp), MaterialTheme.shapes.extraSmall)
-                    Text(work.title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f), maxLines = 2)
-                    IconButton(onClick = { onMove(index, index - 1) }, enabled = index > 0) {
-                        Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Move ${work.title} up")
-                    }
-                    IconButton(onClick = { onMove(index, index + 1) }, enabled = index < items.lastIndex) {
-                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Move ${work.title} down")
-                    }
-                }
-            }
-        }
-    }
 }

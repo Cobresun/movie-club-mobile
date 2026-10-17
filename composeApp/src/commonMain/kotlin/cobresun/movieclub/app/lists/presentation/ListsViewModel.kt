@@ -22,6 +22,7 @@ import cobresun.movieclub.app.lists.domain.ListedWork
 import cobresun.movieclub.app.member.domain.MemberRepository
 import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.lists.domain.CollapsedListsStore
+import cobresun.movieclub.app.lists.domain.withSubsetReordered
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableSharedFlow
 import cobresun.movieclub.app.core.domain.ShareLinks
@@ -48,8 +49,6 @@ data class ListsState(
     val pulse: CardPulse? = null,
     /** Non-null while the random picker runs. */
     val shuffle: ShuffleState? = null,
-    /** Non-null while reordering one list. */
-    val reorderDraft: ReorderDraft? = null,
     /** Every item across the user lists, for picking a review in the Add review sheet. */
     val allItems: AsyncResult<List<ListedWork>> = AsyncResult.Loading,
 ) {
@@ -75,8 +74,6 @@ data class ListsState(
 
 /** [id] is fresh per pulse so the same card can glow twice in a row. */
 data class CardPulse(val workId: String, val id: Int)
-
-data class ReorderDraft(val listId: String, val items: List<Work>)
 
 data class ShuffleState(val listId: String, val candidates: List<Work>, val selected: Work)
 
@@ -111,10 +108,12 @@ sealed interface ListsAction {
     /** (Re)loads [ListsState.allItems] for the Add review sheet. */
     data object LoadAllItems : ListsAction
 
-    data class StartReorder(val listId: String) : ListsAction
-    data class MoveItem(val from: Int, val to: Int) : ListsAction
-    data object SaveReorder : ListsAction
-    data object CancelReorder : ListsAction
+    /**
+     * A drag-and-drop finished: [workIds] are the list's shown items (all of
+     * them, or those matching the filter) in their new order; [droppedId] is
+     * the card that was dragged.
+     */
+    data class Reorder(val listId: String, val workIds: List<String>, val droppedId: String) : ListsAction
 
     data class Shuffle(val listId: String) : ListsAction
     data class ShareList(val listId: String) : ListsAction
@@ -168,19 +167,7 @@ class ListsViewModel(
             }
             is ListsAction.MoveToReviews -> moveToReviews(action.work, action.fromListId)
             ListsAction.LoadAllItems -> loadAllItems()
-            is ListsAction.StartReorder -> _state.update {
-                it.copy(reorderDraft = ReorderDraft(action.listId, it.itemsOrEmpty(action.listId)))
-            }
-
-            is ListsAction.MoveItem -> _state.update { s ->
-                val draft = s.reorderDraft ?: return@update s
-                val items = draft.items
-                if (action.to !in items.indices || action.from !in items.indices) return@update s
-                s.copy(reorderDraft = draft.copy(items = items.toMutableList().apply { add(action.to, removeAt(action.from)) }))
-            }
-
-            ListsAction.SaveReorder -> saveReorder()
-            ListsAction.CancelReorder -> _state.update { it.copy(reorderDraft = null) }
+            is ListsAction.Reorder -> reorder(action.listId, action.workIds, action.droppedId)
             is ListsAction.Shuffle -> shuffle(action.listId)
             is ListsAction.ShareList -> _state.value.list(action.listId)?.let { list ->
                 _events.tryEmit(ListsEvent.Share(ShareLinks.list(clubSlug, list.id), list.title))
@@ -471,20 +458,19 @@ class ListsViewModel(
         }
     }
 
-    private fun saveReorder() {
-        val listId = _state.value.reorderDraft?.listId ?: return
-        val draft = _state.value.reorderDraft?.items ?: return
+    private fun reorder(listId: String, workIds: List<String>, droppedId: String) {
         val before = (_state.value.itemsByList[listId] as? AsyncResult.Success)?.data ?: return
-        _state.update { it.copy(reorderDraft = null) }
-        if (draft.map { it.id } == before.map { it.id }) return
-        setItems(listId, draft)
+        val byId = before.associateBy { it.id }
+        val moved = workIds.mapNotNull { byId[it] }
+        val after = before.withSubsetReordered(moved) { it.id }
+        if (after.map { it.id } == before.map { it.id }) return
+        setItems(listId, after)
+        pulse(droppedId)
         viewModelScope.launch {
-            listsRepository.reorderItems(clubSlug, listId, draft.map { it.id })
-                .onSuccess { message("Order saved") }
-                .onError { error ->
-                    setItems(listId, before)
-                    emitError(error, "save the new order")
-                }
+            listsRepository.reorderItems(clubSlug, listId, moved.map { it.id }).onError { error ->
+                setItems(listId, before)
+                emitError(error, "save the new order") { reorder(listId, workIds, droppedId) }
+            }
         }
     }
 
