@@ -49,6 +49,7 @@ fun JoinClubScreenRoot(
     viewModel: JoinClubViewModel = koinViewModel(),
     onNavigateBack: () -> Unit,
     onJoined: (clubSlug: String) -> Unit,
+    memberClubSlugs: Set<String> = emptySet(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) {
@@ -58,7 +59,18 @@ fun JoinClubScreenRoot(
             }
         }
     }
-    JoinClubScreen(state, viewModel::onAction, onNavigateBack)
+    // Like the web app: an invite to a club you're already in just takes you there.
+    val alreadyMember = state.invite?.slug?.let { it in memberClubSlugs } == true
+    JoinClubScreen(
+        state = state,
+        onAction = { action ->
+            val invite = state.invite
+            if (action == JoinClubAction.OnJoin && alreadyMember && invite != null) onJoined(invite.slug)
+            else viewModel.onAction(action)
+        },
+        onNavigateBack = onNavigateBack,
+        alreadyMember = alreadyMember,
+    )
 }
 
 @Composable
@@ -66,6 +78,7 @@ fun JoinClubScreen(
     state: JoinClubState,
     onAction: (JoinClubAction) -> Unit,
     onNavigateBack: () -> Unit,
+    alreadyMember: Boolean = false,
 ) {
     Scaffold(
         topBar = { SettingsTopBar("Join a club", onNavigateBack) },
@@ -140,7 +153,7 @@ fun JoinClubScreen(
                             }
                             Spacer(Modifier.height(12.dp))
                             Text(
-                                "You're invited to join",
+                                if (alreadyMember) "You're already a member of" else "You're invited to join",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                             )
@@ -156,7 +169,10 @@ fun JoinClubScreen(
                                     if (state.isJoining) {
                                         CircularProgressIndicator(Modifier.size(20.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
                                     } else {
-                                        Text("Join ${invite.clubName}", fontWeight = FontWeight.SemiBold)
+                                        Text(
+                                            if (alreadyMember) "Open ${invite.clubName}" else "Join ${invite.clubName}",
+                                            fontWeight = FontWeight.SemiBold,
+                                        )
                                     }
                                 }
                             }

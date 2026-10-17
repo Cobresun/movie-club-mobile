@@ -275,7 +275,9 @@ private fun ClubNavHost(
         }
 
         composable<Route.JoinClub> {
+            val memberState by memberViewModel.state.collectAsStateWithLifecycle()
             JoinClubScreenRoot(
+                memberClubSlugs = (memberState.clubs as? AsyncResult.Success)?.data.orEmpty().map { it.slug }.toSet(),
                 onNavigateBack = { navController.popBackStack() },
                 onJoined = { clubSlug ->
                     memberViewModel.refresh()
