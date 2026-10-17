@@ -91,6 +91,7 @@ fun ClubScreenRoot(
     awardsViewModel: AwardsViewModel = koinViewModel(),
 ) {
     val selectedTab by clubViewModel.selectedTab.collectAsStateWithLifecycle()
+    val tabResolved by clubViewModel.tabResolved.collectAsStateWithLifecycle()
     val listsState by listsViewModel.state.collectAsStateWithLifecycle()
     val reviewsState by reviewsViewModel.state.collectAsStateWithLifecycle()
     val awardsState by awardsViewModel.state.collectAsStateWithLifecycle()
@@ -170,8 +171,11 @@ fun ClubScreenRoot(
             }
         }
     }
-    LaunchedEffect(awardsState.isAvailable, selectedTab) {
-        if (!awardsState.isAvailable && selectedTab == ClubTab.AWARDS) clubViewModel.selectTab(ClubTab.REVIEWS)
+    // The club name arrives with the availability check, so an empty name means "not known yet":
+    // don't bounce a remembered (or linked) Awards tab before the check lands.
+    val awardsKnown = awardsState.clubName.isNotEmpty()
+    LaunchedEffect(awardsKnown, awardsState.isAvailable, selectedTab) {
+        if (awardsKnown && !awardsState.isAvailable && selectedTab == ClubTab.AWARDS) clubViewModel.selectTab(ClubTab.REVIEWS)
     }
 
     val stateHolder = rememberSaveableStateHolder()
@@ -211,6 +215,8 @@ fun ClubScreenRoot(
             ),
             label = "club-tab",
         ) { tab ->
+            // Hold the content back for the moment it takes to restore this club's last tab.
+            if (!tabResolved) return@AnimatedContent
             stateHolder.SaveableStateProvider(tab.name) {
               CompositionLocalProvider(
                 LocalSnackbarHostState provides snackbarHostState,
