@@ -47,6 +47,8 @@ sealed interface WorkDetails {
         val majorCastNames: List<String> = emptyList(),
         /** IMDb title id ("tt0078748"), for the IMDb link. */
         val imdbId: String? = null,
+        /** Director name -> TMDB profile photo, for those who have one (Wrapped, stats leaderboards). */
+        val directorImageUrls: Map<String, String> = emptyMap(),
     ) : WorkDetails
 
     data class Book(

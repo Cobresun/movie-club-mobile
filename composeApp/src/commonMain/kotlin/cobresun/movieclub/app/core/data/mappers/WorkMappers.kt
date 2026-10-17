@@ -72,6 +72,10 @@ fun JsonElement?.toWorkDetails(): WorkDetails? {
             voteAverage = obj.double("vote_average"),
             backdropUrl = tmdbImageUrl(obj.string("backdrop_path"), "w780"),
             imdbId = obj.string("imdb_id")?.takeIf { it.isNotBlank() },
+            directorImageUrls = obj.objectList("directors").mapNotNull { d ->
+                val name = d.string("name") ?: return@mapNotNull null
+                tmdbImageUrl(d.string("profilePath"), "w185")?.let { name to it }
+            }.toMap(),
             cast = obj.objectList("actors").mapNotNull { actor ->
                 val name = actor.string("name") ?: return@mapNotNull null
                 CastMember(

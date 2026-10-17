@@ -91,4 +91,14 @@ class WorkMappersTest {
     fun treatsNullAsNoDetails() {
         assertNull(json.parseToJsonElement("null").toWorkDetails())
     }
+
+    @Test
+    fun mapsDirectorPhotosWhenTheyHaveOne() {
+        val element = json.parseToJsonElement(
+            """{"kind":"movie","directors":[{"name":"Ridley Scott","profilePath":"/r.jpg"},{"name":"Anon","profilePath":null}]}"""
+        )
+        val details = assertIs<WorkDetails.Movie>(element.toWorkDetails())
+        assertEquals(listOf("Ridley Scott", "Anon"), details.directors)
+        assertEquals(mapOf("Ridley Scott" to "https://image.tmdb.org/t/p/w185/r.jpg"), details.directorImageUrls)
+    }
 }

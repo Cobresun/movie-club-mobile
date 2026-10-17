@@ -242,7 +242,10 @@ private fun topPeople(reviews: List<Review>, people: (Review) -> List<CreditedPe
 }
 
 fun computeTopDirectors(reviews: List<Review>): List<PersonStat> =
-    topPeople(reviews) { r -> r.work.movie?.directors.orEmpty().map { CreditedPerson(it, null) } }
+    topPeople(reviews) { r ->
+        val movie = r.work.movie
+        movie?.directors.orEmpty().map { CreditedPerson(it, movie?.directorImageUrls?.get(it)) }
+    }
 
 /** Cast isn't in the reviews payload; [castByExternalId] comes from the cast endpoint. */
 fun computeTopActors(reviews: List<Review>, castByExternalId: Map<String, List<CreditedPerson>>): List<PersonStat> =
