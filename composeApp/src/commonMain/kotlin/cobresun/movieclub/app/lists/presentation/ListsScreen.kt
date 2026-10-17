@@ -40,6 +40,8 @@ import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material.icons.outlined.VideoLibrary
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import cobresun.movieclub.app.core.domain.WorkType
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -347,7 +349,7 @@ private fun ListContent(
                     if (all.isEmpty()) {
                         item(span = { GridItemSpan(maxLineSpan) }, key = "empty") {
                             EmptyState(
-                                icon = Icons.Outlined.VideoLibrary,
+                                icon = if (workType == WorkType.BOOK) Icons.AutoMirrored.Outlined.MenuBook else Icons.Outlined.VideoLibrary,
                                 title = "Nothing here yet",
                                 message = "Search for a ${workType.noun} and add it to ${state.selectedList?.title ?: "this list"}.",
                                 actionLabel = "Add a ${workType.noun}",
