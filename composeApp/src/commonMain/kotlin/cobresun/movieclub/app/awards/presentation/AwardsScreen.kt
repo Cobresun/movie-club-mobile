@@ -138,6 +138,7 @@ fun AwardsScreen(
             category = category,
             year = season.year,
             candidates = state.candidatesFor(category),
+            hasReviewsForYear = state.reviewed.any { it.reviewedYear == season.year },
             onPick = {
                 onAction(AwardsAction.Nominate(category.title, it.movieId))
                 picking = null

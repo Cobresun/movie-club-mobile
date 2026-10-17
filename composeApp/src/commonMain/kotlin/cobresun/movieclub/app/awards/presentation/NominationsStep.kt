@@ -96,20 +96,9 @@ private fun NominationProgress(done: Int, total: Int) {
     SectionCard(Modifier.padding(horizontal = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Your nominations", style = MaterialTheme.typography.titleMedium)
-                Text(
-                    "Pick up to $NOMINATIONS_PER_MEMBER of the movies the club reviewed this year for each category.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Text("Your nominations", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("$done / $total categories", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             }
-            Spacer(Modifier.width(12.dp))
-            Text(
-                "$done/$total",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.secondary,
-            )
         }
         LinearProgressIndicator(
             progress = { if (total == 0) 0f else done.toFloat() / total },
@@ -131,17 +120,14 @@ private fun NominationCard(
 ) {
     SectionCard(modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(category.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                val others = category.nominations.size - mine.size
-                if (others > 0) {
-                    Text(
-                        "$others other nominee${if (others == 1) "" else "s"} from the club",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+            // Other members' picks stay private until voting opens, like the web.
+            Text(
+                category.title,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
             Pill("${mine.size}/$NOMINATIONS_PER_MEMBER", emphasized = mine.size == NOMINATIONS_PER_MEMBER)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -212,12 +198,13 @@ fun NominationPickerSheet(
     category: AwardCategory,
     year: Int,
     candidates: List<NominationCandidate>,
+    /** Whether the club reviewed any movies in [year] at all. */
+    hasReviewsForYear: Boolean,
     onPick: (NominationCandidate) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
     val visible = candidates.filter { query.isBlank() || it.title.contains(query.trim(), ignoreCase = true) }
-    val nominatedByOthers = category.nominations.map { it.movieId }.toSet()
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -228,7 +215,7 @@ fun NominationPickerSheet(
                 Text("NOMINATE FOR", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.secondary)
                 Text(category.title, style = MaterialTheme.typography.headlineSmall)
                 Text(
-                    "Movies the club reviewed in $year",
+                    "$year Reviews",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -254,7 +241,8 @@ fun NominationPickerSheet(
                 EmptyState(
                     icon = Icons.Outlined.MovieFilter,
                     title = "Nothing to nominate",
-                    message = "Only movies added to Reviews in $year can be nominated, and you've already picked them all here.",
+                    message = if (hasReviewsForYear) "You've nominated every movie the club reviewed this year."
+                    else "The club didn't review any movies in $year, so there's nothing to nominate.",
                 )
             } else {
                 LazyVerticalGrid(
@@ -270,23 +258,7 @@ fun NominationPickerSheet(
                                 .clip(MaterialTheme.shapes.small)
                                 .clickable(onClickLabel = "Nominate ${candidate.title}") { onPick(candidate) },
                         ) {
-                            Box {
-                                Poster(candidate.posterUrl, candidate.title, Modifier.fillMaxWidth())
-                                if (candidate.movieId in nominatedByOthers) {
-                                    Text(
-                                        "NOMINATED",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onTertiary,
-                                        textAlign = TextAlign.Center,
-                                        modifier = Modifier
-                                            .align(Alignment.BottomCenter)
-                                            .fillMaxWidth()
-                                            .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.9f))
-                                            .padding(vertical = 3.dp),
-                                    )
-                                }
-                            }
+                            Poster(candidate.posterUrl, candidate.title, Modifier.fillMaxWidth())
                             Text(
                                 candidate.title,
                                 style = MaterialTheme.typography.labelMedium,
