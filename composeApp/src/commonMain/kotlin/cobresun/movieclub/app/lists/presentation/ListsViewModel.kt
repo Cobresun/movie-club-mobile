@@ -371,7 +371,7 @@ class ListsViewModel(
                 .onSuccess { message(successText) }
                 .onError { error ->
                     _state.update { it.copy(upNextWorkId = previous) }
-                    emitError(error, "update Up Next")
+                    emitError(error, "update Up Next") { setUpNext(workId, successText) }
                 }
         }
     }
