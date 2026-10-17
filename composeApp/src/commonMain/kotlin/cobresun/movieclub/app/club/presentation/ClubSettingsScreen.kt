@@ -1,6 +1,6 @@
 package cobresun.movieclub.app.club.presentation
 
-import androidx.compose.foundation.background
+import androidx.compose.runtime.getValue
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.Check
@@ -25,27 +25,20 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Forum
-import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material.icons.filled.Title
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -55,11 +48,9 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -73,17 +64,14 @@ import cobresun.movieclub.app.core.domain.Club
 import cobresun.movieclub.app.core.domain.ClubType
 import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.member.presentation.components.Badge
-import cobresun.movieclub.app.member.presentation.components.ConfirmDialog
 import cobresun.movieclub.app.member.presentation.components.ErrorMessage
 import cobresun.movieclub.app.member.presentation.components.MemberAvatar
 import cobresun.movieclub.app.member.presentation.components.SettingsDivider
-import cobresun.movieclub.app.member.presentation.components.SettingsFooter
 import cobresun.movieclub.app.member.presentation.components.SettingsGroup
 import cobresun.movieclub.app.member.presentation.components.SettingsRow
 import cobresun.movieclub.app.member.presentation.components.SettingsSectionHeader
-import cobresun.movieclub.app.member.presentation.components.SettingsSwitchRow
 import cobresun.movieclub.app.member.presentation.components.SettingsTopBar
-import cobresun.movieclub.app.member.presentation.components.TextInputDialog
+import cobresun.movieclub.app.core.presentation.components.TextInputSheet
 import cobresun.movieclub.app.member.presentation.components.icon
 import cobresun.movieclub.app.member.presentation.components.label
 import cobresun.movieclub.app.member.presentation.platform.rememberShareSheet
@@ -181,8 +169,11 @@ fun ClubSettingsScreen(
 
     val loadedClub = (club as? AsyncResult.Success)?.data
     when (state.editing) {
-        EditField.NAME -> TextInputDialog(
+        EditField.NAME -> TextInputSheet(
             title = "Club name",
+            confirmLabel = "Save",
+            requireChange = true,
+            dismissOnConfirm = false,
             initialValue = loadedClub?.name.orEmpty(),
             label = "Club name",
             isSaving = state.isSaving,
@@ -193,8 +184,11 @@ fun ClubSettingsScreen(
             onDismiss = { onAction(ClubSettingsAction.OnDismissEdit) },
             onConfirm = { onAction(ClubSettingsAction.OnSaveName(it.trim())) },
         )
-        EditField.SLUG -> TextInputDialog(
+        EditField.SLUG -> TextInputSheet(
             title = "Club link",
+            confirmLabel = "Save",
+            requireChange = true,
+            dismissOnConfirm = false,
             initialValue = loadedClub?.slug.orEmpty(),
             label = "Club link",
             prefix = SLUG_PREFIX,

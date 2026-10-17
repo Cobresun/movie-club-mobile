@@ -1,5 +1,7 @@
 package cobresun.movieclub.app.reviews.presentation
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import cobresun.movieclub.app.core.presentation.components.AppBottomSheet
 import cobresun.movieclub.app.core.presentation.components.rememberAppSheetState
 import androidx.compose.material.icons.outlined.Edit
@@ -13,7 +15,6 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toLocalDateTime
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -71,14 +72,11 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -87,7 +85,7 @@ import cobresun.movieclub.app.core.presentation.components.SheetSnackbarHost
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.WorkDetails
 import cobresun.movieclub.app.core.presentation.components.Avatar
-import cobresun.movieclub.app.core.presentation.components.ConfirmDialog
+import cobresun.movieclub.app.core.presentation.components.ConfirmSheet
 import cobresun.movieclub.app.core.presentation.components.SectionLabel
 import cobresun.movieclub.app.core.presentation.components.ShimmerBox
 import cobresun.movieclub.app.core.presentation.components.WorkHero
@@ -282,7 +280,8 @@ fun ReviewDetailSheet(
     }
 
     if (confirmRemove) {
-        ConfirmDialog(
+        ConfirmSheet(
+            destructive = true,
             title = "Delete review?",
             message = "This removes the whole review for the club — the ${noun} and everyone's scores — and can't be undone. " +
                 "To drop just your own score, use Remove my score in the score panel.",

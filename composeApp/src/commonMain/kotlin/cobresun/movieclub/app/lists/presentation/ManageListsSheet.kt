@@ -1,5 +1,7 @@
 package cobresun.movieclub.app.lists.presentation
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import cobresun.movieclub.app.core.presentation.components.AppBottomSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,10 +32,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,7 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cobresun.movieclub.app.awards.presentation.components.DragHandle
 import cobresun.movieclub.app.awards.presentation.components.ReorderableColumn
-import cobresun.movieclub.app.core.presentation.components.ConfirmDialog
+import cobresun.movieclub.app.core.presentation.components.ConfirmSheet
 import cobresun.movieclub.app.lists.domain.WorkList
 
 /**
@@ -164,7 +164,8 @@ fun ManageListsSheet(
     }
 
     deleting?.let { list ->
-        ConfirmDialog(
+        ConfirmSheet(
+            destructive = true,
             title = "Delete list",
             message = "Are you sure? ${noun.replaceFirstChar { it.uppercase() }}s on this list will not be deleted from the club.",
             confirmLabel = "Delete",

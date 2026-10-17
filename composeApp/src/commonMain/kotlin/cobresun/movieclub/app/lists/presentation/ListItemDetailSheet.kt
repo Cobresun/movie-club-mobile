@@ -1,5 +1,7 @@
 package cobresun.movieclub.app.lists.presentation
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import cobresun.movieclub.app.core.presentation.components.AppBottomSheet
 import cobresun.movieclub.app.core.presentation.components.rememberAppSheetState
 import androidx.compose.animation.animateColorAsState
@@ -39,11 +41,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,7 +60,7 @@ import cobresun.movieclub.app.core.domain.WorkDetails
 import cobresun.movieclub.app.core.domain.WorkType
 import cobresun.movieclub.app.core.platform.HapticFeedback
 import cobresun.movieclub.app.core.presentation.components.Avatar
-import cobresun.movieclub.app.core.presentation.components.ConfirmDialog
+import cobresun.movieclub.app.core.presentation.components.ConfirmSheet
 import cobresun.movieclub.app.core.presentation.components.SheetSnackbarHost
 import cobresun.movieclub.app.core.presentation.components.ShimmerBox
 import cobresun.movieclub.app.core.presentation.components.WorkHero
@@ -197,7 +197,8 @@ fun ListItemDetailSheet(
     }
 
     if (confirmRemove) {
-        ConfirmDialog(
+        ConfirmSheet(
+            destructive = true,
             title = "Remove from list",
             message = "Remove ${work.title} from this list?",
             confirmLabel = "Remove",

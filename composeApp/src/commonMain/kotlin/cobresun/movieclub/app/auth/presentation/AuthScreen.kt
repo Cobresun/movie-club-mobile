@@ -1,5 +1,7 @@
 package cobresun.movieclub.app.auth.presentation
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -36,10 +38,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -261,7 +261,7 @@ private fun LoginForm(
             Text("Forgot password?")
         }
         if (showForgotPassword) {
-            ForgotPasswordDialog(
+            ForgotPasswordSheet(
                 initialEmail = email.trim(),
                 onDismiss = { showForgotPassword = false }
             )

@@ -1,5 +1,7 @@
 package cobresun.movieclub.app.awards.presentation
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import cobresun.movieclub.app.core.presentation.components.LocalTabBarInset
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
@@ -44,11 +46,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -66,8 +66,6 @@ import cobresun.movieclub.app.core.presentation.components.EmptyState
 import cobresun.movieclub.app.core.presentation.components.ErrorState
 import cobresun.movieclub.app.core.presentation.components.ShimmerBox
 import cobresun.movieclub.app.core.presentation.toUserMessage
-import cobresun.movieclub.app.core.platform.HapticFeedback
-import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -240,7 +238,6 @@ private fun SeasonContent(
 @Composable
 private fun PhaseControls(state: AwardsState, season: AwardsSeason, onAction: (AwardsAction) -> Unit) {
     val next = season.step.phase.next ?: return
-    val haptics = koinInject<HapticFeedback>()
     var confirming by rememberSaveable { mutableStateOf(false) }
     val waitingOn = state.waitingOn
     val blocked = state.advanceBlocked
@@ -293,10 +290,7 @@ private fun PhaseControls(state: AwardsState, season: AwardsSeason, onAction: (A
             title = "${next.label}?",
             message = "${next.confirm} There's no going back.",
             confirmLabel = next.label,
-            onConfirm = {
-                haptics.performConfirm()
-                onAction(AwardsAction.AdvanceStep)
-            },
+            onConfirm = { onAction(AwardsAction.AdvanceStep) },
             onDismiss = { confirming = false },
         )
     }

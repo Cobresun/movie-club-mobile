@@ -1,5 +1,7 @@
 package cobresun.movieclub.app.awards.presentation
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,10 +30,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -48,7 +48,7 @@ import cobresun.movieclub.app.awards.domain.isSameCategoryTitle
 import cobresun.movieclub.app.awards.presentation.components.DragHandle
 import cobresun.movieclub.app.awards.presentation.components.ReorderableColumn
 import cobresun.movieclub.app.core.presentation.components.EmptyState
-import cobresun.movieclub.app.core.presentation.components.TextInputDialog
+import cobresun.movieclub.app.core.presentation.components.TextInputSheet
 
 fun LazyListScope.categoriesStep(
     season: AwardsSeason,
@@ -116,7 +116,7 @@ private fun CategoryList(categories: List<AwardCategory>, onAction: (AwardsActio
     }
 
     renaming?.let { title ->
-        TextInputDialog(
+        TextInputSheet(
             title = "Rename category",
             initialValue = title,
             confirmLabel = "Save",

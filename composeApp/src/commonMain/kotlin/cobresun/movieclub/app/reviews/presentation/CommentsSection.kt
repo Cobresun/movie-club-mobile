@@ -1,5 +1,7 @@
 package cobresun.movieclub.app.reviews.presentation
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -32,12 +34,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -49,7 +49,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.presentation.components.Avatar
-import cobresun.movieclub.app.core.presentation.components.ConfirmDialog
+import cobresun.movieclub.app.core.presentation.components.ConfirmSheet
 import cobresun.movieclub.app.core.presentation.components.SectionLabel
 import cobresun.movieclub.app.core.presentation.components.ShimmerBox
 import cobresun.movieclub.app.core.presentation.formatShort
@@ -233,7 +233,8 @@ private fun CommentRow(
     }
 
     if (confirmDelete) {
-        ConfirmDialog(
+        ConfirmSheet(
+            destructive = true,
             title = "Delete comment?",
             message = "Are you sure you want to delete this comment? This action cannot be undone.",
             confirmLabel = "Delete",

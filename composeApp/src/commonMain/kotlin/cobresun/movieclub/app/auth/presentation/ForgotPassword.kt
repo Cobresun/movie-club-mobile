@@ -1,30 +1,21 @@
 package cobresun.movieclub.app.auth.presentation
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import cobresun.movieclub.app.core.domain.onError
+import cobresun.movieclub.app.core.presentation.components.FormSheet
 import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.member.domain.AccountRepository
 import cobresun.movieclub.app.member.presentation.components.toUserMessage
@@ -59,7 +50,7 @@ class ForgotPasswordViewModel(
 }
 
 @Composable
-fun ForgotPasswordDialog(
+fun ForgotPasswordSheet(
     initialEmail: String,
     onDismiss: () -> Unit,
     viewModel: ForgotPasswordViewModel = koinViewModel(),
@@ -72,52 +63,31 @@ fun ForgotPasswordDialog(
     }
     val sentTo = state.sentTo
 
-    AlertDialog(
-        onDismissRequest = { if (!state.isSending) close() },
-        shape = RoundedCornerShape(20.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        title = { Text(if (sentTo == null) "Reset password" else "Check your email") },
-        text = {
-            if (sentTo != null) {
-                Text(
-                    "If an account exists for $sentTo, we've sent a link to reset your password.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        "Enter your account email and we'll send you a reset link.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text("Email") },
-                        singleLine = true,
-                        enabled = !state.isSending,
-                        isError = state.error != null,
-                        supportingText = state.error?.let { { Text(it) } },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            if (sentTo != null) {
-                TextButton(onClick = close) { Text("Done", fontWeight = FontWeight.SemiBold) }
-            } else {
-                TextButton(
-                    onClick = { viewModel.send(email) },
-                    enabled = !state.isSending && isPlausibleEmail(email),
-                ) {
-                    if (state.isSending) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                    else Text("Send link", fontWeight = FontWeight.SemiBold)
-                }
-            }
-        },
-        dismissButton = if (sentTo == null) {
-            { TextButton(onClick = close, enabled = !state.isSending) { Text("Cancel") } }
-        } else null,
-    )
+    // One sheet that turns into the confirmation, rather than swapping sheets.
+    FormSheet(
+        title = if (sentTo == null) "Reset password" else "Check your email",
+        message = if (sentTo == null) "Enter your account email and we'll send you a reset link."
+        else "If an account exists for $sentTo, we've sent a link to reset your password.",
+        confirmLabel = if (sentTo == null) "Send link" else "Done",
+        showCancel = sentTo == null,
+        confirmEnabled = sentTo != null || isPlausibleEmail(email),
+        loading = state.isSending,
+        dismissOnConfirm = sentTo != null,
+        onConfirm = { if (sentTo == null) viewModel.send(email) },
+        onDismiss = close,
+    ) {
+        if (sentTo == null) {
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Email") },
+                singleLine = true,
+                enabled = !state.isSending,
+                isError = state.error != null,
+                supportingText = state.error?.let { { Text(it) } },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
 }

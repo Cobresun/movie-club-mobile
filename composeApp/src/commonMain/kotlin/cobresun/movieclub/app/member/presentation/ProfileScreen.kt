@@ -1,5 +1,7 @@
 package cobresun.movieclub.app.member.presentation
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
@@ -35,14 +37,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.Badge
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,13 +48,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,15 +64,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.member.domain.Member
-import cobresun.movieclub.app.member.presentation.components.ConfirmDialog
 import cobresun.movieclub.app.member.presentation.components.ErrorMessage
 import cobresun.movieclub.app.member.presentation.components.MemberAvatar
-import cobresun.movieclub.app.member.presentation.components.SettingsDivider
 import cobresun.movieclub.app.member.presentation.components.SettingsGroup
 import cobresun.movieclub.app.member.presentation.components.SettingsRow
 import cobresun.movieclub.app.member.presentation.components.SettingsSectionHeader
 import cobresun.movieclub.app.member.presentation.components.SettingsTopBar
-import cobresun.movieclub.app.member.presentation.components.TextInputDialog
 import cobresun.movieclub.app.member.presentation.platform.rememberImagePicker
 import org.koin.compose.viewmodel.koinViewModel
 
