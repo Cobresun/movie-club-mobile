@@ -175,8 +175,8 @@ private fun RankRow(
 }
 
 @Composable
-fun RankBadge(rank: Int) {
-    val first = rank == 1
+fun RankBadge(rank: Int, highlighted: Boolean = rank == 1) {
+    val first = highlighted
     Box(
         Modifier
             .size(28.dp)

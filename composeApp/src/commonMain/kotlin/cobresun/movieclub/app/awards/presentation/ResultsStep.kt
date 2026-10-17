@@ -1,6 +1,10 @@
 package cobresun.movieclub.app.awards.presentation
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -31,6 +35,20 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import cobresun.movieclub.app.core.platform.HapticFeedback
+import cobresun.movieclub.app.core.presentation.rememberReducedMotion
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -39,7 +57,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cobresun.movieclub.app.awards.domain.AwardCategory
-import cobresun.movieclub.app.awards.domain.AwardsStep
 import cobresun.movieclub.app.awards.domain.ScoredNomination
 import cobresun.movieclub.app.awards.domain.scoreAward
 import cobresun.movieclub.app.core.presentation.components.Avatar
@@ -55,6 +72,9 @@ fun LazyListScope.resultsStep(state: AwardsState, onAction: (AwardsAction) -> Un
 @Composable
 private fun ResultCard(state: AwardsState, category: AwardCategory, onAction: (AwardsAction) -> Unit, modifier: Modifier) {
     val gold = MaterialTheme.colorScheme.tertiary
+    val haptics = koinInject<HapticFeedback>()
+    // Only celebrate a reveal that happens now, not winners already shown on open.
+    var justRevealed by remember(category.title) { mutableStateOf(false) }
     Column(
         modifier
             .fillMaxWidth()
@@ -68,13 +88,19 @@ private fun ResultCard(state: AwardsState, category: AwardCategory, onAction: (A
         }
         AnimatedContent(
             targetState = state.isRevealed(category),
-            transitionSpec = { (fadeIn(tween(400)) + expandVertically(tween(400))) togetherWith fadeOut(tween(150)) },
+            transitionSpec = {
+                (fadeIn(tween(300, delayMillis = 100)) + expandVertically(tween(500, easing = RevealEasing), expandFrom = Alignment.Top)) togetherWith
+                    fadeOut(tween(150))
+            },
             label = "reveal",
         ) { revealed ->
             if (!revealed) {
-                Envelope { onAction(AwardsAction.Reveal(category.title)) }
+                Envelope {
+                    justRevealed = true
+                    onAction(AwardsAction.Reveal(category.title))
+                }
             } else {
-                Revealed(state, category)
+                Revealed(state, category, celebrate = justRevealed, onCelebrate = { haptics.performSuccess() })
             }
         }
     }
@@ -103,11 +129,12 @@ private fun Envelope(onReveal: () -> Unit) {
 }
 
 @Composable
-private fun Revealed(state: AwardsState, category: AwardCategory) {
-    val standings = scoreAward(category.nominations).results
+private fun Revealed(state: AwardsState, category: AwardCategory, celebrate: Boolean, onCelebrate: () -> Unit) {
+    val scored = scoreAward(category.nominations)
+    val standings = scored.results
     if (standings.isEmpty()) {
         Text(
-            "No nominees in this category.",
+            "Nobody was nominated for this category.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(16.dp),
@@ -116,26 +143,39 @@ private fun Revealed(state: AwardsState, category: AwardCategory) {
     }
     val winners = standings.filter { it.winner }
     Column(Modifier.fillMaxWidth()) {
-        if (winners.isNotEmpty()) WinnerHero(winners)
-        val rest = standings.filterNot { it.winner }
-        if (rest.isNotEmpty() || state.members.isNotEmpty()) {
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(horizontal = 16.dp))
-            Text(
-                "FULL RANKING",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp),
-            )
-            Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                standings.forEach { StandingRow(it, state) }
-            }
+        if (winners.isNotEmpty()) WinnerHero(winners, celebrate, onCelebrate)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.padding(horizontal = 16.dp))
+        Text(
+            "FULL RANKING",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp),
+        )
+        Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            standings.forEach { StandingRow(it, scored.voters, state) }
         }
     }
 }
 
+/**
+ * The winning poster(s). On a fresh reveal they spring up from slightly small
+ * while a soft gold glow blooms behind them and settles, with a success haptic.
+ */
 @Composable
-private fun WinnerHero(winners: List<ScoredNomination>) {
+private fun WinnerHero(winners: List<ScoredNomination>, celebrate: Boolean, onCelebrate: () -> Unit) {
     val gold = MaterialTheme.colorScheme.tertiary
+    val reducedMotion = rememberReducedMotion()
+    val animate = celebrate && !reducedMotion
+    val scale = remember { Animatable(if (animate) 0.82f else 1f) }
+    val glow = remember { Animatable(if (animate) 0f else RestingGlow) }
+    LaunchedEffect(Unit) {
+        if (!celebrate) return@LaunchedEffect
+        onCelebrate()
+        if (!animate) return@LaunchedEffect
+        launch { scale.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessLow)) }
+        glow.animateTo(0.55f, tween(350, easing = RevealEasing))
+        glow.animateTo(RestingGlow, tween(900))
+    }
     Box(
         Modifier
             .fillMaxWidth()
@@ -146,16 +186,41 @@ private fun WinnerHero(winners: List<ScoredNomination>) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(
-                if (winners.size > 1) "IT'S A TIE" else "WINNER",
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = gold,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.EmojiEvents, null, tint = gold, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    if (winners.size > 1) "IT'S A TIE" else "WINNER",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = gold,
+                )
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 winners.forEach { standing ->
-                    Column(Modifier.width(132.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(Modifier.border(2.dp, gold, MaterialTheme.shapes.small)) {
+                    Column(
+                        Modifier
+                            .width(132.dp)
+                            .semantics(mergeDescendants = true) {}
+                            .clearAndSetSemantics { contentDescription = "${standing.nomination.title}, winner" },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Box(
+                            Modifier
+                                .graphicsLayer { scaleX = scale.value; scaleY = scale.value }
+                                .drawBehind {
+                                    val radius = size.maxDimension * 0.85f
+                                    drawCircle(
+                                        Brush.radialGradient(
+                                            listOf(gold.copy(alpha = glow.value), gold.copy(alpha = 0f)),
+                                            center = center,
+                                            radius = radius,
+                                        ),
+                                        radius = radius,
+                                    )
+                                }
+                                .border(2.dp, gold, MaterialTheme.shapes.small),
+                        ) {
                             Poster(standing.nomination.posterUrl, standing.nomination.title, Modifier.width(132.dp))
                         }
                         Text(
@@ -177,10 +242,13 @@ private fun WinnerHero(winners: List<ScoredNomination>) {
     }
 }
 
+private const val RestingGlow = 0.18f
+private val RevealEasing = CubicBezierEasing(0.32f, 0.72f, 0f, 1f)
+
 @Composable
-private fun StandingRow(standing: ScoredNomination, state: AwardsState) {
+private fun StandingRow(standing: ScoredNomination, voters: List<String>, state: AwardsState) {
     Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        RankBadge(standing.place)
+        RankBadge(standing.place, highlighted = standing.winner)
         Poster(standing.nomination.posterUrl, standing.nomination.title, Modifier.width(40.dp), MaterialTheme.shapes.extraSmall)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -197,21 +265,24 @@ private fun StandingRow(standing: ScoredNomination, state: AwardsState) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            // Each voter's rank for this nominee.
-            val votes = standing.nomination.ranking.entries.sortedBy { it.value }
-            if (votes.isNotEmpty()) {
+            // Every voter's rank for this nominee, including members who have since left.
+            if (voters.isNotEmpty()) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    votes.forEach { (voterId, rank) ->
-                        val member = state.member(voterId)
+                    voters.forEach { voterId ->
+                        val name = state.member(voterId)?.name ?: "Former member"
+                        val rank = standing.nomination.ranking[voterId]
                         Row(
                             Modifier
                                 .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
-                                .padding(start = 2.dp, end = 8.dp, top = 2.dp, bottom = 2.dp),
+                                .padding(start = 2.dp, end = 8.dp, top = 2.dp, bottom = 2.dp)
+                                .clearAndSetSemantics {
+                                    contentDescription = "$name ranked it ${rank?.let { "#$it" } ?: "unranked"}"
+                                },
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Avatar(member?.name ?: "?", member?.imageUrl, size = 20.dp)
+                            Avatar(name, state.member(voterId)?.imageUrl, size = 20.dp)
                             Spacer(Modifier.width(6.dp))
-                            Text("#$rank", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+                            Text(rank?.let { "#$it" } ?: "–", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
