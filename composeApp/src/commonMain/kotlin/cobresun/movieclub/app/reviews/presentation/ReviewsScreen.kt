@@ -2,6 +2,8 @@ package cobresun.movieclub.app.reviews.presentation
 
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -123,6 +125,12 @@ fun ReviewsScreen(
                                 gridState.scrollToItem(0)
                             }
                         }
+                        // Cards that just joined the visible set (a new review, a cleared search)
+                        // fade in from a slight shrink; ones scrolled into view don't.
+                        val visibleKeys = visible.map { it.work.id }.toSet()
+                        var previousKeys by remember { mutableStateOf<Set<String>?>(null) }
+                        val entering = remember(visibleKeys) { previousKeys?.let { visibleKeys - it }.orEmpty() }
+                        SideEffect { previousKeys = visibleKeys }
                         LazyVerticalGrid(
                             state = gridState,
                             columns = GridCells.Adaptive(minSize = 150.dp),
@@ -134,6 +142,7 @@ fun ReviewsScreen(
                             if (reviews.data.isEmpty()) {
                                 item(span = { GridItemSpan(maxLineSpan) }) {
                                     EmptyState(
+                                        modifier = Modifier.fadeUpOnEnter(),
                                         icon = Icons.Outlined.RateReview,
                                         title = "No reviews yet",
                                         message = "Once the club has ${workType.finishedVerb} something, add it here so everyone can score it.",
@@ -144,6 +153,7 @@ fun ReviewsScreen(
                             } else if (visible.isEmpty()) {
                                 item(span = { GridItemSpan(maxLineSpan) }) {
                                     EmptyState(
+                                        modifier = Modifier.fadeUpOnEnter(),
                                         icon = Icons.Outlined.SearchOff,
                                         title = "No matches",
                                         message = "No reviewed ${workType.noun}s match \"${state.query}\".",
@@ -157,7 +167,13 @@ fun ReviewsScreen(
                                     currentUserId = state.currentUserId,
                                     revealed = state.isRevealed(review),
                                     onClick = { onAction(ReviewsAction.OpenDetail(review.work.id)) },
-                                    modifier = Modifier.animateItem(),
+                                    modifier = Modifier
+                                        .animateItem(
+                                            fadeInSpec = tween(200),
+                                            placementSpec = tween(300, easing = EmphasizedEasing),
+                                            fadeOutSpec = null,
+                                        )
+                                        .scaleInOnEnter(review.work.id in entering),
                                 )
                             }
                         }

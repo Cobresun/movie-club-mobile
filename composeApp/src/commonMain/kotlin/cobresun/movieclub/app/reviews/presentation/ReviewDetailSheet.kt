@@ -35,6 +35,20 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.zIndex
+import cobresun.movieclub.app.core.platform.HapticFeedback
+import kotlinx.coroutines.delay
+import org.koin.compose.koinInject
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.layout.fillMaxSize
@@ -108,6 +122,7 @@ fun ReviewDetailSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var confirmRemove by remember { mutableStateOf(false) }
     var scoring by remember(review.work.id) { mutableStateOf(false) }
+    var poppedAt by remember(review.work.id) { mutableIntStateOf(0) }
     val fullDetails = (detail.details as? AsyncResult.Success)?.data
     val work = if (fullDetails != null) review.work.copy(details = fullDetails) else review.work
     val myScore = review.scoreOf(currentUserId)
@@ -151,12 +166,22 @@ fun ReviewDetailSheet(
                     currentUserId = currentUserId,
                     revealed = revealed,
                     canReveal = canReveal,
+                    poppedAt = poppedAt,
                     onReveal = { onAction(ReviewsAction.RevealScores(work.id)) },
                 )
 
                 // Like the web drawer: the fact sits between the verdict and the reference
                 // material, fading in after the sheet opens.
-                AnimatedVisibility(visible = fact != null, enter = fadeIn() + expandVertically()) {
+                var factReady by remember(work.id) { mutableStateOf(false) }
+                LaunchedEffect(work.id) {
+                    // Wait out the sheet's opening slide, like web's idle-callback gate.
+                    delay(300)
+                    factReady = true
+                }
+                AnimatedVisibility(
+                    visible = factReady && fact != null,
+                    enter = fadeIn(tween(300)) + slideInVertically(tween(300, easing = EmphasizedEasing)) { -it / 12 } + expandVertically(tween(300)),
+                ) {
                     fact?.let { ReviewFactCard(it) }
                 }
             }
@@ -244,7 +269,10 @@ fun ReviewDetailSheet(
                 ScoreAssistInput(target, work.title, work.imageUrl, ScoreAssist.buildCandidatePool(scoredWorks, target))
             },
             currentClubSlug = clubSlug,
-            onSave = { onAction(ReviewsAction.SaveScore(work.id, it)) },
+            onSave = {
+                onAction(ReviewsAction.SaveScore(work.id, it))
+                poppedAt++
+            },
             onRemove = { onAction(ReviewsAction.DeleteScore(work.id)) },
             onDismiss = { scoring = false },
         )
@@ -262,7 +290,15 @@ fun ReviewDetailSheet(
     }
 }
 
-/** Club average plus a bar per member, highest first; unscored members trail. */
+/** One tile in the club-scores grid: a member's score, or the club average (memberId null). */
+private data class ScoreTile(val id: String, val memberId: String?, val name: String, val imageUrl: String?, val value: Double)
+
+/**
+ * Club scores as web's tile grid: members who scored, in club order, then the
+ * average spanning both columns. Hidden scores show an eye until revealed, then
+ * settle in one after another (80ms apart). [poppedAt] changes each time you
+ * save a new score, which pops your own tile.
+ */
 @Composable
 private fun ClubScores(
     review: Review,
@@ -270,15 +306,11 @@ private fun ClubScores(
     currentUserId: String?,
     revealed: Boolean,
     canReveal: Boolean,
+    poppedAt: Int,
     onReveal: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            SectionLabel("Club scores", Modifier.weight(1f))
-            review.average?.let {
-                ScoreBadge(it.takeUnless { ScoreReveal.isHidden(null, currentUserId, revealed) }, large = false)
-            }
-        }
+        SectionLabel("Club scores")
         // Like web's reveal pill: collapses away once scores are revealed (or you score).
         AnimatedVisibility(visible = canReveal, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -289,61 +321,147 @@ private fun ClubScores(
                 }
             }
         }
-        val known = members.associateBy { it.id }
-        val memberOrder = (members.map { it.id } + review.scores.keys).distinct()
-            .map { id -> Triple(id, known[id], review.scores[id]?.value) }
-        // Ranking by score would give hidden scores away, so keep club order until revealed.
-        val rows = if (!revealed) memberOrder.sortedByDescending { it.third != null }
-        else memberOrder.sortedWith(compareByDescending<Triple<String, Member?, Double?>> { it.third != null }.thenByDescending { it.third })
-        if (rows.isEmpty()) {
-            Text("No scores yet.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        val tiles = buildList {
+            members.forEach { m ->
+                review.scores[m.id]?.let { add(ScoreTile("member_${m.id}", m.id, m.name.trim().substringBefore(' ').ifBlank { m.name }, m.imageUrl, it.value)) }
+            }
+            review.average?.let { add(ScoreTile("average", null, "Average", null, it)) }
         }
-        rows.forEach { (id, member, score) ->
-            val name = member?.name ?: "Former member"
-            val hidden = score != null && ScoreReveal.isHidden(id, currentUserId, revealed)
-            val value = score.takeUnless { hidden }
-            val fraction by animateFloatAsState(((value ?: 0.0) / ScoreScale.MAX).toFloat())
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Avatar(name, member?.imageUrl, size = 28.dp)
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        if (id == currentUserId) "$name (you)" else name,
-                        style = MaterialTheme.typography.labelLarge,
+        if (tiles.isEmpty()) {
+            Text(
+                "No scores yet — be the first to rate it.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        tiles.filter { it.memberId != null }.withIndex().chunked(2).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                row.forEach { (index, tile) ->
+                    ScoreTileView(
+                        tile = tile,
+                        index = index,
+                        hidden = ScoreReveal.isHidden(tile.memberId, currentUserId, revealed),
+                        poppedAt = if (tile.memberId == currentUserId) poppedAt else 0,
+                        modifier = Modifier.weight(1f),
                     )
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(MaterialTheme.shapes.extraSmall)
-                            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                    ) {
-                        Box(
-                            Modifier
-                                .fillMaxWidth(fraction)
-                                .height(6.dp)
-                                .clip(MaterialTheme.shapes.extraSmall)
-                                .background(
-                                    if (id == currentUserId) MaterialTheme.colorScheme.secondary
-                                    else MaterialTheme.colorScheme.primary
-                                )
-                        )
-                    }
                 }
-                if (hidden) {
-                    Box(Modifier.width(44.dp), contentAlignment = Alignment.CenterEnd) {
-                        HiddenScoreIcon(Modifier.size(20.dp))
-                    }
-                } else {
-                    Text(
-                        value?.let(ScoreScale::format) ?: "—",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = if (value == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.width(44.dp),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                if (row.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+        tiles.firstOrNull { it.memberId == null }?.let { avg ->
+            ScoreTileView(
+                tile = avg,
+                index = tiles.size - 1,
+                hidden = ScoreReveal.isHidden(null, currentUserId, revealed),
+                poppedAt = 0,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ScoreTileView(tile: ScoreTile, index: Int, hidden: Boolean, poppedAt: Int, modifier: Modifier = Modifier) {
+    val haptics = koinInject<HapticFeedback>()
+    val isAverage = tile.memberId == null
+    val primary = MaterialTheme.colorScheme.primary
+
+    // Reveal: hidden → shown settles from a slight shrink, staggered by position.
+    val reveal = remember { Animatable(if (hidden) 0f else 1f) }
+    LaunchedEffect(hidden) {
+        if (hidden) reveal.snapTo(0f)
+        else if (reveal.value < 1f) {
+            delay(index * 80L)
+            reveal.animateTo(1f, tween(500, easing = EmphasizedEasing))
+        }
+    }
+
+    // Score pop (web `score-pop`): springy overshoot with a wobble and a fading primary ring.
+    val pop = remember { Animatable(1f) }
+    LaunchedEffect(poppedAt) {
+        if (poppedAt == 0) return@LaunchedEffect
+        delay(250) // let the score sheet slide away first
+        haptics.performSuccess()
+        pop.snapTo(0f)
+        pop.animateTo(1f, tween(700, easing = EmphasizedEasing))
+    }
+    val p = pop.value
+    val popScale = keyframe(p, 1f, 1.12f, 0.97f, 1.05f, 1f)
+    val popRotation = keyframe(p, 0f, -2.5f, 2f, -1f, 0f)
+    val ringAlpha = keyframe(p, 0f, 0.35f, 0.25f, 0.15f, 0f)
+    val ringWidth = keyframe(p, 0f, 5f, 4f, 3f, 0f)
+
+    val shape = MaterialTheme.shapes.large
+    Row(
+        modifier
+            .zIndex(if (p < 1f) 1f else 0f)
+            .graphicsLayer {
+                scaleX = popScale
+                scaleY = popScale
+                rotationZ = popRotation
+            }
+            .drawBehind {
+                if (ringAlpha > 0f) {
+                    val w = ringWidth.dp.toPx()
+                    drawRoundRect(
+                        primary.copy(alpha = ringAlpha),
+                        topLeft = androidx.compose.ui.geometry.Offset(-w, -w),
+                        size = androidx.compose.ui.geometry.Size(size.width + 2 * w, size.height + 2 * w),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(16.dp.toPx() + w),
                     )
                 }
             }
+            .clip(shape)
+            .background(if (isAverage) primary.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceContainerHigh)
+            .then(if (isAverage) Modifier.border(1.dp, primary.copy(alpha = 0.25f), shape) else Modifier)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        if (isAverage) {
+            Box(
+                Modifier.size(28.dp).clip(CircleShape).background(primary.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Filled.Star, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(16.dp))
+            }
+        } else {
+            Avatar(tile.name, tile.imageUrl, size = 28.dp)
         }
+        Text(
+            tile.name,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        if (hidden) {
+            HiddenScoreIcon(Modifier.size(20.dp))
+        } else {
+            Text(
+                ScoreScale.format(tile.value),
+                style = if (isAverage) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium,
+                fontWeight = if (isAverage) FontWeight.Bold else FontWeight.SemiBold,
+                color = if (isAverage) primary else MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.graphicsLayer {
+                    alpha = reveal.value
+                    val s = 0.9f + 0.1f * reveal.value
+                    scaleX = s
+                    scaleY = s
+                },
+            )
+        }
+    }
+}
+
+/** Piecewise-linear value at [t] across keyframes at 0, 25%, 50%, 70% and 100% (web `score-pop`). */
+private fun keyframe(t: Float, v0: Float, v25: Float, v50: Float, v70: Float, v100: Float): Float {
+    fun lerp(a: Float, b: Float, f: Float) = a + (b - a) * f
+    return when {
+        t <= 0.25f -> lerp(v0, v25, t / 0.25f)
+        t <= 0.5f -> lerp(v25, v50, (t - 0.25f) / 0.25f)
+        t <= 0.7f -> lerp(v50, v70, (t - 0.5f) / 0.2f)
+        else -> lerp(v70, v100, (t - 0.7f) / 0.3f)
     }
 }
 
