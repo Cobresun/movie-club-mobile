@@ -36,6 +36,7 @@ import cobresun.movieclub.app.core.presentation.components.ErrorState
 import cobresun.movieclub.app.core.presentation.components.ShimmerBox
 import cobresun.movieclub.app.core.presentation.toUserMessage
 import cobresun.movieclub.app.stats.domain.computeSummary
+import cobresun.movieclub.app.stats.domain.wrappedYears
 
 /** Below this many scored works the page shows a "getting started" hint. */
 private const val FEW_REVIEWS = 5
@@ -100,10 +101,14 @@ private fun StatsContent(state: StatsState, data: StatsData, onGoToReviews: () -
         return
     }
     val summary = remember(reviews) { computeSummary(reviews) }
+    val wrappedYears = remember(reviews) { wrappedYears(reviews) }
     LazyColumn(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 32.dp + LocalTabBarInset.current),
         modifier = Modifier.fillMaxSize(),
     ) {
+        if (wrappedYears.isNotEmpty()) item("wrapped") {
+            WrappedEntryCard(wrappedYears, onOpenWrapped, Modifier.padding(bottom = 14.dp))
+        }
         if (reviews.size < FEW_REVIEWS) item("hint") { Box(Modifier.padding(bottom = 14.dp)) { FewReviewsHint(reviews.size, type) } }
         item("summary") { Box(Modifier.padding(bottom = 14.dp)) { SummaryTiles(summary, type) } }
         item("records") { ClubRecordsCard(reviews) }
