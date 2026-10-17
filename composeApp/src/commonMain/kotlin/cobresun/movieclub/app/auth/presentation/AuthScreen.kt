@@ -335,7 +335,7 @@ private fun SignupForm(
 
         // Password hint
         Text(
-            text = "Password must be at least 6 characters",
+            text = "Password must be at least $MIN_PASSWORD_LENGTH characters",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -348,7 +348,7 @@ private fun SignupForm(
                     fullName = fullName.trim()
                 ))
             },
-            enabled = !isLoading && isPlausibleEmail(email) && password.length >= 6 && fullName.isNotBlank(),
+            enabled = !isLoading && isPlausibleEmail(email) && password.length >= MIN_PASSWORD_LENGTH && fullName.isNotBlank(),
             modifier = Modifier.fillMaxWidth()
         ) {
             if (isLoading) {
