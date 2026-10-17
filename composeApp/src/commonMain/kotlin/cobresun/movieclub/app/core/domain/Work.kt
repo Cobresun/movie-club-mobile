@@ -60,6 +60,8 @@ sealed interface WorkDetails {
         val imdbId: String? = null,
         /** Director name -> TMDB profile photo, for those who have one (Wrapped, stats leaderboards). */
         val directorImageUrls: Map<String, String> = emptyMap(),
+        /** Production company names (TMDB `production_companies`), for the Studio filter. */
+        val productionCompanies: List<String> = emptyList(),
     ) : WorkDetails
 
     data class Book(

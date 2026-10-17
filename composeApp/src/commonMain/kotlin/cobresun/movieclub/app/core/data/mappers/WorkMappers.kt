@@ -69,6 +69,7 @@ fun JsonElement?.toWorkDetails(): WorkDetails? {
             directors = obj.objectList("directors").mapNotNull { it.string("name") },
             castNames = obj.stringList("castNames"),
             majorCastNames = obj.stringList("majorCastNames"),
+            productionCompanies = obj.stringList("production_companies"),
             voteAverage = obj.double("vote_average"),
             backdropUrl = tmdbImageUrl(obj.string("backdrop_path"), "w780"),
             imdbId = obj.string("imdb_id")?.takeIf { it.isNotBlank() },

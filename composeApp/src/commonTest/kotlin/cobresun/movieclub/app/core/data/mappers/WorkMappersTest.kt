@@ -19,7 +19,7 @@ class WorkMappersTest {
          "imageUrl":"https://image.tmdb.org/t/p/w154/f89.jpg","externalId":"603","addedBy":"u1",
          "externalData":{"kind":"movie","castNames":["Keanu Reeves"],"majorCastNames":[],
            "directors":[{"name":"Lana Wachowski","profilePath":"/a.jpg"},{"name":"Lilly Wachowski","profilePath":null}],
-           "genres":["Action","Science Fiction"],"production_companies":[],"production_countries":[],
+           "genres":["Action","Science Fiction"],"production_companies":["Warner Bros.","Village Roadshow"],"production_countries":[],
            "backdrop_path":"/back.jpg","poster_path":"/poster.jpg","release_date":"1999-03-31",
            "runtime":136,"tagline":"Welcome to the Real World.","vote_average":8.2,"overview":"A hacker…"}}
     """.trimIndent()
@@ -41,6 +41,7 @@ class WorkMappersTest {
         assertEquals(8.2, details.voteAverage)
         assertEquals("https://image.tmdb.org/t/p/w780/back.jpg", details.backdropUrl)
         assertEquals(emptyList(), details.cast)
+        assertEquals(listOf("Warner Bros.", "Village Roadshow"), details.productionCompanies)
     }
 
     @Test
