@@ -16,6 +16,10 @@ import cobresun.movieclub.app.core.domain.WorkDetailsRepository
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.core.domain.ShareLinks
+import cobresun.movieclub.app.filters.domain.FilterQuery
+import cobresun.movieclub.app.filters.domain.FilterResults
+import cobresun.movieclub.app.filters.domain.FilterTarget
+import cobresun.movieclub.app.filters.domain.computeFilters
 import cobresun.movieclub.app.reviews.domain.ScoredWork
 import kotlinx.datetime.LocalDate
 import cobresun.movieclub.app.core.presentation.UiMessage
@@ -36,7 +40,6 @@ import cobresun.movieclub.app.reviews.domain.ReviewSortState
 import cobresun.movieclub.app.reviews.domain.ReviewsRepository
 import cobresun.movieclub.app.reviews.domain.ScoreReveal
 import cobresun.movieclub.app.reviews.domain.ScoreScale
-import cobresun.movieclub.app.reviews.domain.filterReviews
 import cobresun.movieclub.app.reviews.domain.sortReviews
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -54,7 +57,8 @@ data class ReviewsState(
     val clubName: String = "",
     val reviews: AsyncResult<List<Review>> = AsyncResult.Loading,
     val isRefreshing: Boolean = false,
-    val query: String = "",
+    /** The search text plus the filters picked in the filters sheet. */
+    val filterQuery: FilterQuery = FilterQuery(),
     val sortState: ReviewSortState = ReviewSortState(),
     val members: List<Member> = emptyList(),
     val currentUserId: String? = null,
@@ -86,11 +90,18 @@ data class ReviewsState(
 
     fun canReveal(review: Review): Boolean = ScoreReveal.canReveal(review, currentUserId, revealedWorkIds)
 
-    val visibleReviews: List<Review>
-        get() = sortReviews(
-            filterReviews((reviews as? AsyncResult.Success)?.data.orEmpty(), query),
-            sortState,
+    /** Filter bar state for the reviews: offered filters, facets, chips and the matches. */
+    val filters: FilterResults<Review> by lazy {
+        computeFilters(
+            items = (reviews as? AsyncResult.Success)?.data.orEmpty(),
+            query = filterQuery,
+            clubType = clubType,
+            id = { it.work.id },
+            target = { FilterTarget(it.work, it.average) },
         )
+    }
+
+    val visibleReviews: List<Review> by lazy { sortReviews(filters.filtered, sortState) }
 
     val reviewedExternalIds: Set<String>
         get() = (reviews as? AsyncResult.Success)?.data.orEmpty().mapNotNull { it.work.externalId }.toSet()
@@ -140,7 +151,8 @@ sealed interface ReviewsAction {
     /** The tab became visible: Up Next may have changed on the Lists tab. */
     data object Shown : ReviewsAction
     data object StartUpNextReview : ReviewsAction
-    data class Search(val query: String) : ReviewsAction
+    /** New search text and/or filter picks. */
+    data class Filter(val query: FilterQuery) : ReviewsAction
     data class Sort(val option: ReviewSortOption) : ReviewsAction
     data object ToggleSortDirection : ReviewsAction
 
@@ -179,7 +191,7 @@ class ReviewsViewModel(
     private val _state = MutableStateFlow(
         ReviewsState(
             clubSlug = clubSlug,
-            query = savedStateHandle.get<String>(KEY_QUERY).orEmpty(),
+            filterQuery = FilterQuery(text = savedStateHandle.get<String>(KEY_QUERY).orEmpty()),
             detail = savedStateHandle.get<String>(KEY_DETAIL)?.let { ReviewDetailState(it) },
         )
     )
@@ -208,9 +220,9 @@ class ReviewsViewModel(
                 _state.value.detail?.let { loadDetail(it.workId) }
             }
 
-            is ReviewsAction.Search -> {
-                savedStateHandle[KEY_QUERY] = action.query
-                _state.update { it.copy(query = action.query) }
+            is ReviewsAction.Filter -> {
+                savedStateHandle[KEY_QUERY] = action.query.text
+                _state.update { it.copy(filterQuery = action.query) }
             }
             is ReviewsAction.Sort -> _state.update { it.copy(sortState = ReviewSortState(action.option, descending = true)) }
 

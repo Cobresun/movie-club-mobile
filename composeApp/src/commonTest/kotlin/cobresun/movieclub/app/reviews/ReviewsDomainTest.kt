@@ -11,7 +11,6 @@ import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.domain.ReviewSortOption
 import cobresun.movieclub.app.reviews.domain.ReviewSortState
 import cobresun.movieclub.app.reviews.domain.ScoreScale
-import cobresun.movieclub.app.reviews.domain.filterReviews
 import cobresun.movieclub.app.reviews.domain.sortReviews
 import kotlinx.datetime.TimeZone
 import kotlin.test.Test
@@ -74,13 +73,6 @@ class ReviewsDomainTest {
         assertEquals("Oldest first", ReviewSortState(ReviewSortOption.DateReviewed, false).directionLabel)
         assertEquals("Highest first", ReviewSortState(ReviewSortOption.AverageScore, true).directionLabel)
         assertEquals("Lowest first", ReviewSortState(ReviewSortOption.MemberScore("u1"), false).directionLabel)
-    }
-
-    @Test
-    fun filtersByTitleAndPeople() {
-        assertEquals(listOf("b"), filterReviews(all, "braz").ids())
-        assertEquals(listOf("a"), filterReviews(all, "ridley").ids())
-        assertEquals(all, filterReviews(all, "  "))
     }
 
     @Test

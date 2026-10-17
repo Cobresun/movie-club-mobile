@@ -36,7 +36,6 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.RateReview
 import androidx.compose.material.icons.outlined.SearchOff
@@ -45,11 +44,8 @@ import cobresun.movieclub.app.reviews.domain.ScoreReveal
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -76,7 +72,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import cobresun.movieclub.app.core.domain.Work
 import cobresun.movieclub.app.core.domain.WorkType
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cobresun.movieclub.app.core.domain.AsyncResult
@@ -96,6 +91,7 @@ import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.domain.ReviewSortOption
 import cobresun.movieclub.app.reviews.domain.ReviewSortState
 import cobresun.movieclub.app.reviews.domain.ScoreScale
+import cobresun.movieclub.app.filters.presentation.SearchFilterBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -132,9 +128,9 @@ fun ReviewsScreen(
                         val gridState = rememberLazyGridState()
                         // Keyed items keep the first visible card anchored when the order
                         // changes, which lands the user mid-list. Jump back to the top instead.
-                        var lastOrdering by remember { mutableStateOf(state.sortState to state.query) }
-                        LaunchedEffect(state.sortState, state.query) {
-                            val ordering = state.sortState to state.query
+                        var lastOrdering by remember { mutableStateOf(state.sortState to state.filterQuery) }
+                        LaunchedEffect(state.sortState, state.filterQuery) {
+                            val ordering = state.sortState to state.filterQuery
                             if (ordering != lastOrdering) {
                                 lastOrdering = ordering
                                 gridState.scrollToItem(0)
@@ -187,9 +183,9 @@ fun ReviewsScreen(
                                     EmptyState(
                                         icon = Icons.Outlined.SearchOff,
                                         title = "No results found",
-                                        message = "Try adjusting your search. You can search by " +
+                                        message = "Try adjusting your search or filters. You can search by " +
                                             if (workType == WorkType.BOOK) "title, author, subject, or published year"
-                                            else "title, genre, director, or release year",
+                                            else "title, genre, company, director, actor, or release year",
                                     )
                                 }
                             }
@@ -254,28 +250,11 @@ fun ReviewsScreen(
 @Composable
 private fun SearchAndSort(state: ReviewsState, onAction: (ReviewsAction) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        TextField(
-            value = state.query,
-            onValueChange = { onAction(ReviewsAction.Search(it)) },
-            placeholder = { Text("Search titles, people, genres") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-            trailingIcon = {
-                if (state.query.isNotEmpty()) {
-                    IconButton(onClick = { onAction(ReviewsAction.Search("")) }) {
-                        Icon(Icons.Default.Close, contentDescription = "Clear search")
-                    }
-                }
-            },
-            singleLine = true,
-            shape = MaterialTheme.shapes.extraLarge,
-            textStyle = MaterialTheme.typography.bodyMedium,
-            colors = TextFieldDefaults.colors(
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-            ),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        SearchFilterBar(
+            query = state.filterQuery,
+            results = state.filters,
+            onQueryChange = { onAction(ReviewsAction.Filter(it)) },
+            placeholder = "Search reviews",
         )
         SortBar(
             sortState = state.sortState,
