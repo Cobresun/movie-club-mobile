@@ -197,10 +197,7 @@ class ReviewsViewModel(
                 savedStateHandle[KEY_QUERY] = action.query
                 _state.update { it.copy(query = action.query) }
             }
-            is ReviewsAction.Sort -> _state.update { s ->
-                val option = if (s.sortState.option == action.option) ReviewSortOption.None else action.option
-                s.copy(sortState = ReviewSortState(option, option.defaultDescending))
-            }
+            is ReviewsAction.Sort -> _state.update { it.copy(sortState = ReviewSortState(action.option, descending = true)) }
 
             ReviewsAction.ToggleSortDirection -> _state.update {
                 it.copy(sortState = it.sortState.copy(descending = !it.sortState.descending))

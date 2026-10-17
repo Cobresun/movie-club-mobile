@@ -12,7 +12,6 @@ fun sortReviews(reviews: List<Review>, sortState: ReviewSortState): List<Review>
         ReviewSortOption.None -> return reviews
         ReviewSortOption.DateReviewed -> { r -> r.work.addedAt }
         ReviewSortOption.AverageScore -> { r -> r.average }
-        ReviewSortOption.Title -> { r -> r.work.title.lowercase() }
         is ReviewSortOption.MemberScore -> { r -> r.scores[option.userId]?.value }
     }
     val (present, missing) = reviews.partition { selector(it) != null }

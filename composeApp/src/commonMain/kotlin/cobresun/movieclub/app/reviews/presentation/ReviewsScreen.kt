@@ -28,17 +28,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -48,8 +44,6 @@ import androidx.compose.material.icons.outlined.VisibilityOff
 import cobresun.movieclub.app.reviews.domain.ScoreReveal
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -61,6 +55,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.alpha
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.ui.semantics.contentDescription
@@ -268,7 +277,7 @@ private fun SearchAndSort(state: ReviewsState, onAction: (ReviewsAction) -> Unit
             ),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         )
-        SortChips(
+        SortBar(
             sortState = state.sortState,
             members = state.members,
             onSort = { onAction(ReviewsAction.Sort(it)) },
@@ -277,56 +286,106 @@ private fun SearchAndSort(state: ReviewsState, onAction: (ReviewsAction) -> Unit
     }
 }
 
+/**
+ * Web gallery sort bar: a "Sort by" / "Sorted by X" menu button, then — while a
+ * sort is active — a direction pill worded for what's sorted ("Newest first",
+ * "Highest first") that reverses it, and Clear.
+ */
 @Composable
-private fun SortChips(
+private fun SortBar(
     sortState: ReviewSortState,
     members: List<Member>,
     onSort: (ReviewSortOption) -> Unit,
     onToggleDirection: () -> Unit,
 ) {
     data class Opt(val option: ReviewSortOption, val label: String, val member: Member? = null)
-    val options = listOf(
-        Opt(ReviewSortOption.DateReviewed, "Date"),
-        Opt(ReviewSortOption.AverageScore, "Average"),
-        Opt(ReviewSortOption.Title, "Title"),
-    ) + members.map { Opt(ReviewSortOption.MemberScore(it.id), it.name, it) }
+    val options = listOf(Opt(ReviewSortOption.DateReviewed, "Date reviewed")) +
+        members.map { Opt(ReviewSortOption.MemberScore(it.id), "${it.name}'s rating", it) } +
+        Opt(ReviewSortOption.AverageScore, "Average rating")
+    val active = options.firstOrNull { it.option == sortState.option }
+    var menuOpen by remember { mutableStateOf(false) }
+    val pillBorder = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
 
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (sortState.isActive) {
-            item(key = "dir") {
-                IconButton(onClick = onToggleDirection, modifier = Modifier.size(36.dp)) {
-                    Icon(
-                        if (sortState.descending) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
-                        contentDescription = if (sortState.descending) "Descending" else "Ascending",
-                        tint = MaterialTheme.colorScheme.secondary,
+        Box {
+            OutlinedButton(
+                onClick = { menuOpen = true },
+                border = pillBorder,
+                contentPadding = PaddingValues(start = 14.dp, end = 8.dp),
+                modifier = Modifier.height(36.dp),
+            ) {
+                Text(if (active != null) "Sorted by " else "Sort by", color = MaterialTheme.colorScheme.onSurface)
+                active?.let { Text(it.label, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface) }
+                Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+            }
+            DropdownMenu(
+                expanded = menuOpen,
+                onDismissRequest = { menuOpen = false },
+                shape = MaterialTheme.shapes.medium,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            ) {
+                Text(
+                    "Sort reviews by",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                )
+                options.forEach { opt ->
+                    DropdownMenuItem(
+                        text = { Text(opt.label) },
+                        leadingIcon = {
+                            when {
+                                opt.member != null -> Avatar(opt.member.name, opt.member.imageUrl, size = 24.dp)
+                                opt.option == ReviewSortOption.AverageScore ->
+                                    Icon(Icons.Default.Star, contentDescription = null, tint = MaterialTheme.colorScheme.tertiary)
+                                else -> Icon(Icons.Outlined.Schedule, contentDescription = null)
+                            }
+                        },
+                        trailingIcon = if (opt.option == sortState.option) {
+                            { Icon(Icons.Default.Check, contentDescription = "Selected", tint = MaterialTheme.colorScheme.primary) }
+                        } else null,
+                        onClick = {
+                            menuOpen = false
+                            onSort(opt.option)
+                        },
                     )
                 }
             }
         }
-        items(options, key = { it.label + it.option.toString() }) { opt ->
-            val selected = sortState.option == opt.option
-            FilterChip(
-                selected = selected,
-                onClick = { onSort(opt.option) },
-                label = { Text(opt.label, maxLines = 1) },
-                leadingIcon = opt.member?.let { m -> { Avatar(m.name, m.imageUrl, size = 20.dp) } },
-                shape = MaterialTheme.shapes.extraLarge,
-                colors = FilterChipDefaults.filterChipColors(
-                    containerColor = Color.Transparent,
-                    selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    selectedLabelColor = MaterialTheme.colorScheme.secondary,
-                ),
-                border = FilterChipDefaults.filterChipBorder(
-                    enabled = true,
-                    selected = selected,
-                    borderColor = MaterialTheme.colorScheme.outlineVariant,
-                    selectedBorderColor = MaterialTheme.colorScheme.secondary,
-                ),
-            )
+        AnimatedVisibility(visible = active != null, enter = fadeIn() + expandHorizontally(), exit = fadeOut() + shrinkHorizontally()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = onToggleDirection,
+                    border = pillBorder,
+                    contentPadding = PaddingValues(start = 8.dp, end = 14.dp),
+                    modifier = Modifier.height(36.dp).semantics {
+                        stateDescription = "Currently ${sortState.directionLabel.lowercase()}"
+                        onClick(label = "Reverse") { onToggleDirection(); true }
+                    },
+                ) {
+                    Icon(
+                        if (sortState.descending) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(sortState.directionLabel, color = MaterialTheme.colorScheme.onSurface)
+                }
+                OutlinedButton(
+                    onClick = { onSort(ReviewSortOption.None) },
+                    border = pillBorder,
+                    contentPadding = PaddingValues(start = 14.dp, end = 10.dp),
+                    modifier = Modifier.height(36.dp),
+                ) {
+                    Text("Clear", color = MaterialTheme.colorScheme.onSurface)
+                    Spacer(Modifier.width(4.dp))
+                    Icon(Icons.Default.Close, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(18.dp))
+                }
+            }
         }
     }
 }

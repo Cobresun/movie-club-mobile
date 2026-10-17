@@ -68,8 +68,12 @@ class ReviewsDomainTest {
     }
 
     @Test
-    fun sortsByTitle() {
-        assertEquals(listOf("a", "b", "c"), sortReviews(all, ReviewSortState(ReviewSortOption.Title, false)).ids())
+    fun directionLabelDependsOnWhatIsSorted() {
+        assertEquals("", ReviewSortState().directionLabel)
+        assertEquals("Newest first", ReviewSortState(ReviewSortOption.DateReviewed, true).directionLabel)
+        assertEquals("Oldest first", ReviewSortState(ReviewSortOption.DateReviewed, false).directionLabel)
+        assertEquals("Highest first", ReviewSortState(ReviewSortOption.AverageScore, true).directionLabel)
+        assertEquals("Lowest first", ReviewSortState(ReviewSortOption.MemberScore("u1"), false).directionLabel)
     }
 
     @Test
