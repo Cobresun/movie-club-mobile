@@ -110,9 +110,20 @@ data class ReviewDetailState(
     /** Full metadata incl. cast; falls back to the list summary while loading. */
     val details: AsyncResult<WorkDetails?> = AsyncResult.Loading,
     val comments: AsyncResult<List<ReviewComment>> = AsyncResult.Loading,
-    val questions: AsyncResult<List<String>>? = null,
+    val questions: DiscussionQuestionsState = DiscussionQuestionsState(),
     val isSavingScore: Boolean = false,
     val isPostingComment: Boolean = false,
+)
+
+/**
+ * AI discussion questions (web `DiscussionQuestions.vue`). [questions] is null
+ * until generated; an empty list means the model didn't recognize the work.
+ * A failed regenerate keeps the previous questions and sets [failed].
+ */
+data class DiscussionQuestionsState(
+    val questions: List<String>? = null,
+    val isLoading: Boolean = false,
+    val failed: Boolean = false,
 )
 
 sealed interface ReviewsEvent {
@@ -560,13 +571,14 @@ class ReviewsViewModel(
 
     private fun generateQuestions() {
         val workId = _state.value.detail?.workId ?: return
-        updateDetail(workId) { it.copy(questions = AsyncResult.Loading) }
+        updateDetail(workId) { it.copy(questions = it.questions.copy(isLoading = true)) }
         viewModelScope.launch {
             when (val result = reviewsRepository.generateDiscussionQuestions(clubSlug, workId)) {
-                is Result.Success -> updateDetail(workId) { it.copy(questions = AsyncResult.Success(result.data)) }
-                is Result.Error -> {
-                    updateDetail(workId) { it.copy(questions = null) }
-                    emitError(result.error, "generate discussion questions") { generateQuestions() }
+                is Result.Success -> updateDetail(workId) {
+                    it.copy(questions = DiscussionQuestionsState(questions = result.data))
+                }
+                is Result.Error -> updateDetail(workId) {
+                    it.copy(questions = it.questions.copy(isLoading = false, failed = true))
                 }
             }
         }

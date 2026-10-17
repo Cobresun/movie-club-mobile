@@ -45,6 +45,8 @@ sealed interface WorkDetails {
         val cast: List<CastMember> = emptyList(),
         /** Server-filtered major cast (top-billed or popular), used for "Familiar face" facts. */
         val majorCastNames: List<String> = emptyList(),
+        /** IMDb title id ("tt0078748"), for the IMDb link. */
+        val imdbId: String? = null,
     ) : WorkDetails
 
     data class Book(

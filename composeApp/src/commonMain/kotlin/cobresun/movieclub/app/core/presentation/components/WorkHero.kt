@@ -54,6 +54,8 @@ fun WorkHero(
     modifier: Modifier = Modifier,
     /** When set, the TMDB rating shows as a tap-to-reveal placeholder (reviews only, like web). */
     onRevealTmdbRating: (() -> Unit)? = null,
+    /** Replaces the default year/runtime/rating facts line (the reviews sheet shows web's meta line). */
+    facts: List<String>? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     val backdrop = (work.details as? WorkDetails.Movie)?.backdropUrl ?: work.imageUrl
@@ -94,7 +96,7 @@ fun WorkHero(
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                 )
-                val facts = work.metaFacts(includeTmdbRating = onRevealTmdbRating == null)
+                val facts = facts ?: work.metaFacts(includeTmdbRating = onRevealTmdbRating == null)
                 val hasTmdbRating = ((work.details as? WorkDetails.Movie)?.voteAverage ?: 0.0) > 0
                 if (facts.isNotEmpty()) {
                     Text(
@@ -244,7 +246,7 @@ fun SectionLabel(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-private fun String.stripHtml(): String =
+internal fun String.stripHtml(): String =
     replace(Regex("<br\\s*/?>", RegexOption.IGNORE_CASE), "\n")
         .replace(Regex("</p>", RegexOption.IGNORE_CASE), "\n\n")
         .replace(Regex("<[^>]+>"), "")

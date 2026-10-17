@@ -35,6 +35,16 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.key
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
@@ -77,11 +87,9 @@ import cobresun.movieclub.app.core.presentation.components.SheetSnackbarHost
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.WorkDetails
 import cobresun.movieclub.app.core.presentation.components.Avatar
-import cobresun.movieclub.app.core.presentation.components.CastRow
 import cobresun.movieclub.app.core.presentation.components.ConfirmDialog
 import cobresun.movieclub.app.core.presentation.components.SectionLabel
 import cobresun.movieclub.app.core.presentation.components.ShimmerBox
-import cobresun.movieclub.app.core.presentation.components.WorkAbout
 import cobresun.movieclub.app.core.presentation.components.WorkHero
 import cobresun.movieclub.app.providers.presentation.WatchProvidersSection
 import cobresun.movieclub.app.core.presentation.formatShort
@@ -145,12 +153,8 @@ fun ReviewDetailSheet(
                 .padding(bottom = 24.dp),
         ) {
             var tmdbTapped by remember(work.id) { mutableStateOf(false) }
-            WorkHero(
-                work,
-                onRevealTmdbRating = if (ScoreReveal.isTmdbRatingHidden(review, currentUserId, tmdbTapped)) {
-                    { tmdbTapped = true }
-                } else null,
-            ) {
+            // Like web, the hero carries the meta line; the TMDB rating lives under Details.
+            WorkHero(work, facts = work.reviewMetaLine()) {
                 work.addedDate?.let { date ->
                     ReviewedDate(date) { onAction(ReviewsAction.SetReviewedDate(work.id, it)) }
                 }
@@ -186,18 +190,11 @@ fun ReviewDetailSheet(
                 }
             }
 
-            if (work.type == cobresun.movieclub.app.core.domain.WorkType.MOVIE) {
-                work.externalId?.let {
-                    WatchProvidersSection(it, Modifier.padding(start = 20.dp, end = 20.dp, bottom = 20.dp))
-                }
-            }
+            work.overview()?.let { SynopsisSection(it, Modifier.padding(start = 20.dp, end = 20.dp, bottom = 20.dp)) }
 
             val cast = (work.details as? WorkDetails.Movie)?.cast.orEmpty()
             if (cast.isNotEmpty()) {
-                SectionLabel("Cast", Modifier.padding(horizontal = 20.dp))
-                Spacer(Modifier.height(10.dp))
-                CastRow(cast)
-                Spacer(Modifier.height(20.dp))
+                CastSection(cast, Modifier.padding(bottom = 20.dp))
             } else if (detail.details is AsyncResult.Loading && work.type == cobresun.movieclub.app.core.domain.WorkType.MOVIE) {
                 Row(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     repeat(4) { ShimmerBox(Modifier.size(64.dp), MaterialTheme.shapes.extraLarge) }
@@ -205,21 +202,21 @@ fun ReviewDetailSheet(
                 Spacer(Modifier.height(20.dp))
             }
 
+            DetailsSection(
+                work = work,
+                tmdbHidden = ScoreReveal.isTmdbRatingHidden(review, currentUserId, tmdbTapped),
+                onRevealTmdb = { tmdbTapped = true },
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
+            ) {
+                if (work.type == cobresun.movieclub.app.core.domain.WorkType.MOVIE) {
+                    work.externalId?.let { WatchProvidersSection(it) }
+                }
+            }
+
             Column(
                 Modifier.padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
-                if (work.details != null) {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        SectionLabel("About")
-                        WorkAbout(work)
-                    }
-                }
-
-                if (discussionQuestionsEnabled) {
-                    DiscussionQuestions(detail.questions) { onAction(ReviewsAction.GenerateQuestions) }
-                }
-
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                 CommentsSection(
@@ -228,6 +225,10 @@ fun ReviewDetailSheet(
                     isPosting = detail.isPostingComment,
                     onAction = onAction,
                 )
+
+                if (discussionQuestionsEnabled) {
+                    DiscussionQuestions(detail.questions, noun) { onAction(ReviewsAction.GenerateQuestions) }
+                }
 
                 // Deliberately tucked at the end: rare and destructive, so no sticky prominence.
                 TextButton(
@@ -465,37 +466,148 @@ private fun keyframe(t: Float, v0: Float, v25: Float, v50: Float, v70: Float, v1
     }
 }
 
+/**
+ * Web `DiscussionQuestions`: a generate button until there are questions, then a
+ * card whose numbered questions deal in one after another (70ms apart). A
+ * regenerate dims the current set; if it fails, they stay with a note.
+ */
 @Composable
-private fun DiscussionQuestions(questions: AsyncResult<List<String>>?, onGenerate: () -> Unit) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .background(MaterialTheme.colorScheme.secondaryContainer)
-            .padding(16.dp)
-            .animateContentSize(),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
-            Spacer(Modifier.width(8.dp))
-            Text("Discussion questions", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-        }
-        when (questions) {
-            null -> FilledTonalButton(onClick = onGenerate) { Text("Generate questions") }
-            is AsyncResult.Loading -> Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                Spacer(Modifier.width(10.dp))
-                Text("Thinking up questions…", style = MaterialTheme.typography.bodyMedium)
+private fun DiscussionQuestions(state: DiscussionQuestionsState, noun: String, onGenerate: () -> Unit) {
+    val questions = state.questions
+    val phase = when {
+        !questions.isNullOrEmpty() -> "loaded"
+        questions != null -> "unrecognized"
+        state.failed -> "error"
+        else -> "idle"
+    }
+    AnimatedContent(
+        targetState = phase,
+        transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
+        modifier = Modifier.fillMaxWidth(),
+        label = "discussion-questions",
+    ) { p ->
+        when (p) {
+            "loaded" -> Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.large)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .padding(16.dp)
+                    .animateContentSize(),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Outlined.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(18.dp))
+                    Text("Discussion questions", style = MaterialTheme.typography.titleSmall)
+                }
+                Column(
+                    Modifier.graphicsLayer { alpha = if (state.isLoading) 0.5f else 1f },
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    questions.orEmpty().forEachIndexed { i, q ->
+                        // Keyed by text so a regenerated set remounts and deals in again.
+                        key("$i-$q") {
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .fadeUpOnEnter(delayMillis = i * 70)
+                                    .clip(MaterialTheme.shapes.medium)
+                                    .background(MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.6f))
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                Text("${i + 1}.", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
+                                Text(q, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+                }
+                if (state.failed) {
+                    Text(
+                        "Couldn't regenerate. Showing the previous questions.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onGenerate, enabled = !state.isLoading) {
+                        if (state.isLoading) {
+                            CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.width(6.dp))
+                        }
+                        Text(if (state.isLoading) "Regenerating…" else "Regenerate", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
             }
 
-            is AsyncResult.Error -> TextButton(onClick = onGenerate) { Text("Try again") }
-            is AsyncResult.Success -> {
-                questions.data.forEachIndexed { i, q ->
-                    Text("${i + 1}. $q", style = MaterialTheme.typography.bodyMedium)
-                }
-                TextButton(onClick = onGenerate) { Text("Regenerate") }
+            "unrecognized" -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "We couldn't recognize this $noun, so we couldn't generate discussion questions for it.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                GenerateQuestionsButton("Generate discussion questions", loading = false, enabled = false, onClick = onGenerate)
             }
+
+            "error" -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Couldn't generate questions. Please try again.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                GenerateQuestionsButton("Try again", loading = state.isLoading, enabled = !state.isLoading, onClick = onGenerate)
+            }
+
+            else -> GenerateQuestionsButton(
+                if (state.isLoading) "Generating questions…" else "Generate discussion questions",
+                loading = state.isLoading,
+                enabled = !state.isLoading,
+                onClick = onGenerate,
+            )
+        }
+    }
+}
+
+/** The AI button: a slowly turning gradient ring (web `ai-shimmer-button`), faster while loading. */
+@Composable
+private fun GenerateQuestionsButton(label: String, loading: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    val transition = rememberInfiniteTransition(label = "ai-shimmer")
+    val angle by transition.animateFloat(
+        0f, 360f,
+        infiniteRepeatable(tween(if (loading) 1_200 else 4_000, easing = LinearEasing)),
+        label = "ai-angle",
+    )
+    val colors = listOf(
+        MaterialTheme.colorScheme.primary,
+        MaterialTheme.colorScheme.secondary,
+        MaterialTheme.colorScheme.tertiary,
+        MaterialTheme.colorScheme.primary,
+    )
+    val shape = MaterialTheme.shapes.medium
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        shape = shape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer { alpha = if (enabled || loading) 1f else 0.5f }
+            .clip(shape)
+            .drawBehind {
+                rotate(angle) {
+                    drawCircle(Brush.sweepGradient(colors), radius = size.maxDimension)
+                }
+            }
+            .padding(1.5.dp),
+    ) {
+        Row(
+            Modifier.padding(vertical = 14.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Outlined.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(label, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
         }
     }
 }
