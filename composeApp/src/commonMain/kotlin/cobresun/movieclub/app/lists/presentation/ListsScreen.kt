@@ -1,6 +1,13 @@
 package cobresun.movieclub.app.lists.presentation
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
+import kotlinx.coroutines.delay
+import cobresun.movieclub.app.reviews.presentation.EmphasizedEasing
+import cobresun.movieclub.app.reviews.presentation.scaleInOnEnter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -68,7 +75,6 @@ import cobresun.movieclub.app.core.presentation.components.LocalTabBarInset
 import cobresun.movieclub.app.core.presentation.components.Poster
 import cobresun.movieclub.app.core.presentation.components.ShimmerBox
 import cobresun.movieclub.app.core.presentation.noun
-import cobresun.movieclub.app.core.presentation.posterSubtitle
 import cobresun.movieclub.app.core.presentation.toUserMessage
 import cobresun.movieclub.app.lists.domain.WorkList
 
@@ -88,6 +94,14 @@ fun ListsScreen(
     var detailListId by rememberSaveable { mutableStateOf<String?>(null) }
     var detailWorkId by rememberSaveable { mutableStateOf<String?>(null) }
     var showManage by rememberSaveable { mutableStateOf(false) }
+    val enteringKeys = rememberEnteringKeys(state)
+
+    state.pulse?.let { pulse ->
+        LaunchedEffect(pulse) {
+            delay(800)
+            onAction(ListsAction.PulseShown)
+        }
+    }
 
     Box(modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
@@ -132,7 +146,6 @@ fun ListsScreen(
                                 FilterField(
                                     query = state.filter,
                                     onQueryChange = { onAction(ListsAction.Filter(it)) },
-                                    noun = state.clubType.workType.noun,
                                 )
                             }
                             lists.data.forEach { list ->
@@ -145,6 +158,7 @@ fun ListsScreen(
                                         detailListId = list.id
                                         detailWorkId = work.id
                                     },
+                                    enteringKeys = enteringKeys,
                                 )
                             }
                         }
@@ -190,6 +204,30 @@ fun ListsScreen(
     }
 }
 
+/**
+ * Grid keys ("listId/workId") that just appeared on a list that was already
+ * showing (an add, a move in, an expand), so only those cards scale in; the
+ * first load and cards scrolled into view don't animate. Read once per card,
+ * at its first composition, which happens right after this composition.
+ */
+@Composable
+private fun rememberEnteringKeys(state: ListsState): Set<String> {
+    val previous = remember { arrayOfNulls<Map<String, Set<String>>>(1) }
+    val current = state.listsOrEmpty.filter { !state.isCollapsed(it.id) }.mapNotNull { list ->
+        (state.items(list.id) as? AsyncResult.Success)?.let { list.id to state.visibleItems(list.id).mapTo(HashSet()) { "${list.id}/${it.id}" } }
+    }.toMap()
+    val before = previous[0]
+    val entering = if (before == null) emptySet() else current.flatMapTo(HashSet()) { (listId, keys) ->
+        before[listId]?.let { keys - it }.orEmpty()
+    }
+    // A collapsed list counts as showing nothing, so expanding it scales its cards in.
+    val collapsed = state.listsOrEmpty
+        .filter { state.isCollapsed(it.id) && state.items(it.id) is AsyncResult.Success }
+        .associate { it.id to emptySet<String>() }
+    SideEffect { previous[0] = current + collapsed }
+    return entering
+}
+
 @Composable
 private fun ListsHeader(clubName: String, onManage: () -> Unit) {
     Row(
@@ -213,6 +251,7 @@ private fun LazyGridScope.listSection(
     onAction: (ListsAction) -> Unit,
     onAdd: () -> Unit,
     onOpen: (Work) -> Unit,
+    enteringKeys: Set<String>,
 ) {
     val collapsed = state.isCollapsed(list.id)
     item(span = { GridItemSpan(maxLineSpan) }, key = "header-${list.id}", contentType = "header") {
@@ -273,11 +312,17 @@ private fun LazyGridScope.listSection(
                 }
             }
             items(visible, key = { "${list.id}/${it.id}" }, contentType = { "work" }) { work ->
-                PosterTile(
+                val key = "${list.id}/${work.id}"
+                val entering = remember { key in enteringKeys }
+                ListItemCard(
                     work = work,
-                    highlighted = work.id == state.upNextWorkId,
+                    addedBy = work.addedByUserId?.let { state.members[it] },
+                    isUpNext = work.id == state.upNextWorkId,
+                    pulse = state.pulse?.takeIf { it.workId == work.id }?.id,
                     onClick = { onOpen(work) },
-                    modifier = Modifier.animateItem(),
+                    modifier = Modifier
+                        .animateItem(fadeInSpec = tween(200), fadeOutSpec = tween(200), placementSpec = tween(300, easing = EmphasizedEasing))
+                        .scaleInOnEnter(entering, from = 0.9f),
                 )
             }
         }
@@ -345,38 +390,11 @@ private fun ListSectionHeader(
 }
 
 @Composable
-fun PosterTile(work: Work, onClick: () -> Unit, modifier: Modifier = Modifier, highlighted: Boolean = false) {
-    Column(
-        modifier = modifier
-            .clip(MaterialTheme.shapes.small)
-            .clickable(onClick = onClick),
-    ) {
-        Poster(imageUrl = work.imageUrl, title = work.title, modifier = Modifier.fillMaxWidth(), highlighted = highlighted)
-        Spacer(Modifier.height(8.dp))
-        Text(
-            work.title,
-            style = MaterialTheme.typography.labelLarge,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-        work.posterSubtitle()?.let {
-            Text(
-                it,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
-
-@Composable
-private fun FilterField(query: String, onQueryChange: (String) -> Unit, noun: String) {
+private fun FilterField(query: String, onQueryChange: (String) -> Unit) {
     TextField(
         value = query,
         onValueChange = onQueryChange,
-        placeholder = { Text("Filter ${noun}s by title, person or genre") },
+        placeholder = { Text("Search watchlists") },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
         trailingIcon = {
             if (query.isNotEmpty()) {

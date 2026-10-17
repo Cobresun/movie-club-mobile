@@ -44,6 +44,8 @@ data class ListsState(
     val isRefreshing: Boolean = false,
     /** Club members by id, for "Added by". */
     val members: Map<String, Member> = emptyMap(),
+    /** The card to glow once: just pinned as Up Next, or just dropped. */
+    val pulse: CardPulse? = null,
     /** Non-null while the random picker runs. */
     val shuffle: ShuffleState? = null,
     /** Non-null while reordering one list. */
@@ -70,6 +72,9 @@ data class ListsState(
 
     fun isCollapsed(listId: String): Boolean = listId in collapsedListIds
 }
+
+/** [id] is fresh per pulse so the same card can glow twice in a row. */
+data class CardPulse(val workId: String, val id: Int)
 
 data class ReorderDraft(val listId: String, val items: List<Work>)
 
@@ -114,6 +119,8 @@ sealed interface ListsAction {
     data class Shuffle(val listId: String) : ListsAction
     data class ShareList(val listId: String) : ListsAction
     data object ShuffleFinished : ListsAction
+    /** The card glow ran; clear it so a card scrolled back into view doesn't glow again. */
+    data object PulseShown : ListsAction
 }
 
 class ListsViewModel(
@@ -179,6 +186,7 @@ class ListsViewModel(
                 _events.tryEmit(ListsEvent.Share(ShareLinks.list(clubSlug, list.id), list.title))
             }
             ListsAction.ShuffleFinished -> finishShuffle()
+            ListsAction.PulseShown -> _state.update { it.copy(pulse = null) }
         }
     }
 
@@ -394,6 +402,7 @@ class ListsViewModel(
     private fun setUpNext(workId: String?, successText: String) {
         val previous = _state.value.upNextWorkId
         _state.update { it.copy(upNextWorkId = workId) }
+        if (workId != null) pulse(workId)
         viewModelScope.launch {
             listsRepository.setUpNext(clubSlug, workId)
                 .onSuccess { message(successText) }
@@ -500,6 +509,12 @@ class ListsViewModel(
     }
 
     // endregion
+
+    private var pulseCount = 0
+
+    private fun pulse(workId: String) {
+        _state.update { it.copy(pulse = CardPulse(workId, ++pulseCount)) }
+    }
 
     private fun message(text: String) {
         _events.tryEmit(ListsEvent.Message(UiMessage(text)))
