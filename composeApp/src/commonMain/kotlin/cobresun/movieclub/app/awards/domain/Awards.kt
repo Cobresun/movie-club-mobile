@@ -4,12 +4,12 @@ package cobresun.movieclub.app.awards.domain
  * The phases of a club's awards season. Wire values match the web's
  * `AwardsStep` enum (0–4).
  */
-enum class AwardsStep(val value: Int, val title: String) {
-    CATEGORIES(0, "Categories"),
-    NOMINATIONS(1, "Nominations"),
-    RANKINGS(2, "Rankings"),
-    PRESENTATION(3, "Results"),
-    COMPLETED(4, "Results");
+enum class AwardsStep(val value: Int) {
+    CATEGORIES(0),
+    NOMINATIONS(1),
+    RANKINGS(2),
+    PRESENTATION(3),
+    COMPLETED(4);
 
     /**
      * The step members can manually advance to, or null. Presentation only
@@ -28,7 +28,7 @@ enum class AwardsStep(val value: Int, val title: String) {
     companion object {
         fun from(value: Int): AwardsStep = entries.firstOrNull { it.value == value } ?: CATEGORIES
 
-        /** Steps shown in the progress indicator (Presentation and Completed share "Results"). */
+        /** Steps shown in the progress indicator (Completed is the ceremony finished). */
         val visible = listOf(CATEGORIES, NOMINATIONS, RANKINGS, PRESENTATION)
     }
 }

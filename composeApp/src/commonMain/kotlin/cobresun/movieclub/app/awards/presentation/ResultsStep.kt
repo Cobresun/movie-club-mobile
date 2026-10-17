@@ -47,12 +47,6 @@ import cobresun.movieclub.app.core.presentation.components.Poster
 
 fun LazyListScope.resultsStep(state: AwardsState, onAction: (AwardsAction) -> Unit) {
     val season = state.loadedSeason ?: return
-    item(key = "results-intro") {
-        StepIntro(
-            if (season.step == AwardsStep.COMPLETED) "The ${season.year} awards are in. Lowest combined rank wins."
-            else "Gather the club and reveal each category one at a time."
-        )
-    }
     items(season.categories, key = { "result-${it.title}" }) { category ->
         ResultCard(state, category, onAction, Modifier.padding(horizontal = 16.dp).animateItem())
     }

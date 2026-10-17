@@ -2,6 +2,7 @@ package cobresun.movieclub.app.awards.presentation
 
 import cobresun.movieclub.app.core.presentation.components.LocalTabBarInset
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -22,7 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.EmojiEvents
@@ -46,20 +47,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cobresun.movieclub.app.awards.domain.AwardCategory
 import cobresun.movieclub.app.awards.domain.AwardsSeason
 import cobresun.movieclub.app.awards.domain.AwardsStep
-import cobresun.movieclub.app.awards.domain.isRankedBy
 import cobresun.movieclub.app.awards.presentation.components.StepIndicator
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.presentation.components.ClubNameLabel
-import cobresun.movieclub.app.core.presentation.components.ConfirmDialog
+import cobresun.movieclub.app.core.presentation.components.ConfirmSheet
 import cobresun.movieclub.app.core.presentation.components.EmptyState
 import cobresun.movieclub.app.core.presentation.components.ErrorState
 import cobresun.movieclub.app.core.presentation.components.ShimmerBox
 import cobresun.movieclub.app.core.presentation.toUserMessage
+import cobresun.movieclub.app.core.platform.HapticFeedback
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -109,7 +112,7 @@ fun AwardsScreen(
             exit = fadeOut() + slideOutVertically { it / 2 },
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = LocalTabBarInset.current),
         ) {
-            if (season != null) AdvanceBar(state, season, onAction)
+            if (season != null) PhaseControls(state, season, onAction)
         }
     }
 
@@ -180,12 +183,15 @@ private fun SeasonContent(
         modifier = Modifier.fillMaxSize(),
     ) {
         LazyColumn(
-            contentPadding = PaddingValues(top = 4.dp, bottom = (if (season.step.manualNext != null) 140.dp else 32.dp) + LocalTabBarInset.current),
+            contentPadding = PaddingValues(top = 4.dp, bottom = (if (season.step.manualNext != null) 168.dp else 32.dp) + LocalTabBarInset.current),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxSize(),
         ) {
             item(key = "stepper") {
                 StepIndicator(season.step, Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
+            }
+            item(key = "phase-description") {
+                StepIntro(season.step.phase.description, Modifier.animateItem())
             }
             when (season.step) {
                 AwardsStep.CATEGORIES -> categoriesStep(season, onAction)
@@ -197,24 +203,20 @@ private fun SeasonContent(
     }
 }
 
-/** Sticky footer that explains what's left and moves the season to its next phase. */
+/**
+ * Sticky footer with the phase's progress, who the club is waiting on, and the
+ * button that closes the phase once nobody is outstanding (web `PhaseControls`).
+ */
 @Composable
-private fun AdvanceBar(state: AwardsState, season: AwardsSeason, onAction: (AwardsAction) -> Unit) {
-    val next = season.step.manualNext ?: return
+private fun PhaseControls(state: AwardsState, season: AwardsSeason, onAction: (AwardsAction) -> Unit) {
+    val next = season.step.phase.next ?: return
+    val haptics = koinInject<HapticFeedback>()
     var confirming by rememberSaveable { mutableStateOf(false) }
-    val hint = when (season.step) {
-        AwardsStep.CATEGORIES -> if (season.categories.isEmpty()) "Add at least one category to continue."
-        else "${season.categories.size} categor${if (season.categories.size == 1) "y" else "ies"} ready."
-        AwardsStep.NOMINATIONS -> {
-            val nominees = season.categories.sumOf { it.nominations.size }
-            "$nominees nominee${if (nominees == 1) "" else "s"} so far."
-        }
-        AwardsStep.RANKINGS -> {
-            val waiting = state.members.count { m -> season.categories.any { !it.isRankedBy(m.id) } }
-            if (waiting == 0) "Everyone has ranked every category."
-            else "Waiting on $waiting member${if (waiting == 1) "" else "s"} to finish ranking."
-        }
-        else -> ""
+    val waitingOn = state.waitingOn
+    val blocked = state.advanceBlocked
+    val detail = when {
+        waitingOn.isNotEmpty() -> "Waiting on ${listNames(waitingOn.map { it.name })}. The club moves on once everyone is done."
+        else -> blocked
     }
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
@@ -226,39 +228,45 @@ private fun AdvanceBar(state: AwardsState, season: AwardsSeason, onAction: (Awar
             Modifier.padding(start = 20.dp, end = 10.dp, top = 10.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                hint,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
-            )
+            Column(Modifier.weight(1f).animateContentSize()) {
+                state.phaseProgress?.let {
+                    Text(it, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                }
+                detail?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
             Spacer(Modifier.width(12.dp))
-            Button(onClick = { confirming = true }, enabled = state.advanceBlocked == null && !state.isAdvancing) {
+            Button(
+                onClick = { confirming = true },
+                enabled = blocked == null && !state.isAdvancing,
+                contentPadding = PaddingValues(start = 16.dp, end = 10.dp),
+            ) {
                 if (state.isAdvancing) {
                     CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                 } else {
-                    Text(if (next == AwardsStep.PRESENTATION) "Results" else next.title)
-                    Spacer(Modifier.width(6.dp))
-                    Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(18.dp))
+                    Text(next.label)
+                    Spacer(Modifier.width(4.dp))
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, Modifier.size(18.dp))
                 }
             }
         }
     }
     if (confirming) {
-        ConfirmDialog(
-            title = when (next) {
-                AwardsStep.NOMINATIONS -> "Open nominations?"
-                AwardsStep.RANKINGS -> "Close nominations?"
-                else -> "Close rankings?"
+        ConfirmSheet(
+            title = "${next.label}?",
+            message = "${next.confirm} There's no going back.",
+            confirmLabel = next.label,
+            onConfirm = {
+                haptics.performConfirm()
+                onAction(AwardsAction.AdvanceStep)
             },
-            message = when (next) {
-                AwardsStep.NOMINATIONS -> "Categories lock in and members can start nominating movies. This moves the season forward for everyone."
-                AwardsStep.RANKINGS -> "Nominations close and members start ranking the nominees. This moves the season forward for everyone."
-                else -> "Rankings close and the club can reveal the winners. This moves the season forward for everyone."
-            },
-            confirmLabel = "Continue",
-            destructive = false,
-            onConfirm = { onAction(AwardsAction.AdvanceStep) },
             onDismiss = { confirming = false },
         )
     }

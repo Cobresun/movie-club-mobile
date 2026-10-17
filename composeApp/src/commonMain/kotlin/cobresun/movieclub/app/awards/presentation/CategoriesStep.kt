@@ -56,9 +56,6 @@ fun LazyListScope.categoriesStep(
     season: AwardsSeason,
     onAction: (AwardsAction) -> Unit,
 ) {
-    item(key = "categories-intro") {
-        StepIntro("Decide what the club is giving awards for. Drag to set the order they're presented in.")
-    }
     item(key = "categories-list") {
         if (season.categories.isEmpty()) {
             EmptyState(
@@ -192,12 +189,13 @@ private fun AddCategory(season: AwardsSeason, onAction: (AwardsAction) -> Unit) 
     }
 }
 
+/** The phase's description, under the progress bar. */
 @Composable
-fun StepIntro(text: String) {
+fun StepIntro(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+        modifier = modifier.padding(horizontal = 20.dp, vertical = 4.dp),
     )
 }

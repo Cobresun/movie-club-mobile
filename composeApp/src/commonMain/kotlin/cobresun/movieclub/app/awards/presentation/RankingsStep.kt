@@ -39,9 +39,6 @@ import cobresun.movieclub.app.core.presentation.components.Poster
 
 fun LazyListScope.rankingsStep(state: AwardsState, onAction: (AwardsAction) -> Unit) {
     val season = state.loadedSeason ?: return
-    item(key = "rankings-intro") {
-        StepIntro("Drag each category's nominees into your order, best at the top, then submit. You can resubmit until results open.")
-    }
     items(season.categories, key = { "rank-${it.title}" }) { category ->
         RankingCard(state, category, onAction, Modifier.padding(horizontal = 16.dp).animateItem())
     }

@@ -26,8 +26,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cobresun.movieclub.app.awards.domain.AwardsStep
+import cobresun.movieclub.app.awards.presentation.phase
 
-/** Categories → Nominations → Rankings → Results, with the current phase highlighted. */
+/** Categories → Nominations → Voting → Ceremony, with the current phase highlighted. */
 @Composable
 fun StepIndicator(step: AwardsStep, modifier: Modifier = Modifier) {
     val steps = AwardsStep.visible
@@ -37,7 +38,7 @@ fun StepIndicator(step: AwardsStep, modifier: Modifier = Modifier) {
             .fillMaxWidth()
             .clearAndSetSemantics {
                 contentDescription = if (step == AwardsStep.COMPLETED) "Awards complete"
-                else "Step ${current + 1} of ${steps.size}: ${step.title}"
+                else "Step ${current + 1} of ${steps.size}: ${step.phase.label}"
             },
         verticalAlignment = Alignment.Top,
     ) {
@@ -51,7 +52,7 @@ fun StepIndicator(step: AwardsStep, modifier: Modifier = Modifier) {
                     Connector(visible = index < steps.lastIndex, lit = index < current, modifier = Modifier.weight(1f))
                 }
                 Text(
-                    s.title,
+                    s.phase.label,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
                     color = when {

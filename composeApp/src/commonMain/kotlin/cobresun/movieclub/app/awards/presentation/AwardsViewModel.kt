@@ -14,7 +14,9 @@ import cobresun.movieclub.app.awards.domain.allRevealed
 import cobresun.movieclub.app.awards.domain.categoryTitleError
 import cobresun.movieclub.app.awards.domain.rankingOrderFor
 import cobresun.movieclub.app.awards.domain.remainingNominationsFor
+import cobresun.movieclub.app.awards.domain.membersYetToFinish
 import cobresun.movieclub.app.awards.domain.stepChangeError
+import cobresun.movieclub.app.awards.domain.work
 import cobresun.movieclub.app.club.domain.ClubRepository
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.ClubType
@@ -63,6 +65,26 @@ data class AwardsState(
             val season = loadedSeason ?: return null
             val next = season.step.manualNext ?: return null
             return season.stepChangeError(next, memberIds)
+        }
+
+    /** Members who still have their part of the current phase to do. */
+    val waitingOn: List<Member>
+        get() {
+            val outstanding = loadedSeason?.membersYetToFinish(memberIds) ?: return emptyList()
+            return members.filter { it.id in outstanding }
+        }
+
+    /** "N categories" or "X of Y members have finished …" (web `PhaseControls`). */
+    val phaseProgress: String?
+        get() {
+            val season = loadedSeason ?: return null
+            if (season.step == AwardsStep.CATEGORIES) {
+                val count = season.categories.size
+                return "$count ${if (count == 1) "category" else "categories"}"
+            }
+            val work = season.step.work ?: return null
+            val finished = members.size - waitingOn.size
+            return "$finished of ${members.size} members have finished $work"
         }
 
     fun member(id: String): Member? = members.firstOrNull { it.id == id }
@@ -281,17 +303,8 @@ class AwardsViewModel(
         _state.update { it.copy(isAdvancing = true) }
         viewModelScope.launch {
             awardsRepository.setStep(clubSlug, season.year, next)
-                .onSuccess {
-                    _state.update { it.copy(season = AsyncResult.Success(season.copy(step = next))) }
-                    message(
-                        when (next) {
-                            AwardsStep.NOMINATIONS -> "Nominations are open"
-                            AwardsStep.RANKINGS -> "Rankings are open"
-                            else -> "Time for the results!"
-                        }
-                    )
-                }
-                .onError { emitError(it, "move to ${next.title}") { advance() } }
+                .onSuccess { _state.update { it.copy(season = AsyncResult.Success(season.copy(step = next))) } }
+                .onError { emitError(it, season.step.phase.next?.label?.lowercase() ?: "move on") { advance() } }
             _state.update { it.copy(isAdvancing = false) }
             loadSeason(quiet = true)
         }
