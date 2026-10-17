@@ -29,7 +29,12 @@ class KtorMemberDataSource(
 ) : MemberDataSource {
     override suspend fun getMember(): Result<MemberDto, DataError.Remote> {
         // The signed-in member is BetterAuth's session user; there is no /api/member.
-        return when (val result = safeCall<SessionUserDto> { httpClient.get("$BASE_URL/api/auth/get-session") }) {
+        // Profile edits write the user row directly, so the signed session_data cookie
+        // keeps the old name/avatar until it expires; `disableCookieCache` reads the
+        // database (and rewrites the cookie), as the web app does after profile edits.
+        return when (val result = safeCall<SessionUserDto> {
+            httpClient.get("$BASE_URL/api/auth/get-session?disableCookieCache=true")
+        }) {
             is Result.Success -> result.data.user
                 ?.let { Result.Success(MemberDto(it.id, it.email, it.name, it.image)) }
                 ?: Result.Error(DataError.Remote.UNKNOWN)
