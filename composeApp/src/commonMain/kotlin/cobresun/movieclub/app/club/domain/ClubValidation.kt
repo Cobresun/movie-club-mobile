@@ -32,18 +32,18 @@ object ClubValidation {
     fun sanitizeSlugInput(input: String): String =
         input.lowercase().replace(' ', '-').filter { it in 'a'..'z' || it in '0'..'9' || it == '-' }
 
+    private val INVITE_IN_URL = Regex("/join-club/([^/?#\\s]+)")
+    private val BARE_TOKEN = Regex("^[\\w-]+$")
+
     /**
-     * Extracts an invite token from a pasted invite link (https or movieclub://) or a bare token.
+     * Extracts an invite token from what a member pasted: the whole invite link
+     * (https or movieclub://) or just the token out of it (web `parseInviteToken`).
      * Returns null when nothing token-like is present.
      */
     fun parseInviteToken(input: String): String? {
         val trimmed = input.trim()
-        if (trimmed.isEmpty()) return null
-        val marker = "join-club/"
-        val raw = if (marker in trimmed) trimmed.substringAfter(marker) else trimmed
-        val token = raw.substringBefore('?').substringBefore('#').trimEnd('/')
-        if (token.isEmpty() || token.any { it.isWhitespace() || it == '/' }) return null
-        return token
+        INVITE_IN_URL.find(trimmed)?.let { return it.groupValues[1] }
+        return trimmed.takeIf { BARE_TOKEN.matches(it) }
     }
 
     fun inviteLink(token: String): String = "$BASE_URL/join-club/$token"

@@ -241,7 +241,6 @@ fun ClubsScreen(
             },
             onSettings = { club -> navController.navigate(Route.ClubSettings(club.slug)) },
             onCreateClub = { navController.navigate(Route.CreateClub) },
-            onJoinClub = { navController.navigate(Route.JoinClub()) },
         )
     }
     if (showAccount) {
@@ -319,16 +318,25 @@ private fun ClubNavHost(
             )
         }
 
+        // Web routes club-less members to the new-club view, framed as onboarding.
         composable<Route.EmptyClubs> {
-            EmptyClubsScreen(
-                onCreateClick = { navController.navigate(Route.CreateClub) },
-                onJoinClick = { navController.navigate(Route.JoinClub()) },
+            CreateClubScreenRoot(
+                isFirstClub = true,
+                onNavigateBack = null,
+                onNavigateToClub = { clubSlug, name, type ->
+                    memberViewModel.refresh()
+                    onOpenClub(clubSlug)
+                    navController.navigate(Route.ClubInvite(clubSlug, name, type.value))
+                },
+                onJoin = { token -> navController.navigate(Route.JoinClub(token)) },
+                topEnd = { AccountButton() },
             )
         }
 
         composable<Route.CreateClub> {
             CreateClubScreenRoot(
                 onNavigateBack = { navController.popBackStack() },
+                onJoin = { token -> navController.navigate(Route.JoinClub(token)) },
                 onNavigateToClub = { clubSlug, name, type ->
                     memberViewModel.refresh()
                     onOpenClub(clubSlug)
@@ -385,29 +393,5 @@ private fun ClubNavHost(
                 }
             )
         }
-    }
-}
-
-@Composable
-private fun EmptyClubsScreen(
-    onCreateClick: () -> Unit,
-    onJoinClick: () -> Unit,
-) {
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-    ) {
-        AccountButton(Modifier.align(Alignment.TopEnd).padding(8.dp))
-        StatusMessage(
-            icon = Icons.Default.Groups,
-            title = "No clubs yet",
-            message = "Start your own club and invite friends, or join one with an invite link.",
-            primaryAction = "Create a club" to onCreateClick,
-            secondaryAction = "Join with invite link" to onJoinClick,
-            modifier = Modifier.align(Alignment.Center),
-        )
     }
 }

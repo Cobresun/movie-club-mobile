@@ -16,7 +16,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.CircularProgressIndicator
@@ -47,7 +46,7 @@ import kotlinx.coroutines.launch
 /**
  * The club switcher, a bottom sheet like the mobile web's (`ClubSwitcher` +
  * `ClubPanelRows`): the current club with its members & settings, the other
- * clubs, and ways to start or join one.
+ * clubs, and a way to start one (that screen also joins by invite link).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,8 +57,8 @@ internal fun ClubSwitcherSheet(
     onDismiss: () -> Unit,
     onSelectClub: (Club) -> Unit,
     onSettings: (Club) -> Unit,
+    /** The new-club screen, which also takes a pasted invite link. */
     onCreateClub: () -> Unit,
-    onJoinClub: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -139,7 +138,6 @@ internal fun ClubSwitcherSheet(
 
             SheetDivider(Modifier.padding(top = 8.dp))
             SheetRow(Icons.Default.Add, "Create new club") { closeThen(onCreateClub) }
-            SheetRow(Icons.Default.Link, "Join with invite link") { closeThen(onJoinClub) }
         }
     }
 }
