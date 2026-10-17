@@ -20,6 +20,8 @@ import kotlinx.datetime.LocalDate
 import cobresun.movieclub.app.core.presentation.UiMessage
 import cobresun.movieclub.app.core.presentation.isRetryable
 import cobresun.movieclub.app.core.presentation.toUserMessage
+import cobresun.movieclub.app.lists.domain.ListedWork
+import cobresun.movieclub.app.lists.domain.ListsRepository
 import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.member.domain.MemberRepository
 import cobresun.movieclub.app.reviews.domain.MemberScore
@@ -58,7 +60,22 @@ data class ReviewsState(
     val myScoredWorks: List<ScoredWork> = emptyList(),
     /** Works whose club scores were revealed by hand this visit (web keeps these in memory too). */
     val revealedWorkIds: Set<String> = emptySet(),
+    /** The club's Up Next pointer and every user-list item, to find the pinned work. */
+    val upNextWorkId: String? = null,
+    val listedWorks: List<ListedWork> = emptyList(),
+    /** The Up Next work being moved into reviews; keeps its card up, pending, until it lands. */
+    val startingUpNext: ListedWork? = null,
 ) {
+    /**
+     * The Up Next card's work, or null when nothing is pinned or it's already
+     * reviewed. `all-items` is in list order, so the first match is the topmost list's copy.
+     */
+    val upNext: ListedWork?
+        get() = startingUpNext ?: upNextWorkId?.let { id ->
+            val reviews = (reviews as? AsyncResult.Success)?.data ?: return null
+            if (reviews.any { it.work.id == id }) null else listedWorks.firstOrNull { it.work.id == id }
+        }
+
     fun isRevealed(review: Review): Boolean = ScoreReveal.isRevealed(review, currentUserId, revealedWorkIds)
 
     fun canReveal(review: Review): Boolean = ScoreReveal.canReveal(review, currentUserId, revealedWorkIds)
@@ -103,6 +120,9 @@ sealed interface ReviewsEvent {
 
 sealed interface ReviewsAction {
     data object Refresh : ReviewsAction
+    /** The tab became visible: Up Next may have changed on the Lists tab. */
+    data object Shown : ReviewsAction
+    data object StartUpNextReview : ReviewsAction
     data class Search(val query: String) : ReviewsAction
     data class Sort(val option: ReviewSortOption) : ReviewsAction
     data object ToggleSortDirection : ReviewsAction
@@ -131,6 +151,7 @@ class ReviewsViewModel(
     private val memberRepository: MemberRepository,
     private val authRepository: AuthRepository,
     private val clubRepository: ClubRepository,
+    private val listsRepository: ListsRepository,
 ) : ViewModel() {
     private val clubSlug = requireNotNull(savedStateHandle.get<String>("clubSlug"))
 
@@ -155,9 +176,12 @@ class ReviewsViewModel(
 
     fun onAction(action: ReviewsAction) {
         when (action) {
+            ReviewsAction.Shown -> loadUpNext()
+            ReviewsAction.StartUpNextReview -> startUpNextReview()
             ReviewsAction.Refresh -> {
                 if (_state.value.clubName.isBlank()) loadContext()
                 loadReviews(initial = false)
+                loadUpNext()
                 _state.value.detail?.let { loadDetail(it.workId) }
             }
 
@@ -204,7 +228,45 @@ class ReviewsViewModel(
     }
 
     /** Called when a work arrives from the lists tab. */
-    fun refreshQuietly() = loadReviews(initial = false)
+    fun refreshQuietly() {
+        loadReviews(initial = false)
+        loadUpNext()
+    }
+
+    private fun loadUpNext() {
+        viewModelScope.launch {
+            listsRepository.getUpNext(clubSlug).onSuccess { id -> _state.update { it.copy(upNextWorkId = id) } }
+        }
+        viewModelScope.launch {
+            listsRepository.getAllItems(clubSlug).onSuccess { items -> _state.update { it.copy(listedWorks = items) } }
+        }
+    }
+
+    /**
+     * Web UpNextCard "Review": moves the pinned work from its list into reviews
+     * (so it leaves the list rather than being duplicated), then opens its detail
+     * sheet, where score entry lives.
+     */
+    private fun startUpNextReview() {
+        val item = _state.value.upNext ?: return
+        if (_state.value.startingUpNext != null) return
+        _state.update { it.copy(startingUpNext = item) }
+        viewModelScope.launch {
+            val moved = when (val listId = listsRepository.getReviewsListId(clubSlug)) {
+                is Result.Success -> listsRepository.moveItem(clubSlug, item.listId, item.work.id, listId.data)
+                is Result.Error -> listId
+            }
+            when (moved) {
+                is Result.Success -> {
+                    _state.update { s -> s.copy(listedWorks = s.listedWorks.filter { it.work.id != item.work.id }) }
+                    fetchReviews()
+                    if (_state.value.review(item.work.id) != null) onAction(ReviewsAction.OpenDetail(item.work.id))
+                }
+                is Result.Error -> message("Failed to add \"${item.work.title}\" to reviews. Please try again.")
+            }
+            _state.update { it.copy(startingUpNext = null) }
+        }
+    }
 
     private fun loadContext() {
         viewModelScope.launch {
@@ -236,15 +298,19 @@ class ReviewsViewModel(
         viewModelScope.launch {
             if (initial) _state.update { it.copy(reviews = AsyncResult.Loading) }
             else _state.update { it.copy(isRefreshing = true) }
-            when (val result = reviewsRepository.getReviews(clubSlug)) {
-                is Result.Success -> _state.update { it.copy(reviews = AsyncResult.Success(result.data)) }
-                is Result.Error -> if (_state.value.reviews is AsyncResult.Success) {
-                    emitError(result.error, "refresh reviews") { loadReviews(initial = false) }
-                } else {
-                    _state.update { it.copy(reviews = AsyncResult.Error(dataError = result.error)) }
-                }
-            }
+            fetchReviews()
             _state.update { it.copy(isRefreshing = false) }
+        }
+    }
+
+    private suspend fun fetchReviews() {
+        when (val result = reviewsRepository.getReviews(clubSlug)) {
+            is Result.Success -> _state.update { it.copy(reviews = AsyncResult.Success(result.data)) }
+            is Result.Error -> if (_state.value.reviews is AsyncResult.Success) {
+                emitError(result.error, "refresh reviews") { loadReviews(initial = false) }
+            } else {
+                _state.update { it.copy(reviews = AsyncResult.Error(dataError = result.error)) }
+            }
         }
     }
 

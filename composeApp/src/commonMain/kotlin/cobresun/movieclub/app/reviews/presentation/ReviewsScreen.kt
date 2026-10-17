@@ -92,6 +92,7 @@ fun ReviewsScreen(
     modifier: Modifier = Modifier,
 ) {
     val workType = state.clubType.workType
+    LaunchedEffect(Unit) { onAction(ReviewsAction.Shown) }
     Box(modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 8.dp)) {
@@ -139,6 +140,16 @@ fun ReviewsScreen(
                             verticalArrangement = Arrangement.spacedBy(20.dp),
                             modifier = Modifier.fillMaxSize(),
                         ) {
+                            state.upNext?.let { upNext ->
+                                item(key = "up-next", span = { GridItemSpan(maxLineSpan) }) {
+                                    UpNextReviewCard(
+                                        item = upNext,
+                                        starting = state.startingUpNext != null,
+                                        onReview = { onAction(ReviewsAction.StartUpNextReview) },
+                                        modifier = Modifier.animateItem(),
+                                    )
+                                }
+                            }
                             if (reviews.data.isEmpty()) {
                                 item(span = { GridItemSpan(maxLineSpan) }) {
                                     EmptyState(
