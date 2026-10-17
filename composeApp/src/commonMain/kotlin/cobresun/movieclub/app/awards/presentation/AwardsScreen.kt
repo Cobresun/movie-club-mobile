@@ -27,8 +27,11 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -40,6 +43,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -221,6 +225,9 @@ private fun SeasonContent(
                 AwardsStep.RANKINGS -> rankingsStep(state, onAction)
                 AwardsStep.PRESENTATION, AwardsStep.COMPLETED -> resultsStep(state, onAction)
             }
+            item(key = "delete-year") {
+                DeleteYearButton(state, season.year, onAction)
+            }
         }
     }
 }
@@ -289,6 +296,39 @@ private fun PhaseControls(state: AwardsState, season: AwardsSeason, onAction: (A
                 haptics.performConfirm()
                 onAction(AwardsAction.AdvanceStep)
             },
+            onDismiss = { confirming = false },
+        )
+    }
+}
+
+@Composable
+private fun DeleteYearButton(state: AwardsState, year: Int, onAction: (AwardsAction) -> Unit) {
+    var confirming by rememberSaveable { mutableStateOf(false) }
+    // Close the sheet once the request settles (on failure the snackbar explains why).
+    var wasDeleting by remember { mutableStateOf(false) }
+    LaunchedEffect(state.isDeletingYear) {
+        if (wasDeleting && !state.isDeletingYear) confirming = false
+        wasDeleting = state.isDeletingYear
+    }
+    Box(Modifier.fillMaxWidth().padding(top = 12.dp), contentAlignment = Alignment.Center) {
+        TextButton(
+            onClick = { confirming = true },
+            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurfaceVariant),
+        ) {
+            Icon(Icons.Outlined.DeleteOutline, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("Delete $year awards")
+        }
+    }
+    if (confirming) {
+        ConfirmSheet(
+            title = "Delete $year awards?",
+            message = "This removes every category, nomination and vote for $year. It can't be undone.",
+            confirmLabel = "Delete",
+            destructive = true,
+            loading = state.isDeletingYear,
+            dismissOnConfirm = false,
+            onConfirm = { onAction(AwardsAction.DeleteYear) },
             onDismiss = { confirming = false },
         )
     }

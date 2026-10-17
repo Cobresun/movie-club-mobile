@@ -55,6 +55,7 @@ data class AwardsState(
     /** Categories revealed during the presentation on this device. */
     val revealed: Set<String> = emptySet(),
     val isAdvancing: Boolean = false,
+    val isDeletingYear: Boolean = false,
     /** The "New awards" sheet, while open. */
     val newAwards: NewAwardsState? = null,
 ) {
@@ -138,6 +139,7 @@ sealed interface AwardsAction {
     data object OpenNewAwards : AwardsAction
     data object DismissNewAwards : AwardsAction
     data class CreateYear(val year: Int, val categories: List<String>) : AwardsAction
+    data object DeleteYear : AwardsAction
 
     data class AddCategory(val title: String) : AwardsAction
     data class RenameCategory(val from: String, val to: String) : AwardsAction
@@ -213,6 +215,7 @@ class AwardsViewModel(
             AwardsAction.OpenNewAwards -> openNewAwards()
             AwardsAction.DismissNewAwards -> _state.update { it.copy(newAwards = null) }
             is AwardsAction.CreateYear -> createYear(action.year, action.categories)
+            AwardsAction.DeleteYear -> deleteYear()
             is AwardsAction.AddCategory -> addCategory(action.title)
             is AwardsAction.RenameCategory -> renameCategory(action.from, action.to)
             is AwardsAction.DeleteCategory -> deleteCategory(action.title)
@@ -373,6 +376,36 @@ class AwardsViewModel(
                 .onError { error ->
                     _state.update { s -> s.copy(newAwards = s.newAwards?.copy(isCreating = false)) }
                     emitError(error, "start the $year awards") { createYear(year, categories) }
+                }
+        }
+    }
+
+    private fun deleteYear() {
+        val year = _state.value.selectedYear ?: return
+        if (_state.value.isDeletingYear) return
+        _state.update { it.copy(isDeletingYear = true) }
+        viewModelScope.launch {
+            awardsRepository.deleteYear(clubSlug, year)
+                .onSuccess {
+                    // Back to the awards list, which lands on the newest remaining year.
+                    val remaining = (_state.value.years as? AsyncResult.Success)?.data.orEmpty() - year
+                    val next = remaining.firstOrNull()
+                    _state.update {
+                        it.copy(
+                            years = AsyncResult.Success(remaining),
+                            selectedYear = next,
+                            season = if (next == null) null else AsyncResult.Loading,
+                            rankingDrafts = emptyMap(),
+                            revealed = emptySet(),
+                            isDeletingYear = false,
+                        )
+                    }
+                    message("Deleted the $year awards")
+                    loadYears(quiet = true)
+                }
+                .onError { error ->
+                    _state.update { it.copy(isDeletingYear = false) }
+                    emitError(error, "delete the $year awards") { deleteYear() }
                 }
         }
     }
