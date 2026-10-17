@@ -64,11 +64,15 @@ fun CommentsSection(
                 }
             }
 
-            is AsyncResult.Error -> Text(
-                "Couldn't load comments. Pull down on the reviews to refresh.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            is AsyncResult.Error -> Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Couldn't load comments.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { onAction(ReviewsAction.RetryComments) }) { Text("Retry") }
+            }
 
             is AsyncResult.Success -> {
                 if (comments.data.isEmpty()) {

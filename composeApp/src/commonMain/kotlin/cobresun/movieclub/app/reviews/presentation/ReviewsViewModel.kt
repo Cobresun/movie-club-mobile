@@ -120,6 +120,7 @@ sealed interface ReviewsAction {
     data class EditComment(val commentId: String, val content: String, val spoiler: Boolean) : ReviewsAction
     data class DeleteComment(val commentId: String) : ReviewsAction
     data object GenerateQuestions : ReviewsAction
+    data object RetryComments : ReviewsAction
 }
 
 class ReviewsViewModel(
@@ -163,6 +164,11 @@ class ReviewsViewModel(
             is ReviewsAction.AddReview -> addReview(action.work)
             is ReviewsAction.RemoveReview -> removeReview(action.work)
             is ReviewsAction.Share -> share(action.work)
+            ReviewsAction.RetryComments -> _state.value.detail?.let { d ->
+                updateDetail(d.workId) { it.copy(comments = AsyncResult.Loading) }
+                loadComments(d.workId)
+            }
+
             is ReviewsAction.OpenDetail -> {
                 _state.update { it.copy(detail = ReviewDetailState(action.workId)) }
                 loadDetail(action.workId)
