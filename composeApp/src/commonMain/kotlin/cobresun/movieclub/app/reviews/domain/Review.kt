@@ -45,4 +45,6 @@ data class ReviewComment(
     val content: String,
     val createdDate: LocalDate?,
     val spoiler: Boolean,
+    /** ISO-8601 instant posted, for "2 hours ago". */
+    val createdAt: String? = null,
 )

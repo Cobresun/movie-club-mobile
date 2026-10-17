@@ -72,4 +72,5 @@ fun CommentDto.toReviewComment(timeZone: TimeZone = TimeZone.currentSystemDefaul
         content = content,
         createdDate = parseLocalDate(createdDate, timeZone),
         spoiler = spoiler,
+        createdAt = createdDate,
     )

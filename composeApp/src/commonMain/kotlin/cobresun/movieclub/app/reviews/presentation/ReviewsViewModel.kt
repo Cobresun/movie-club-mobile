@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.Job
+import kotlin.time.Clock
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -183,6 +184,7 @@ class ReviewsViewModel(
     val state = _state.asStateFlow()
 
     private val scorePolls = mutableMapOf<String, Job>()
+    private var tempCommentCount = 0
 
     private val _events = MutableSharedFlow<ReviewsEvent>(extraBufferCapacity = 8)
     val events = _events.asSharedFlow()
@@ -536,12 +538,36 @@ class ReviewsViewModel(
     private fun addComment(content: String, spoiler: Boolean) {
         val workId = _state.value.detail?.workId ?: return
         if (content.isBlank()) return
-        updateDetail(workId) { it.copy(isPostingComment = true) }
+        // Optimistic copy (web does the same), replaced by the refetch.
+        val me = _state.value.members.firstOrNull { it.id == _state.value.currentUserId }
+        val temp = me?.let {
+            ReviewComment(
+                id = "temp-${++tempCommentCount}",
+                workId = workId,
+                userId = it.id,
+                userName = it.name,
+                userImageUrl = it.imageUrl,
+                content = content.trim(),
+                createdDate = null,
+                spoiler = spoiler,
+                createdAt = Clock.System.now().toString(),
+            )
+        }
+        if (temp != null) updateComments(workId) { it + temp } else updateDetail(workId) { it.copy(isPostingComment = true) }
         viewModelScope.launch {
             commentsRepository.addComment(clubSlug, workId, content, spoiler)
                 .onSuccess { loadComments(workId) }
-                .onError { emitError(it, "post your comment") }
+                .onError { error ->
+                    temp?.let { t -> updateComments(workId) { list -> list.filter { it.id != t.id } } }
+                    emitError(error, "post your comment")
+                }
             updateDetail(workId) { it.copy(isPostingComment = false) }
+        }
+    }
+
+    private fun updateComments(workId: String, transform: (List<ReviewComment>) -> List<ReviewComment>) {
+        updateDetail(workId) { d ->
+            (d.comments as? AsyncResult.Success)?.let { d.copy(comments = AsyncResult.Success(transform(it.data))) } ?: d
         }
     }
 
