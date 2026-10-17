@@ -175,7 +175,6 @@ fun ReviewsScreen(
                             if (reviews.data.isEmpty() && state.pendingWorks.isEmpty()) {
                                 item(span = { GridItemSpan(maxLineSpan) }) {
                                     EmptyState(
-                                        modifier = Modifier.fadeUpOnEnter(),
                                         icon = Icons.Outlined.RateReview,
                                         title = "No reviews yet",
                                         message = "Start building your club's ${workType.noun} collection by adding your first review",
@@ -186,7 +185,6 @@ fun ReviewsScreen(
                             } else if (visible.isEmpty()) {
                                 item(span = { GridItemSpan(maxLineSpan) }) {
                                     EmptyState(
-                                        modifier = Modifier.fadeUpOnEnter(),
                                         icon = Icons.Outlined.SearchOff,
                                         title = "No results found",
                                         message = "Try adjusting your search. You can search by " +

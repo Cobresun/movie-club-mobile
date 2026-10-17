@@ -34,8 +34,9 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import cobresun.movieclub.app.core.presentation.fadeUpOnAppear
 
-/** Friendly centered message for empty lists and searches. */
+/** Friendly centered message for empty lists and searches; fades up as it appears (web EmptyState). */
 @Composable
 fun EmptyState(
     icon: ImageVector,
@@ -47,6 +48,7 @@ fun EmptyState(
 ) {
     Column(
         modifier = modifier
+            .fadeUpOnAppear()
             .fillMaxWidth()
             .padding(horizontal = 32.dp, vertical = 48.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

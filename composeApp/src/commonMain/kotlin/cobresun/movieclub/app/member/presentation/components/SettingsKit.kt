@@ -43,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import cobresun.movieclub.app.core.presentation.fadeUpOnAppear
 import androidx.compose.ui.unit.sp
 import cobresun.movieclub.app.core.domain.ClubType
 import coil3.compose.SubcomposeAsyncImage
@@ -284,7 +285,8 @@ fun StatusMessage(
     secondaryAction: Pair<String, () -> Unit>? = null,
 ) {
     Column(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 24.dp),
+        // Empty and error states fade up as they appear (web EmptyState `animate-fade-up`).
+        modifier = modifier.fadeUpOnAppear().fillMaxWidth().padding(horizontal = 32.dp, vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(

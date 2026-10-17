@@ -20,17 +20,17 @@ object AppMotion {
 }
 
 /**
- * Fades in while rising 12dp the first time it's composed (web `animate-fade-up`).
+ * Fades in while rising 16dp the first time it's composed (web `animate-fade-up`).
  * Shows instantly when the system asks for reduced motion.
  */
 fun Modifier.fadeUpOnAppear(durationMillis: Int = AppMotion.SLOW, delayMillis: Int = 0): Modifier = composed {
     val reduced = rememberReducedMotion()
     val progress = remember { Animatable(if (reduced) 1f else 0f) }
     LaunchedEffect(Unit) {
-        if (progress.value < 1f) progress.animateTo(1f, tween(durationMillis, delayMillis, easing = AppMotion.Emphasized))
+        if (progress.value < 1f) progress.animateTo(1f, tween(durationMillis, delayMillis, easing = AppMotion.Standard))
     }
     graphicsLayer {
         alpha = progress.value
-        translationY = (1f - progress.value) * 12.dp.toPx()
+        translationY = (1f - progress.value) * 16.dp.toPx()
     }
 }
