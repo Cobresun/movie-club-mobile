@@ -98,7 +98,7 @@ fun ListsScreen(
         Column(Modifier.fillMaxSize()) {
             ListsHeader(
                 clubName = state.clubName,
-                canShuffle = (state.selectedItems as? AsyncResult.Success)?.data?.isNotEmpty() == true,
+                canShuffle = ((state.selectedItems as? AsyncResult.Success)?.data?.size ?: 0) > 1,
                 canReorder = ((state.selectedItems as? AsyncResult.Success)?.data?.size ?: 0) > 1,
                 onShuffle = { onAction(ListsAction.Shuffle) },
                 onReorder = { onAction(ListsAction.StartReorder) },
