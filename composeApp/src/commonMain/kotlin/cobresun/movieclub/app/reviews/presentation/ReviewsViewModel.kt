@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class ReviewsState(
+    val clubSlug: String? = null,
     val clubType: ClubType = ClubType.MOVIE,
     val clubName: String = "",
     val reviews: AsyncResult<List<Review>> = AsyncResult.Loading,
@@ -136,6 +137,7 @@ class ReviewsViewModel(
     // The search text and open details sheet survive process death like the selected tab does.
     private val _state = MutableStateFlow(
         ReviewsState(
+            clubSlug = clubSlug,
             query = savedStateHandle.get<String>(KEY_QUERY).orEmpty(),
             detail = savedStateHandle.get<String>(KEY_DETAIL)?.let { ReviewDetailState(it) },
         )

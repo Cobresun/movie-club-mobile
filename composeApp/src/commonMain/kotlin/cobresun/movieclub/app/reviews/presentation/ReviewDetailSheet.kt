@@ -32,7 +32,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -89,6 +95,7 @@ fun ReviewDetailSheet(
     currentUserId: String?,
     discussionQuestionsEnabled: Boolean,
     scoredWorks: List<ScoredWork>,
+    clubSlug: String?,
     /** False hides everyone else's scores and the average until you score or reveal. */
     revealed: Boolean,
     /** Offer "Reveal club scores": hidden, with something to hide. */
@@ -100,9 +107,11 @@ fun ReviewDetailSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var confirmRemove by remember { mutableStateOf(false) }
+    var scoring by remember(review.work.id) { mutableStateOf(false) }
     val fullDetails = (detail.details as? AsyncResult.Success)?.data
     val work = if (fullDetails != null) review.work.copy(details = fullDetails) else review.work
     val myScore = review.scoreOf(currentUserId)
+    val noun = if (work.type == cobresun.movieclub.app.core.domain.WorkType.BOOK) "book" else "movie"
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -110,14 +119,14 @@ fun ReviewDetailSheet(
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         dragHandle = null,
     ) {
-        Box {
+        Box(Modifier.fillMaxHeight(0.96f).imePadding()) {
+        Column(Modifier.fillMaxSize()) {
         Column(
             Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.96f)
-                .imePadding()
+                .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .navigationBarsPadding()
+                .then(if (currentUserId == null) Modifier.navigationBarsPadding() else Modifier)
                 .padding(bottom = 24.dp),
         ) {
             var tmdbTapped by remember(work.id) { mutableStateOf(false) }
@@ -136,24 +145,6 @@ fun ReviewDetailSheet(
                 Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp),
             ) {
-                ScoreEntryPanel(
-                    workId = work.id,
-                    existing = myScore?.value,
-                    isSaving = detail.isSavingScore,
-                    enabled = currentUserId != null,
-                    onSave = { onAction(ReviewsAction.SaveScore(work.id, it)) },
-                    onDelete = { onAction(ReviewsAction.DeleteScore(work.id)) },
-                    assist = remember(work.id, scoredWorks) {
-                        val target = ScoreAssist.Target(
-                            workId = work.id,
-                            type = work.type,
-                            externalId = work.externalId,
-                            genres = (work.details as? WorkDetails.Movie)?.genres.orEmpty(),
-                        )
-                        ScoreAssistInput(target, work.title, work.imageUrl, ScoreAssist.buildCandidatePool(scoredWorks, target))
-                    },
-                )
-
                 ClubScores(
                     review = review,
                     members = members,
@@ -213,35 +204,58 @@ fun ReviewDetailSheet(
                     onAction = onAction,
                 )
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedButton(onClick = { onAction(ReviewsAction.Share(work)) }, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Share")
-                    }
-                    OutlinedButton(
-                        onClick = { confirmRemove = true },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Icon(Icons.Outlined.DeleteOutline, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Remove")
-                    }
+                // Deliberately tucked at the end: rare and destructive, so no sticky prominence.
+                TextButton(
+                    onClick = { confirmRemove = true },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error.copy(alpha = 0.85f)),
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                ) {
+                    Icon(Icons.Outlined.DeleteOutline, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Delete review")
                 }
             }
+        }
+        if (currentUserId != null) {
+            ScoreFooter(
+                noun = noun,
+                hasScore = myScore != null,
+                onRate = { scoring = true },
+                onShare = { onAction(ReviewsAction.Share(work)) },
+            )
+        }
         }
         SheetSnackbarHost()
         }
     }
 
+    if (scoring && currentUserId != null) {
+        ScoreEntrySheet(
+            workId = work.id,
+            noun = noun,
+            existing = myScore?.value,
+            assist = remember(work.id, scoredWorks) {
+                val target = ScoreAssist.Target(
+                    workId = work.id,
+                    type = work.type,
+                    externalId = work.externalId,
+                    genres = (work.details as? WorkDetails.Movie)?.genres.orEmpty(),
+                )
+                ScoreAssistInput(target, work.title, work.imageUrl, ScoreAssist.buildCandidatePool(scoredWorks, target))
+            },
+            currentClubSlug = clubSlug,
+            onSave = { onAction(ReviewsAction.SaveScore(work.id, it)) },
+            onRemove = { onAction(ReviewsAction.DeleteScore(work.id)) },
+            onDismiss = { scoring = false },
+        )
+    }
+
     if (confirmRemove) {
         ConfirmDialog(
-            title = "Remove ${work.title} from reviews?",
-            message = "Every member's score for it will be removed too. This can't be undone.",
-            confirmLabel = "Remove",
+            title = "Delete review?",
+            message = "This removes the whole review for the club — the ${noun} and everyone's scores — and can't be undone. " +
+                "To drop just your own score, use Remove my score in the score panel.",
+            confirmLabel = "Delete",
             onConfirm = { onAction(ReviewsAction.RemoveReview(work)) },
             onDismiss = { confirmRemove = false },
         )
@@ -410,6 +424,48 @@ private fun ReviewedDate(date: LocalDate, onChange: (LocalDate) -> Unit) {
             dismissButton = { TextButton(onClick = { picking = false }) { Text("Cancel") } },
         ) {
             DatePicker(state = pickerState, title = { Text("Reviewed on", Modifier.padding(start = 24.dp, top = 16.dp)) })
+        }
+    }
+}
+
+/**
+ * The sheet's primary action, always one tap away: "Rate this movie" while
+ * unrated; once scored it turns secondary ("Edit score") and Share becomes the
+ * primary button beside it.
+ */
+@Composable
+private fun ScoreFooter(noun: String, hasScore: Boolean, onRate: () -> Unit, onShare: () -> Unit) {
+    Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainerLow)) {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Button(
+                onClick = onRate,
+                shape = MaterialTheme.shapes.medium,
+                colors = if (hasScore) {
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                    )
+                } else ButtonDefaults.buttonColors(),
+                modifier = Modifier.weight(1f).height(52.dp),
+            ) {
+                Icon(if (hasScore) Icons.Outlined.Edit else Icons.Filled.Star, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(if (hasScore) "Edit score" else "Rate this $noun", fontWeight = FontWeight.Bold)
+            }
+            AnimatedVisibility(visible = hasScore, enter = fadeIn() + expandHorizontally(), exit = fadeOut() + shrinkHorizontally()) {
+                Button(onClick = onShare, shape = MaterialTheme.shapes.medium, modifier = Modifier.height(52.dp)) {
+                    Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Share", fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }

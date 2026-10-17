@@ -191,6 +191,7 @@ fun ReviewsScreen(
                 currentUserId = state.currentUserId,
                 discussionQuestionsEnabled = state.discussionQuestionsEnabled,
                 scoredWorks = state.myScoredWorks,
+                clubSlug = state.clubSlug,
                 revealed = state.isRevealed(review),
                 canReveal = state.canReveal(review),
                 fact = remember(review, state.reviews, state.currentUserId, state.revealedWorkIds) { state.spotlightFact(review) },
