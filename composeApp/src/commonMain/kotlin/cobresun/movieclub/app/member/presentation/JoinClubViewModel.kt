@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import cobresun.movieclub.app.club.domain.ClubRepository
 import cobresun.movieclub.app.club.domain.ClubValidation
 import cobresun.movieclub.app.club.domain.InviteInfo
+import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.member.presentation.components.toUserMessage
@@ -75,7 +76,17 @@ class JoinClubViewModel(
             clubRepository.getInviteInfo(token)
                 .onSuccess { info -> _state.update { it.copy(isLookingUp = false, invite = info) } }
                 .onError { e ->
-                    _state.update { it.copy(isLookingUp = false, error = e.toUserMessage("find that invite")) }
+                    _state.update {
+                        it.copy(
+                            isLookingUp = false,
+                            // A rejected token reads like the web's join page; connection trouble keeps its retry hint.
+                            error = if (e.remote == DataError.Remote.UNKNOWN || e.remote == DataError.Remote.EMAIL_NOT_CONFIRMED) {
+                                e.serverMessage?.takeIf { m -> m.isNotBlank() } ?: "The invite token is invalid or expired."
+                            } else {
+                                e.toUserMessage("find that invite")
+                            },
+                        )
+                    }
                 }
         }
     }

@@ -43,6 +43,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cobresun.movieclub.app.member.presentation.components.SettingsTopBar
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.compose.koinInject
+import cobresun.movieclub.app.core.platform.HapticFeedback
 
 @Composable
 fun JoinClubScreenRoot(
@@ -52,15 +54,24 @@ fun JoinClubScreenRoot(
     memberClubSlugs: Set<String> = emptySet(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val haptics = koinInject<HapticFeedback>()
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                is JoinClubEvent.Joined -> onJoined(event.clubSlug)
+                is JoinClubEvent.Joined -> {
+                    haptics.performSuccess()
+                    onJoined(event.clubSlug)
+                }
             }
         }
     }
     // Like the web app: an invite to a club you're already in just takes you there.
     val alreadyMember = state.invite?.slug?.let { it in memberClubSlugs } == true
+    // Web JoinClubView redirects straight to a club you're already in.
+    LaunchedEffect(alreadyMember, state.invite?.slug) {
+        val slug = state.invite?.slug
+        if (alreadyMember && slug != null) onJoined(slug)
+    }
     JoinClubScreen(
         state = state,
         onAction = { action ->

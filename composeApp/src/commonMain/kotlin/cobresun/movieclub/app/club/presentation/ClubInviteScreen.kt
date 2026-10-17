@@ -94,6 +94,11 @@ fun ClubInviteScreenRoot(
     val scope = rememberCoroutineScope()
     var copied by remember { mutableStateOf(false) }
 
+    // The club exists: celebrate as the check finishes drawing.
+    LaunchedEffect(Unit) {
+        delay(500)
+        haptics.performSuccess()
+    }
     LaunchedEffect(copied) {
         if (copied) {
             delay(2000)
