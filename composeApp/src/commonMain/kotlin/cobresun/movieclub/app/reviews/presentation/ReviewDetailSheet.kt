@@ -1,6 +1,7 @@
 package cobresun.movieclub.app.reviews.presentation
 
 import androidx.compose.ui.focus.onFocusChanged
+import cobresun.movieclub.app.core.presentation.dismissKeyboardOnTapOrDrag
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import cobresun.movieclub.app.core.presentation.components.AppBottomSheet
@@ -136,7 +137,6 @@ fun ReviewDetailSheet(
     val work = if (fullDetails != null) review.work.copy(details = fullDetails) else review.work
     val myScore = review.scoreOf(currentUserId)
     val noun = if (work.type == cobresun.movieclub.app.core.domain.WorkType.BOOK) "book" else "movie"
-
     AppBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -149,6 +149,7 @@ fun ReviewDetailSheet(
                 .fillMaxWidth()
                 .weight(1f)
                 .onFocusChanged { typing = it.hasFocus }
+                .dismissKeyboardOnTapOrDrag()
                 .verticalScroll(rememberScrollState())
                 .then(if (currentUserId == null) Modifier.navigationBarsPadding() else Modifier)
                 .padding(bottom = 24.dp),

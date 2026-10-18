@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import cobresun.movieclub.app.core.presentation.dismissKeyboardOnTapOrDrag
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -122,6 +123,7 @@ fun ListItemDetailSheet(
                     Modifier
                         .fillMaxWidth()
                         .weight(1f)
+                        .dismissKeyboardOnTapOrDrag()
                         .verticalScroll(rememberScrollState())
                         .padding(bottom = 24.dp),
                 ) {
