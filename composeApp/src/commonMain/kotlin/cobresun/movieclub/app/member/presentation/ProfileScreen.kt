@@ -64,13 +64,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.member.domain.Member
-import cobresun.movieclub.app.member.presentation.components.ErrorMessage
-import cobresun.movieclub.app.member.presentation.components.MemberAvatar
-import cobresun.movieclub.app.member.presentation.components.SettingsGroup
-import cobresun.movieclub.app.member.presentation.components.SettingsRow
-import cobresun.movieclub.app.member.presentation.components.SettingsSectionHeader
-import cobresun.movieclub.app.member.presentation.components.SettingsTopBar
-import cobresun.movieclub.app.member.presentation.platform.rememberImagePicker
+import cobresun.movieclub.app.core.presentation.components.ErrorMessage
+import cobresun.movieclub.app.core.presentation.components.MemberAvatar
+import cobresun.movieclub.app.core.presentation.components.SettingsGroup
+import cobresun.movieclub.app.core.presentation.components.SettingsRow
+import cobresun.movieclub.app.core.presentation.components.SettingsSectionHeader
+import cobresun.movieclub.app.core.presentation.components.SettingsTopBar
+import cobresun.movieclub.app.core.presentation.platform.rememberImagePicker
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable

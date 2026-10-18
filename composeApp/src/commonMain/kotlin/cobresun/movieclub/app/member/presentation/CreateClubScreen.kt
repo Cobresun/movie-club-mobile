@@ -52,8 +52,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
-import cobresun.movieclub.app.member.presentation.components.SettingsTopBar
-import cobresun.movieclub.app.member.presentation.components.icon
+import cobresun.movieclub.app.core.presentation.components.SettingsTopBar
+import cobresun.movieclub.app.core.presentation.components.icon
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable

@@ -51,7 +51,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import cobresun.movieclub.app.core.presentation.components.Poster
 import cobresun.movieclub.app.member.domain.Member
-import cobresun.movieclub.app.member.presentation.components.icon
+import cobresun.movieclub.app.core.presentation.components.icon
 import cobresun.movieclub.app.reviews.domain.ScoreScale
 import cobresun.movieclub.app.stats.domain.VolumeUnit
 import cobresun.movieclub.app.stats.domain.WrappedCard

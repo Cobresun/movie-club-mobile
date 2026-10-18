@@ -1,4 +1,4 @@
-package cobresun.movieclub.app.member.presentation.platform
+package cobresun.movieclub.app.core.presentation.platform
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember

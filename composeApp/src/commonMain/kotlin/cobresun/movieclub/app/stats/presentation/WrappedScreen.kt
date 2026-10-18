@@ -69,8 +69,8 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import cobresun.movieclub.app.core.presentation.components.AppSnackbarHost
-import cobresun.movieclub.app.member.presentation.platform.encodeToPng
-import cobresun.movieclub.app.member.presentation.platform.rememberImageShareSheet
+import cobresun.movieclub.app.core.presentation.platform.encodeToPng
+import cobresun.movieclub.app.core.presentation.platform.rememberImageShareSheet
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

@@ -88,11 +88,11 @@ import cobresun.movieclub.app.reviews.presentation.SharedReviewScreenRoot
 import cobresun.movieclub.app.member.presentation.MemberViewModel
 import cobresun.movieclub.app.member.presentation.ProfileScreenRoot
 import cobresun.movieclub.app.stats.presentation.WrappedScreenRoot
-import cobresun.movieclub.app.member.presentation.components.ErrorMessage
-import cobresun.movieclub.app.member.presentation.components.MemberAvatar
-import cobresun.movieclub.app.member.presentation.components.StatusMessage
-import cobresun.movieclub.app.member.presentation.components.icon
-import cobresun.movieclub.app.member.presentation.components.label
+import cobresun.movieclub.app.core.presentation.components.ErrorMessage
+import cobresun.movieclub.app.core.presentation.components.MemberAvatar
+import cobresun.movieclub.app.core.presentation.components.StatusMessage
+import cobresun.movieclub.app.core.presentation.components.icon
+import cobresun.movieclub.app.core.presentation.components.label
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 

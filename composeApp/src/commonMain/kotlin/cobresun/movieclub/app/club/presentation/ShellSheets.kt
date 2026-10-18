@@ -39,8 +39,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cobresun.movieclub.app.core.domain.Club
 import cobresun.movieclub.app.member.domain.Member
-import cobresun.movieclub.app.member.presentation.components.MemberAvatar
-import cobresun.movieclub.app.member.presentation.components.label
+import cobresun.movieclub.app.core.presentation.components.MemberAvatar
+import cobresun.movieclub.app.core.presentation.components.label
 import kotlinx.coroutines.launch
 
 /**

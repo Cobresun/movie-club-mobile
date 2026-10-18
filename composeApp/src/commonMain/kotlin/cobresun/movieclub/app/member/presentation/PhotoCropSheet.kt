@@ -55,7 +55,7 @@ import androidx.compose.ui.unit.dp
 import cobresun.movieclub.app.member.domain.AvatarCrop
 import cobresun.movieclub.app.member.domain.CropRect
 import cobresun.movieclub.app.member.domain.ImageSize
-import cobresun.movieclub.app.member.presentation.platform.encodeToJpeg
+import cobresun.movieclub.app.core.presentation.platform.encodeToJpeg
 import kotlin.math.roundToInt
 
 /**

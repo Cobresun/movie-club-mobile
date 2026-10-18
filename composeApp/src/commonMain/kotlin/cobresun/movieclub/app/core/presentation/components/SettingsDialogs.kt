@@ -1,4 +1,4 @@
-package cobresun.movieclub.app.member.presentation.components
+package cobresun.movieclub.app.core.presentation.components
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack

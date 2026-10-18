@@ -66,7 +66,7 @@ import cobresun.movieclub.app.core.presentation.AppMotion
 import cobresun.movieclub.app.core.presentation.components.AppSnackbarHost
 import cobresun.movieclub.app.core.presentation.fadeUpOnAppear
 import cobresun.movieclub.app.core.presentation.rememberReducedMotion
-import cobresun.movieclub.app.member.presentation.platform.rememberShareSheet
+import cobresun.movieclub.app.core.presentation.platform.rememberShareSheet
 import androidx.compose.material3.SnackbarHostState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

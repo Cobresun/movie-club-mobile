@@ -71,7 +71,7 @@ import cobresun.movieclub.app.app.ClubSection
 import cobresun.movieclub.app.app.DeepLink
 import cobresun.movieclub.app.app.DeepLinks
 import cobresun.movieclub.app.core.domain.ShareLinks
-import cobresun.movieclub.app.member.presentation.platform.rememberShareSheet
+import cobresun.movieclub.app.core.presentation.platform.rememberShareSheet
 import org.koin.compose.koinInject
 import cobresun.movieclub.app.stats.presentation.StatsAction
 import cobresun.movieclub.app.stats.presentation.StatsScreen

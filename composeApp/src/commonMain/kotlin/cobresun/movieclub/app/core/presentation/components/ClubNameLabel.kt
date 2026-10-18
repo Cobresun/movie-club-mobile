@@ -33,7 +33,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import cobresun.movieclub.app.club.presentation.LocalCurrentClubName
 import cobresun.movieclub.app.club.presentation.LocalCurrentMember
-import cobresun.movieclub.app.member.presentation.components.MemberAvatar
+import cobresun.movieclub.app.core.presentation.components.MemberAvatar
 
 /**
  * Tappable eyebrow above a tab title (web club chip): the current club's name,

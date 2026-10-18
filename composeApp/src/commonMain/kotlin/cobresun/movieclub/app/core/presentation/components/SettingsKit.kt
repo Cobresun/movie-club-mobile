@@ -1,4 +1,4 @@
-package cobresun.movieclub.app.member.presentation.components
+package cobresun.movieclub.app.core.presentation.components
 
 import cobresun.movieclub.app.core.presentation.initialsOf
 import androidx.compose.foundation.background
