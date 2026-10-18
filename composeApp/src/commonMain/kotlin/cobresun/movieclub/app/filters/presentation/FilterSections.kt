@@ -1,5 +1,8 @@
 package cobresun.movieclub.app.filters.presentation
 
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
@@ -223,6 +226,13 @@ fun RangeFilterSection(
             }
         }
 
+        // The fill only shows once a span is picked, like web's bare rail.
+        val colors = SliderDefaults.colors(
+            activeTickColor = Color.Transparent,
+            inactiveTickColor = Color.Transparent,
+            activeTrackColor = if (selection != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+            inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
+        )
         // The slider works in rail fractions so a fractional step (scores) snaps exactly.
         val stepCount = ((scale.hi - scale.lo) / option.step).roundToInt()
         RangeSlider(
@@ -236,13 +246,20 @@ fun RangeFilterSection(
                 }
             },
             steps = (stepCount - 1).coerceAtLeast(0),
-            // The fill only shows once a span is picked, like web's bare rail.
-            colors = SliderDefaults.colors(
-                activeTickColor = Color.Transparent,
-                inactiveTickColor = Color.Transparent,
-                activeTrackColor = if (selection != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant,
-            ),
+            startThumb = { RangeThumb() },
+            endThumb = { RangeThumb() },
+            track = { sliderState ->
+                SliderDefaults.Track(
+                    rangeSliderState = sliderState,
+                    colors = colors,
+                    drawStopIndicator = null,
+                    drawTick = { _, _ -> },
+                    thumbTrackGapSize = 0.dp,
+                    trackInsideCornerSize = 3.dp,
+                    modifier = Modifier.height(6.dp),
+                )
+            },
+            colors = colors,
             modifier = Modifier.fillMaxWidth().semantics {
                 contentDescription = option.label
                 stateDescription = "${option.format(from)} to ${option.format(to)}"
@@ -253,6 +270,23 @@ fun RangeFilterSection(
             Text(option.format(scale.lo), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(option.format(scale.hi), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+    }
+}
+
+/**
+ * Web's round range thumb (a light disc ringed in brand blue), centred in a 32dp box so
+ * it's easy to catch even resting on either end of the rail.
+ */
+@Composable
+private fun RangeThumb() {
+    Box(Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier
+                .size(22.dp)
+                .shadow(2.dp, CircleShape)
+                .background(MaterialTheme.colorScheme.onSurface, CircleShape)
+                .border(3.dp, MaterialTheme.colorScheme.primary, CircleShape),
+        )
     }
 }
 
