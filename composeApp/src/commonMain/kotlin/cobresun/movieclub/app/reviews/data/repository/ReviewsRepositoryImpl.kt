@@ -1,6 +1,13 @@
 package cobresun.movieclub.app.reviews.data.repository
 
+import cobresun.movieclub.app.core.data.OfflineKeys
 import cobresun.movieclub.app.core.data.SessionCaches
+import cobresun.movieclub.app.core.data.readThrough
+import cobresun.movieclub.app.core.data.saved
+import cobresun.movieclub.app.reviews.data.dto.CommentDto
+import cobresun.movieclub.app.reviews.data.dto.MemberScoredWorkDto
+import cobresun.movieclub.app.reviews.data.dto.ReviewItemDto
+import kotlinx.serialization.builtins.ListSerializer
 import cobresun.movieclub.app.core.data.mappers.toWorkDetails
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.NewWork
@@ -42,7 +49,9 @@ class ReviewsRepositoryImpl(
         caches.reviewsListId.get(clubSlug) { dataSource.getReviewsListId(clubSlug).map { it.id } }
 
     override suspend fun getMyScoredWorks(): Result<List<ScoredWork>, DataError.Remote> =
-        dataSource.getMyScores().let { result ->
+        caches.offline.readThrough(OfflineKeys.MY_SCORES, ListSerializer(MemberScoredWorkDto.serializer())) {
+            dataSource.getMyScores()
+        }.let { result ->
             // Mapping walks each work's JSON tree; keep it off the main thread.
             withContext(Dispatchers.Default) {
                 val zone = TimeZone.currentSystemDefault()
@@ -52,13 +61,20 @@ class ReviewsRepositoryImpl(
 
     override suspend fun getReviews(clubSlug: String, refresh: Boolean): Result<List<Review>, DataError.Remote> =
         caches.reviews.get(clubSlug, refresh) {
-            dataSource.getReviews(clubSlug).let { result ->
-                withContext(Dispatchers.Default) {
-                    val zone = TimeZone.currentSystemDefault()
-                    result.map { items -> items.map { it.toReview(zone) }.sortedByDescending { it.work.addedAt } }
-                }
-            }
+            caches.offline.readThrough(OfflineKeys.reviews(clubSlug), reviewItemsSerializer) { dataSource.getReviews(clubSlug) }
+                .map { it.toReviews() }
         }
+
+    override suspend fun savedReviews(clubSlug: String): List<Review>? = caches.reviews.saved(clubSlug) {
+        caches.offline.load(OfflineKeys.reviews(clubSlug), reviewItemsSerializer)?.toReviews()
+    }
+
+    private val reviewItemsSerializer = ListSerializer(ReviewItemDto.serializer())
+
+    private suspend fun List<ReviewItemDto>.toReviews(): List<Review> = withContext(Dispatchers.Default) {
+        val zone = TimeZone.currentSystemDefault()
+        map { it.toReview(zone) }.sortedByDescending { it.work.addedAt }
+    }
 
     override suspend fun addReview(clubSlug: String, work: NewWork): Result<Unit, DataError.Remote> =
         reviewsListId(clubSlug).flatMap { listId ->
@@ -116,7 +132,9 @@ class ReviewsRepositoryImpl(
         dataSource.generateDiscussionQuestions(clubSlug, workId).map { it.questions }
 
     override suspend fun getComments(clubSlug: String, workId: String): Result<List<ReviewComment>, DataError.Remote> =
-        dataSource.getComments(clubSlug, workId).map { list -> list.map { it.toReviewComment() } }
+        caches.offline.readThrough(OfflineKeys.comments(clubSlug, workId), ListSerializer(CommentDto.serializer())) {
+            dataSource.getComments(clubSlug, workId)
+        }.map { list -> list.map { it.toReviewComment() } }
 
     override suspend fun addComment(
         clubSlug: String,

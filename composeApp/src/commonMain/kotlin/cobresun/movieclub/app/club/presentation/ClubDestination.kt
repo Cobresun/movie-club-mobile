@@ -35,6 +35,7 @@ import cobresun.movieclub.app.core.presentation.components.AccountButton
 import cobresun.movieclub.app.core.platform.HapticFeedback
 import cobresun.movieclub.app.core.domain.ClubType
 import org.koin.compose.koinInject
+import cobresun.movieclub.app.core.presentation.OnReconnect
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -193,6 +194,8 @@ fun ClubsScreen(
     val currentMembers = currentClubSlug?.let { memberState.members[it] }
     val currentMeta = clubMetaLine(currentClub?.type, currentMembers?.size)
     LaunchedEffect(currentClubSlug) { currentClubSlug?.let(memberViewModel::loadMembers) }
+    // Back online: clubs, profile and members shown meanwhile came from storage.
+    OnReconnect { memberViewModel.refresh() }
 
     CompositionLocalProvider(
         LocalClubSwitcher provides { showSwitcher = true },

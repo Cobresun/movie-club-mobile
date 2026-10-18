@@ -1,6 +1,12 @@
 package cobresun.movieclub.app.lists.data.repository
 
+import cobresun.movieclub.app.core.data.OfflineKeys
 import cobresun.movieclub.app.core.data.SessionCaches
+import cobresun.movieclub.app.core.data.readThrough
+import cobresun.movieclub.app.core.data.dto.WorkListItemDto
+import cobresun.movieclub.app.lists.data.dto.SourcedListItemDto
+import cobresun.movieclub.app.lists.data.dto.WorkListDto
+import kotlinx.serialization.builtins.ListSerializer
 import cobresun.movieclub.app.core.data.mappers.toWork
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
@@ -32,28 +38,42 @@ class ListsRepositoryImpl(
     /** After a write to the club's lists: titles, items, Up Next and reviews may all move. */
     private suspend fun listsChanged(clubSlug: String) = caches.invalidateClubWorks(clubSlug)
 
+    private val listsSerializer = ListSerializer(WorkListDto.serializer())
+    private val itemsSerializer = ListSerializer(WorkListItemDto.serializer())
+    private val allItemsSerializer = ListSerializer(SourcedListItemDto.serializer())
+
     override suspend fun getLists(clubSlug: String): Result<List<WorkList>, DataError.Remote> =
-        dataSource.getLists(clubSlug).map { lists ->
-            lists.filter { it.systemType == null }.map { it.toWorkList() }
-        }
+        caches.offline.readThrough(OfflineKeys.lists(clubSlug), listsSerializer) { dataSource.getLists(clubSlug) }
+            .map { it.toWorkLists() }
+
+    override suspend fun savedLists(clubSlug: String): List<WorkList>? =
+        caches.offline.load(OfflineKeys.lists(clubSlug), listsSerializer)?.toWorkLists()
+
+    private fun List<WorkListDto>.toWorkLists() = filter { it.systemType == null }.map { it.toWorkList() }
 
     override suspend fun getItems(clubSlug: String, listId: String): Result<List<Work>, DataError.Remote> =
-        dataSource.getItems(clubSlug, listId).let { result ->
-            // Each item walks a JSON tree; keep that off the main thread.
-            withContext(Dispatchers.Default) {
-                val zone = TimeZone.currentSystemDefault()
-                result.map { items -> items.map { it.toWork(zone) } }
-            }
-        }
+        caches.offline.readThrough(OfflineKeys.listItems(clubSlug, listId), itemsSerializer) {
+            dataSource.getItems(clubSlug, listId)
+        }.map { it.toWorks() }
+
+    override suspend fun savedItems(clubSlug: String, listId: String): List<Work>? =
+        caches.offline.load(OfflineKeys.listItems(clubSlug, listId), itemsSerializer)?.toWorks()
+
+    // Each item walks a JSON tree; keep that off the main thread.
+    private suspend fun List<WorkListItemDto>.toWorks(): List<Work> = withContext(Dispatchers.Default) {
+        val zone = TimeZone.currentSystemDefault()
+        map { it.toWork(zone) }
+    }
 
     override suspend fun getAllItems(clubSlug: String, refresh: Boolean): Result<List<ListedWork>, DataError.Remote> =
         caches.allItems.get(clubSlug, refresh) {
-            dataSource.getAllItems(clubSlug).let { result ->
-                withContext(Dispatchers.Default) {
-                    val zone = TimeZone.currentSystemDefault()
-                    result.map { items -> items.map { it.toListedWork(zone) } }
+            caches.offline.readThrough(OfflineKeys.allItems(clubSlug), allItemsSerializer) { dataSource.getAllItems(clubSlug) }
+                .map { items ->
+                    withContext(Dispatchers.Default) {
+                        val zone = TimeZone.currentSystemDefault()
+                        items.map { it.toListedWork(zone) }
+                    }
                 }
-            }
         }
 
     override suspend fun createList(clubSlug: String, title: String): Result<WorkList, DataError.Remote> =
@@ -104,7 +124,10 @@ class ListsRepositoryImpl(
         caches.reviewsListId.get(clubSlug) { dataSource.getReviewsListId(clubSlug).map { it.id } }
 
     override suspend fun getUpNext(clubSlug: String, refresh: Boolean): Result<String?, DataError.Remote> =
-        caches.upNext.get(clubSlug, refresh) { dataSource.getNextWork(clubSlug).map { it.workId } }
+        caches.upNext.get(clubSlug, refresh) {
+            caches.offline.readThrough(OfflineKeys.upNext(clubSlug), NextWorkDto.serializer()) { dataSource.getNextWork(clubSlug) }
+                .map { it.workId }
+        }
 
     override suspend fun setUpNext(clubSlug: String, workId: String?): Result<Unit, DataError.Remote> {
         val result = if (workId == null) {
@@ -112,6 +135,9 @@ class ListsRepositoryImpl(
         } else {
             dataSource.setNextWork(clubSlug, NextWorkDto(workId))
         }
-        return result.onSuccess { caches.upNext.put(clubSlug, workId) }
+        return result.onSuccess {
+            caches.upNext.put(clubSlug, workId)
+            caches.offline.save(OfflineKeys.upNext(clubSlug), NextWorkDto.serializer(), NextWorkDto(workId))
+        }
     }
 }

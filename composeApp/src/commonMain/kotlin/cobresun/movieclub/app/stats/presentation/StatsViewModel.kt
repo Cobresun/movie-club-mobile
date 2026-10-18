@@ -58,6 +58,13 @@ class StatsViewModel(
 
     private var started = false
 
+    /** The connection is back: reload (if the tab has been shown) without a refresh spinner. */
+    fun reloadQuietly() {
+        if (!started) return
+        if (_state.value.clubName.isBlank()) loadContext()
+        load(initial = _state.value.data !is AsyncResult.Success, showIndicator = false)
+    }
+
     fun onAction(action: StatsAction) {
         when (action) {
             StatsAction.Refresh -> {

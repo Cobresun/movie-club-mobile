@@ -94,6 +94,14 @@ Uses **Koin** for DI:
 - Session cookies serialized as delimited strings (`||` separator)
 - Cookies automatically sent/received by Ktor client on all requests
 
+### Offline Support
+- `core/data/OfflineStore` keeps the last good answer of each club read on disk as JSON (re-encoded DTOs, one file per key; Android `filesDir/offline-v1`, iOS Application Support). Keys live in `OfflineKeys` (`club/<slug>/...`); bump `OfflineStore.DIRECTORY_NAME` when stored DTO shapes change incompatibly (undecodable files are dropped anyway)
+- It sits beneath the in-memory `SessionCaches`: repositories wrap fetches in `offline.readThrough(key, serializer) { network }` (network first; on NO_INTERNET/timeout/429/5xx the stored answer is returned as Success). `forgetClub` / `clear` (sign-in, sign-out) remove disk entries too
+- Stale-while-revalidate: `savedClubs`/`savedMember`/`savedMembers`/`savedReviews`/`savedLists`/`savedItems` return the kept answer without a request; `MemberViewModel`, `ReviewsViewModel` and `ListsViewModel` paint it on first load, then revalidate
+- `NetworkMonitor` (Android ConnectivityManager, iOS NWPathMonitor) feeds `HttpClientFactory`'s offline gate (requests fail at once with `OfflineException` → NO_INTERNET, no retries) and `AppConnectivity` (domain `Connectivity`): on reconnect it invalidates `SessionCaches`, then emits `reconnected`; `OnReconnect { }` reloads the club shell's tabs quietly. `OfflineBanner` shows in the club shell while offline
+- Writes offline fail fast; view models roll back optimistic changes and offer Retry
+- Images: `ConfigureImageLoader` (in `App`) gives Coil a persistent 300 MB disk cache (iOS Caches dir instead of tmp), so seen posters show offline
+
 ### Authentication Implementation
 
 The app uses **BetterAuth** for authentication with HTTP cookie-based sessions:

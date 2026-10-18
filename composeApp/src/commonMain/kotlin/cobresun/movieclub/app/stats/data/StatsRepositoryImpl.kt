@@ -1,6 +1,12 @@
 package cobresun.movieclub.app.stats.data
 
+import cobresun.movieclub.app.core.data.OfflineKeys
+import cobresun.movieclub.app.core.data.OfflineStore
+import cobresun.movieclub.app.core.data.readThrough
 import cobresun.movieclub.app.core.data.safeCall
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 import cobresun.movieclub.app.core.domain.Constants.BASE_URL
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
@@ -33,8 +39,12 @@ fun Map<String, List<CastCreditDto>>.toCreditedCast(): Map<String, List<Credited
 
 class StatsRepositoryImpl(
     private val httpClient: HttpClient,
+    private val offline: OfflineStore,
 ) : StatsRepository {
     override suspend fun getReviewedCast(clubSlug: String): Result<Map<String, List<CreditedPerson>>, DataError.Remote> =
-        safeCall<Map<String, List<CastCreditDto>>> { httpClient.get("$BASE_URL/api/club/$clubSlug/reviews/cast") }
-            .map { it.toCreditedCast() }
+        offline.readThrough(OfflineKeys.cast(clubSlug), castSerializer) {
+            safeCall<Map<String, List<CastCreditDto>>> { httpClient.get("$BASE_URL/api/club/$clubSlug/reviews/cast") }
+        }.map { it.toCreditedCast() }
+
+    private val castSerializer = MapSerializer(String.serializer(), ListSerializer(CastCreditDto.serializer()))
 }

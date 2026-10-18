@@ -14,8 +14,10 @@ import kotlinx.serialization.json.JsonElement
 /** `GET /api/club/:slug/work/:workId/details`, shared by the reviews and lists sheets. */
 class WorkDetailsRepositoryImpl(
     private val httpClient: HttpClient,
+    private val offline: OfflineStore,
 ) : WorkDetailsRepository {
     override suspend fun getWorkDetails(clubSlug: String, workId: String): Result<WorkDetails?, DataError.Remote> =
-        safeCall<JsonElement> { httpClient.get("$BASE_URL/api/club/$clubSlug/work/$workId/details") }
-            .map { it.toWorkDetails() }
+        offline.readThrough(OfflineKeys.workDetails(clubSlug, workId), JsonElement.serializer()) {
+            safeCall<JsonElement> { httpClient.get("$BASE_URL/api/club/$clubSlug/work/$workId/details") }
+        }.map { it.toWorkDetails() }
 }

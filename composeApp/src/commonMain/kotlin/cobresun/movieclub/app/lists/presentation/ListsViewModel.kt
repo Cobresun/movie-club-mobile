@@ -274,11 +274,26 @@ class ListsViewModel(
         }
     }
 
-    private fun load(initial: Boolean) {
+    /** The connection is back: reload what's on screen without a refresh spinner. */
+    fun reloadQuietly() {
+        if (_state.value.clubName.isBlank()) loadClubContext()
+        load(initial = _state.value.lists !is AsyncResult.Success, showIndicator = false)
+        _state.value.detail?.let { loadDetail(it.workId) }
+    }
+
+    private fun load(initial: Boolean, showIndicator: Boolean = true) {
         viewModelScope.launch {
             if (initial) {
-                _state.update { it.copy(lists = AsyncResult.Loading) }
-            } else {
+                // Paint the lists kept from last time at once, then revalidate below.
+                val saved = listsRepository.savedLists(clubSlug)
+                val savedItems = saved?.associate { list ->
+                    list.id to (listsRepository.savedItems(clubSlug, list.id)?.let { AsyncResult.Success(it) } ?: AsyncResult.Loading)
+                }
+                _state.update {
+                    if (saved != null) it.copy(lists = AsyncResult.Success(saved), itemsByList = savedItems.orEmpty())
+                    else it.copy(lists = AsyncResult.Loading)
+                }
+            } else if (showIndicator) {
                 _state.update { it.copy(isRefreshing = true) }
             }
             val upNextDeferred = async { listsRepository.getUpNext(clubSlug, refresh = !initial) }
@@ -288,7 +303,12 @@ class ListsViewModel(
                     _state.update { s ->
                         s.copy(
                             lists = AsyncResult.Success(lists),
-                            itemsByList = if (initial) lists.associate { it.id to AsyncResult.Loading } else s.itemsByList,
+                            // Kept items stay on screen until their list's fresh copy lands.
+                            itemsByList = if (initial) {
+                                lists.associate { list -> list.id to (s.itemsByList[list.id] as? AsyncResult.Success ?: AsyncResult.Loading) }
+                            } else {
+                                s.itemsByList
+                            },
                         )
                     }
                     // Fetch every list at once and publish them together: one state update
@@ -314,7 +334,7 @@ class ListsViewModel(
                 }
 
                 is Result.Error -> {
-                    if (initial || _state.value.lists !is AsyncResult.Success) {
+                    if (_state.value.lists !is AsyncResult.Success) {
                         _state.update { it.copy(lists = AsyncResult.Error(dataError = result.error)) }
                     } else {
                         emitError(result.error, "refresh your lists") { load(initial = false) }

@@ -22,11 +22,13 @@ import cobresun.movieclub.app.auth.presentation.AuthScreenRoot
 import cobresun.movieclub.app.auth.presentation.AuthViewModel
 import cobresun.movieclub.app.club.presentation.ClubsScreenRoot
 import cobresun.movieclub.app.core.domain.AsyncResult
+import cobresun.movieclub.app.core.presentation.ConfigureImageLoader
 import cobresun.movieclub.app.theme.AppTheme
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun App() {
+    ConfigureImageLoader()
     AppTheme {
         Scaffold(
             contentWindowInsets = WindowInsets()

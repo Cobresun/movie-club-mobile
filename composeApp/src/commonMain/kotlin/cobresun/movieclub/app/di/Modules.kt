@@ -21,6 +21,9 @@ import cobresun.movieclub.app.club.presentation.ClubInviteViewModel
 import cobresun.movieclub.app.club.presentation.ClubViewModel
 import cobresun.movieclub.app.core.data.HttpClientFactory
 import cobresun.movieclub.app.core.data.SessionCaches
+import cobresun.movieclub.app.core.data.AppConnectivity
+import cobresun.movieclub.app.core.domain.Connectivity
+import cobresun.movieclub.app.core.presentation.ConnectivityViewModel
 import cobresun.movieclub.app.core.data.SessionCookieStorage
 import cobresun.movieclub.app.core.data.SessionCookieStorageImpl
 import cobresun.movieclub.app.core.data.LastClubStoreImpl
@@ -69,13 +72,20 @@ expect val platformModule: Module
 
 val sharedModule = module {
     // Session-scoped copies of club reads, shared by the repositories below
-    single { SessionCaches() }
+    single { SessionCaches(get()) }
 
     // Cookie storage
     single { SessionCookieStorageImpl(get()) }.bind<SessionCookieStorage>()
 
+    // Connectivity: the platform monitor, plus what to do when the network returns
+    single<Connectivity> {
+        val caches = get<SessionCaches>()
+        AppConnectivity(get(), onReconnect = { caches.invalidateAll() })
+    }
+    viewModelOf(::ConnectivityViewModel)
+
     // HTTP client with cookie support
-    single { HttpClientFactory.create(get(), get()) }
+    single { HttpClientFactory.create(get(), get(), get()) }
 
     // Auth
     single { KtorBetterAuthDataSource(get()) }.bind<BetterAuthDataSource>()
@@ -86,7 +96,7 @@ val sharedModule = module {
     single { KtorMemberDataSource(get()) }.bind<MemberDataSource>()
     single { MemberRepositoryImpl(get(), get()) } binds arrayOf(MemberRepository::class, AccountRepository::class)
     single { LastClubStoreImpl(get()) }.bind<LastClubStore>()
-    single { cobresun.movieclub.app.core.data.WorkDetailsRepositoryImpl(get()) }
+    single { cobresun.movieclub.app.core.data.WorkDetailsRepositoryImpl(get(), get()) }
         .bind<cobresun.movieclub.app.core.domain.WorkDetailsRepository>()
     viewModel { MemberViewModel(get(), get(), get()) }
     viewModel { CreateClubViewModel(get()) }
@@ -129,7 +139,7 @@ val sharedModule = module {
     viewModelOf(::WatchProvidersViewModel)
 
     // Statistics (reuses the reviews and club repositories)
-    single { StatsRepositoryImpl(get()) }.bind<StatsRepository>()
+    single { StatsRepositoryImpl(get(), get()) }.bind<StatsRepository>()
     viewModelOf(::StatsViewModel)
     viewModelOf(::WrappedViewModel)
 }

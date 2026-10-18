@@ -17,6 +17,12 @@ interface ReviewsRepository {
      */
     suspend fun getReviews(clubSlug: String, refresh: Boolean = false): Result<List<Review>, DataError.Remote>
 
+    /**
+     * The reviews last kept on this device, without a request (null when none): paint them,
+     * then call [getReviews]. Offline, [getReviews] returns the same kept answer.
+     */
+    suspend fun savedReviews(clubSlug: String): List<Review>? = null
+
     /** Adds a work (from search) to the club's reviews. */
     suspend fun addReview(clubSlug: String, work: NewWork): Result<Unit, DataError.Remote>
 

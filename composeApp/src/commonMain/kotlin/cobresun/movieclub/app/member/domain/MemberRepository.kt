@@ -14,6 +14,14 @@ interface MemberRepository {
     suspend fun getClubs(refresh: Boolean = false): Result<List<Club>, DataError.Remote>
 
     /**
+     * The last answers kept on this device (null when there are none), without asking the
+     * server: paint them first, then call [getMember] / [getClubs]. Offline, those return
+     * the same kept answers instead of failing.
+     */
+    suspend fun savedMember(): Member? = null
+    suspend fun savedClubs(): List<Club>? = null
+
+    /**
      * Creates a new club; [memberEmail] (the current user) becomes its admin.
      * @return Result containing the new club slug on success
      */

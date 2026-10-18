@@ -42,6 +42,11 @@ class MemberViewModel(
     /** Loads the members of [slug] for the club header (avatar stack and member count). */
     fun loadMembers(slug: String, refresh: Boolean = false) {
         viewModelScope.launch {
+            if (slug !in _state.value.members) {
+                clubRepository.savedMembers(slug)?.let { saved ->
+                    _state.update { if (slug in it.members) it else it.copy(members = it.members + (slug to saved)) }
+                }
+            }
             clubRepository.getMembers(slug, refresh).onSuccess { members ->
                 _state.update { it.copy(members = it.members + (slug to members)) }
             }
@@ -56,20 +61,32 @@ class MemberViewModel(
 
     private fun loadMe(refresh: Boolean = false) {
         viewModelScope.launch {
+            if (_state.value.me == null) {
+                memberRepository.savedMember()?.let { saved -> _state.update { it.copy(me = it.me ?: saved) } }
+            }
             memberRepository.getMember(refresh).onSuccess { me -> _state.update { it.copy(me = me) } }
         }
     }
 
     private fun loadClubs(showLoading: Boolean, refresh: Boolean = false) {
         viewModelScope.launch {
-            if (showLoading) _state.update { it.copy(clubs = AsyncResult.Loading) }
             val lastSlug = _state.value.lastClubSlug ?: lastClubStore.get()
+            if (showLoading) {
+                // Paint the clubs kept from last time at once (offline too), then revalidate.
+                val saved = memberRepository.savedClubs()
+                _state.update {
+                    if (saved != null) it.copy(clubs = AsyncResult.Success(saved), lastClubSlug = lastSlug)
+                    else it.copy(clubs = AsyncResult.Loading)
+                }
+            }
             when (val result = memberRepository.getClubs(refresh)) {
                 is Result.Success -> {
                     _state.update { it.copy(clubs = AsyncResult.Success(result.data), lastClubSlug = lastSlug) }
                 }
                 is Result.Error -> {
-                    if (showLoading) _state.update { it.copy(clubs = AsyncResult.Error(dataError = result.error)) }
+                    if (_state.value.clubs !is AsyncResult.Success) {
+                        _state.update { it.copy(clubs = AsyncResult.Error(dataError = result.error)) }
+                    }
                 }
             }
         }

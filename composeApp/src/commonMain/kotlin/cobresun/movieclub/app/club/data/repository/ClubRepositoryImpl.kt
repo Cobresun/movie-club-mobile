@@ -11,7 +11,13 @@ import cobresun.movieclub.app.club.domain.ApiError
 import cobresun.movieclub.app.club.domain.ClubFeatures
 import cobresun.movieclub.app.club.domain.ClubRepository
 import cobresun.movieclub.app.club.domain.InviteInfo
+import cobresun.movieclub.app.core.data.OfflineKeys
 import cobresun.movieclub.app.core.data.SessionCaches
+import cobresun.movieclub.app.core.data.readThrough
+import cobresun.movieclub.app.core.data.saved
+import cobresun.movieclub.app.club.data.dto.ClubSettingsDto
+import cobresun.movieclub.app.club.data.dto.MemberDto
+import kotlinx.serialization.builtins.ListSerializer
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.map
@@ -24,8 +30,15 @@ class ClubRepositoryImpl(
 ) : ClubRepository {
     override suspend fun getMembers(clubSlug: String, refresh: Boolean): Result<List<Member>, DataError.Remote> =
         caches.members.get(clubSlug, refresh) {
-            clubDataSource.getMembers(clubSlug).map { dtos -> dtos.map { it.toDomain() } }
+            caches.offline.readThrough(OfflineKeys.members(clubSlug), membersSerializer) { clubDataSource.getMembers(clubSlug) }
+                .map { dtos -> dtos.map { it.toDomain() } }
         }
+
+    override suspend fun savedMembers(clubSlug: String): List<Member>? = caches.members.saved(clubSlug) {
+        caches.offline.load(OfflineKeys.members(clubSlug), membersSerializer)?.map { it.toDomain() }
+    }
+
+    private val membersSerializer = ListSerializer(MemberDto.serializer())
 
     override suspend fun getClubPreview(clubSlug: String): Result<Club, DataError.Remote> =
         clubDataSource.getClubPreview(clubSlug).map { Club(id = it.clubId, slug = it.slug, name = it.clubName, type = ClubType.from(it.type)) }
@@ -51,7 +64,9 @@ class ClubRepositoryImpl(
 
     override suspend fun getFeatures(clubSlug: String, refresh: Boolean): Result<ClubFeatures, DataError.Remote> =
         caches.features.get(clubSlug, refresh) {
-            clubDataSource.getSettings(clubSlug).toRemote().map { it.features.toDomain() }
+            caches.offline.readThrough(OfflineKeys.features(clubSlug), ClubSettingsDto.serializer()) {
+                clubDataSource.getSettings(clubSlug).toRemote()
+            }.map { it.features.toDomain() }
         }
 
     override suspend fun updateFeatures(
@@ -62,7 +77,10 @@ class ClubRepositoryImpl(
         clubDataSource.updateSettings(
             clubSlug,
             ClubSettingsPatchDto(ClubFeaturesPatchDto(awards, discussionQuestions))
-        ).toRemote().map { it.features.toDomain() }.onSuccess { caches.features.put(clubSlug, it) }
+        ).toRemote()
+            .onSuccess { caches.offline.save(OfflineKeys.features(clubSlug), ClubSettingsDto.serializer(), it) }
+            .map { it.features.toDomain() }
+            .onSuccess { caches.features.put(clubSlug, it) }
 
     override suspend fun getInviteInfo(token: String): Result<InviteInfo, ApiError> =
         clubDataSource.getInviteInfo(token).map { it.toDomain() }

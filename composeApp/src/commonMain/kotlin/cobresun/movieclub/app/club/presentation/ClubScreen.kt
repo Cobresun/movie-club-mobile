@@ -77,6 +77,9 @@ import cobresun.movieclub.app.stats.presentation.StatsAction
 import cobresun.movieclub.app.stats.presentation.StatsScreen
 import cobresun.movieclub.app.stats.presentation.StatsViewModel
 import org.koin.compose.viewmodel.koinViewModel
+import cobresun.movieclub.app.core.presentation.OfflineBanner
+import cobresun.movieclub.app.core.presentation.OnReconnect
+import cobresun.movieclub.app.awards.presentation.AwardsAction
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
@@ -191,6 +194,15 @@ fun ClubScreenRoot(
         if (awardsKnown && !awardsAvailable && selectedTab == ClubTab.AWARDS) clubViewModel.selectTab(ClubTab.REVIEWS)
     }
 
+    // Back online: answers shown meanwhile came from storage; fetch fresh ones quietly.
+    OnReconnect {
+        reviewsViewModel.reloadQuietly()
+        listsViewModel.reloadQuietly()
+        statsViewModel.reloadQuietly()
+        awardsViewModel.refreshAvailability()
+        awardsViewModel.onAction(AwardsAction.Refresh)
+    }
+
     val stateHolder = rememberSaveableStateHolder()
 
     Scaffold(
@@ -296,6 +308,12 @@ fun ClubScreenRoot(
             Modifier
                 .align(Alignment.TopEnd)
                 .padding(top = padding.calculateTopPadding() + 8.dp, end = 12.dp)
+        )
+        // Above the tabs' floating Add button, so it never covers it.
+        OfflineBanner(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = padding.calculateBottomPadding() + 88.dp)
         )
         }
     }

@@ -1,7 +1,13 @@
 package cobresun.movieclub.app.member.data.repository
 
 import cobresun.movieclub.app.club.domain.ApiError
+import cobresun.movieclub.app.core.data.OfflineKeys
 import cobresun.movieclub.app.core.data.SessionCaches
+import cobresun.movieclub.app.core.data.readThrough
+import cobresun.movieclub.app.core.data.saved
+import cobresun.movieclub.app.club.data.dto.MemberDto
+import cobresun.movieclub.app.member.data.dto.ClubDto
+import kotlinx.serialization.builtins.ListSerializer
 import cobresun.movieclub.app.core.domain.Club
 import cobresun.movieclub.app.core.domain.ClubType
 import cobresun.movieclub.app.core.domain.DataError
@@ -21,13 +27,27 @@ class MemberRepositoryImpl(
     private val memberDataSource: MemberDataSource,
     private val caches: SessionCaches,
 ) : MemberRepository, AccountRepository {
+    private val clubsSerializer = ListSerializer(ClubDto.serializer())
+
     override suspend fun getMember(refresh: Boolean): Result<Member, DataError.Remote> =
-        caches.me.get(Unit, refresh) { memberDataSource.getMember().map { it.toMember() } }
+        caches.me.get(Unit, refresh) {
+            caches.offline.readThrough(OfflineKeys.ME, MemberDto.serializer()) { memberDataSource.getMember() }
+                .map { it.toMember() }
+        }
 
     override suspend fun getClubs(refresh: Boolean): Result<List<Club>, DataError.Remote> =
         caches.clubs.get(Unit, refresh) {
-            memberDataSource.getClubs().map { clubDtos -> clubDtos.map { it.toClub() } }
+            caches.offline.readThrough(OfflineKeys.CLUBS, clubsSerializer) { memberDataSource.getClubs() }
+                .map { clubDtos -> clubDtos.map { it.toClub() } }
         }
+
+    override suspend fun savedMember(): Member? = caches.me.saved(Unit) {
+        caches.offline.load(OfflineKeys.ME, MemberDto.serializer())?.toMember()
+    }
+
+    override suspend fun savedClubs(): List<Club>? = caches.clubs.saved(Unit) {
+        caches.offline.load(OfflineKeys.CLUBS, clubsSerializer)?.map { it.toClub() }
+    }
 
     override suspend fun createClub(
         name: String,

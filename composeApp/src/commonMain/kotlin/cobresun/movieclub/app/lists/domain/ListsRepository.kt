@@ -30,6 +30,13 @@ interface ListsRepository {
     /** Items on one list in the list's saved order. */
     suspend fun getItems(clubSlug: String, listId: String): Result<List<Work>, DataError.Remote>
 
+    /**
+     * Lists and list items last kept on this device, without a request (null when none):
+     * paint them, then call [getLists] / [getItems], which return the same answers offline.
+     */
+    suspend fun savedLists(clubSlug: String): List<WorkList>? = null
+    suspend fun savedItems(clubSlug: String, listId: String): List<Work>? = null
+
     /** Creates, renames, deletes or reorders lists. */
     suspend fun createList(clubSlug: String, title: String): Result<WorkList, DataError.Remote>
     suspend fun renameList(clubSlug: String, listId: String, title: String): Result<Unit, DataError.Remote>

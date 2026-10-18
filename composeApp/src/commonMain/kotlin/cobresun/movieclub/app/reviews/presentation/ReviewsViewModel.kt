@@ -269,6 +269,14 @@ class ReviewsViewModel(
         }
     }
 
+    /** The connection is back: reload what's on screen without a refresh spinner. */
+    fun reloadQuietly() {
+        if (_state.value.clubName.isBlank()) loadContext()
+        viewModelScope.launch { fetchReviews() }
+        loadUpNext()
+        _state.value.detail?.let { loadDetail(it.workId) }
+    }
+
     /** Called when a work arrives from the lists tab. */
     fun refreshQuietly() {
         loadReviews(initial = false)
@@ -345,8 +353,13 @@ class ReviewsViewModel(
 
     private fun loadReviews(initial: Boolean) {
         viewModelScope.launch {
-            if (initial) _state.update { it.copy(reviews = AsyncResult.Loading) }
-            else _state.update { it.copy(isRefreshing = true) }
+            if (initial) {
+                // Paint the reviews kept from last time at once, then revalidate below.
+                val saved = reviewsRepository.savedReviews(clubSlug)
+                _state.update { it.copy(reviews = if (saved != null) AsyncResult.Success(saved) else AsyncResult.Loading) }
+            } else {
+                _state.update { it.copy(isRefreshing = true) }
+            }
             // The first load shares the copy the club's other tabs are fetching.
             fetchReviews(refresh = !initial)
             _state.update { it.copy(isRefreshing = false) }

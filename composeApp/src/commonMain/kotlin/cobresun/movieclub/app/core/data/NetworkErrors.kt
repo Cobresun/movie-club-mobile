@@ -21,7 +21,7 @@ fun classifyNetworkException(e: Throwable): DataError.Remote {
         when (current) {
             is HttpRequestTimeoutException, is ConnectTimeoutException, is SocketTimeoutException ->
                 return DataError.Remote.REQUEST_TIMEOUT
-            is UnresolvedAddressException -> return DataError.Remote.NO_INTERNET
+            is UnresolvedAddressException, is OfflineException -> return DataError.Remote.NO_INTERNET
         }
         val name = current::class.simpleName.orEmpty()
         val message = current.message.orEmpty()

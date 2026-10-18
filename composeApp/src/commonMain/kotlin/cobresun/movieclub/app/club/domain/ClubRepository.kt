@@ -12,6 +12,9 @@ interface ClubRepository {
      */
     suspend fun getMembers(clubSlug: String, refresh: Boolean = false): Result<List<Member>, DataError.Remote>
 
+    /** The members last kept on this device, without a request (null when none); see [getMembers]. */
+    suspend fun savedMembers(clubSlug: String): List<Member>? = null
+
     /** The club's public name and type, also for clubs the user isn't in (shared pages). */
     suspend fun getClubPreview(clubSlug: String): Result<Club, DataError.Remote>
 

@@ -6,6 +6,7 @@ import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.plugins.api.createClientPlugin
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.cookies.HttpCookies
 import io.ktor.client.plugins.defaultRequest
@@ -17,11 +18,29 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.io.IOException
 import kotlinx.serialization.json.Json
 
+/** Thrown before a request is sent while the device is offline; classified as NO_INTERNET. */
+class OfflineException : IOException("The device is offline")
+
+/**
+ * Fails requests at once while [NetworkMonitor] reports no network, instead of
+ * waiting on DNS, connect timeouts and retries; reads then fall back to stored answers.
+ */
+private fun offlineGate(connectivity: NetworkMonitor) = createClientPlugin("OfflineGate") {
+    onRequest { _, _ -> if (!connectivity.isOnline.value) throw OfflineException() }
+}
+
 object HttpClientFactory {
-    fun create(engine: HttpClientEngine, cookieStorage: SessionCookieStorage): HttpClient {
+    fun create(
+        engine: HttpClientEngine,
+        cookieStorage: SessionCookieStorage,
+        connectivity: NetworkMonitor? = null,
+    ): HttpClient {
         return HttpClient(engine) {
+            connectivity?.let { install(offlineGate(it)) }
+
             install(ContentNegotiation) {
                 json(
                     json = Json {
@@ -37,14 +56,15 @@ object HttpClientFactory {
 
             // A cold start's first request can fail on a connection that isn't ready yet.
             // Retry reads that failed before any response or hit a gateway error; writes and
-            // timeouts aren't retried.
+            // timeouts aren't retried, nor is anything once the device reports no network.
             install(HttpRequestRetry) {
                 maxRetries = 2
                 retryIf { request, response ->
                     request.method == HttpMethod.Get && response.status.value in 502..504
                 }
                 retryOnExceptionIf { request, cause ->
-                    request.method == HttpMethod.Get && cause !is HttpRequestTimeoutException
+                    request.method == HttpMethod.Get && cause !is HttpRequestTimeoutException &&
+                        cause !is OfflineException && connectivity?.isOnline?.value != false
                 }
                 exponentialDelay(base = 2.0, maxDelayMs = 2_000L)
             }
