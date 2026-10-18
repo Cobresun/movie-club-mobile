@@ -42,7 +42,7 @@ Presentation layer:
 Dependency injection:
 - [ ] Add a `{feature}Module` in `di/Modules.kt` and list it in `appModule`'s `includes(...)`
 - [ ] Register implementations with `singleOf(::Impl) { bind<Interface>() }`
-- [ ] Register ViewModels with `viewModelOf(::FeatureViewModel)`
+- [ ] Register ViewModels with `viewModelOf(::FeatureViewModel)`; route arguments are constructor parameters passed with `koinViewModel { parametersOf(...) }` (see Navigation in CLAUDE.md)
 - [ ] Run `KoinModulesTest` (`./gradlew -q :composeApp:testAndroidHostTest`) to check the graph
 
 Testing:

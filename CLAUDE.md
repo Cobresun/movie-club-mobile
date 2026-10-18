@@ -63,7 +63,7 @@ See the "Design Philosophy" section below for detailed guidance on maintaining t
 ### Dependency Injection
 Uses **Koin** (4.2) for DI:
 - `di/Modules.kt` holds one module per feature (`coreModule`, `authModule`, `reviewsModule`, ...), gathered by `appModule` with `includes(...)`; `platformModule` (`Modules.android.kt` / `Modules.ios.kt`) adds platform implementations
-- Constructor DSL by default: `singleOf(::Impl) { bind<Interface>() }`, `viewModelOf(::SomeViewModel)`; a `single { }` lambda only when a parameter isn't a plain `get()` (defaults, callbacks, factory functions)
+- Constructor DSL by default: `singleOf(::Impl) { bind<Interface>() }`, `viewModelOf(::SomeViewModel)`; a `single { }` lambda only when a parameter isn't a plain `get()` (defaults, callbacks, factory functions). View models taking several route arguments (or a nullable one) destructure them: `viewModel { (slug: String, workId: String) -> X(slug, workId, get()) }`; a lone slug resolves by type, so `viewModelOf` still fits
 - `initKoin()` runs once per process: Android `MainApplication.onCreate`, iOS `iOSApp.init` (via `setUpKoin()`). Compose uses that instance (no `KoinApplication`/`KoinContext`)
 - `KoinModulesTest` (androidHostTest) runs `verify()` over the whole graph, so a missing binding fails the tests
 
@@ -119,11 +119,12 @@ The app uses Material Design 3 with a complete dark color scheme.
 Reference: [Material Design 3 Color System](https://m3.material.io/styles/color/roles)
 
 ### Navigation
-Uses Jetpack Compose Navigation with type-safe routes defined in `app/Route.kt`:
-- `LandingPage` - Entry point
-- `AuthGraph` - Authentication flow
-- `ClubGraph` - Main app (clubs, watchlist, reviews)
-- `Club(clubId)` - Individual club view
+Uses **Navigation 3** (`org.jetbrains.androidx.navigation3`): back stacks are plain lists of the `@Serializable` routes in `app/Route.kt` (`sealed interface Route : NavKey`):
+- `App.kt` holds the top-level stack: `LandingPage` → `AuthGraph` → `ClubGraph`
+- `ClubDestination.kt`'s `ClubNavHost` holds the signed-in stack: `Club(slug, tab)`, `ClubSettings`, `Profile`, `Wrapped`, `CreateClub`/`ClubInvite`/`JoinClub`/`EmptyClubs`, and the public `Shared*`/`ClubNotFound` pages
+- `app/Navigation.kt`: `rememberRouteBackStack` (saved across process death; every `Route` is registered for polymorphic serialization since iOS has no reflection), `push` (single-top), `pop` (never empties the stack), `resetTo`, and `RouteDisplay` (a `NavDisplay` with `NavMotion` fades, saveable state and a ViewModelStore per entry)
+- Route arguments reach view models through Koin: screens call `koinViewModel { parametersOf(route.clubSlug, ...) }` and view models take them as constructor parameters. `SavedStateHandle` is only for UI state that should survive process death (selected tab, search text, open sheet)
+- Results between entries are plain state hoisted into the nav host (e.g. Wrapped's "Go to Reviews" sets `tabRequest` for the club screen)
 
 ### State Management
 - ViewModels use `StateFlow` for reactive state
@@ -160,13 +161,13 @@ See "Design Philosophy - Error Handling" for best practices on handling errors i
 - ❌ Cannot import repositories directly in Composables (use ViewModels)
 
 **Good Pattern - Clean Boundary:**
-`ClubViewModel` (lines 28-33) depends only on repository interfaces:
+`ClubViewModel` depends only on its route arguments and domain interfaces:
 ```kotlin
 class ClubViewModel(
-    savedStateHandle: SavedStateHandle,
-    private val reviewsRepository: ReviewsRepository,
-    private val watchListRepository: WatchListRepository,
-    private val tmdbRepository: TmdbRepository
+    val clubSlug: String,
+    initialTab: ClubTab?,
+    private val savedStateHandle: SavedStateHandle,
+    private val lastClubStore: LastClubStore,
 )
 ```
 

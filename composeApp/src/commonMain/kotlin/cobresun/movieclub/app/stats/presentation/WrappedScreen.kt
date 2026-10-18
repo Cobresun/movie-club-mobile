@@ -77,12 +77,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @Composable
 fun WrappedScreenRoot(
+    clubSlug: String,
+    /** 0 opens the latest released year. */
+    year: Int,
     onClose: () -> Unit,
     onGoToReviews: () -> Unit,
-    viewModel: WrappedViewModel = koinViewModel(),
+    viewModel: WrappedViewModel = koinViewModel { parametersOf(clubSlug, year) },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     WrappedScreen(

@@ -43,12 +43,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cobresun.movieclub.app.member.presentation.components.SettingsTopBar
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 import org.koin.compose.koinInject
 import cobresun.movieclub.app.core.platform.HapticFeedback
 
 @Composable
 fun JoinClubScreenRoot(
-    viewModel: JoinClubViewModel = koinViewModel(),
+    /** Pre-fills the invite (e.g. from a join-club link). */
+    token: String?,
+    viewModel: JoinClubViewModel = koinViewModel { parametersOf(token) },
     onNavigateBack: () -> Unit,
     onJoined: (clubSlug: String) -> Unit,
     memberClubSlugs: Set<String> = emptySet(),

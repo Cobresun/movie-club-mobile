@@ -1,6 +1,5 @@
 package cobresun.movieclub.app.club.presentation
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cobresun.movieclub.app.club.domain.ClubRepository
@@ -23,15 +22,18 @@ data class ClubInviteState(
 
 /** The handoff after creating a club (web `ClubInviteView`): get the invite link out. */
 class ClubInviteViewModel(
-    savedStateHandle: SavedStateHandle,
+    clubSlug: String,
+    clubName: String,
+    /** A `ClubType.value`. */
+    clubType: String,
     private val clubRepository: ClubRepository,
     private val clipboardManager: ClipboardManager,
 ) : ViewModel() {
     private val _state = MutableStateFlow(
         ClubInviteState(
-            clubSlug = requireNotNull(savedStateHandle.get<String>("clubSlug")),
-            clubName = savedStateHandle.get<String>("clubName").orEmpty().ifBlank { "Your club" },
-            clubType = ClubType.from(savedStateHandle.get<String>("clubType")),
+            clubSlug = clubSlug,
+            clubName = clubName.ifBlank { "Your club" },
+            clubType = ClubType.from(clubType),
         )
     )
     val state = _state.asStateFlow()

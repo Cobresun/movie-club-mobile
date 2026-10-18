@@ -1,6 +1,5 @@
 package cobresun.movieclub.app.reviews.presentation
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cobresun.movieclub.app.core.domain.AsyncResult
@@ -22,11 +21,10 @@ data class SharedReviewState(
 
 /** A shared review link for a club you're not in: the public page, read-only. */
 class SharedReviewViewModel(
-    savedStateHandle: SavedStateHandle,
+    private val clubSlug: String,
+    private val workId: String,
     private val reviewsRepository: ReviewsRepository,
 ) : ViewModel() {
-    private val clubSlug = requireNotNull(savedStateHandle.get<String>("clubSlug"))
-    private val workId = requireNotNull(savedStateHandle.get<String>("workId"))
 
     private val _state = MutableStateFlow(SharedReviewState())
     val state = _state.asStateFlow()

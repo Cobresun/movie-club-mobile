@@ -63,15 +63,16 @@ private data class Loaded(val stats: StatsData, val club: ClubContext)
  * statistics screen and builds the selected year's deck from them.
  */
 class WrappedViewModel(
+    private val clubSlug: String,
+    /** The route's year; 0 for the latest released. */
+    year: Int,
     private val savedStateHandle: SavedStateHandle,
     private val reviewsRepository: ReviewsRepository,
     private val clubRepository: ClubRepository,
     private val memberRepository: MemberRepository,
 ) : ViewModel() {
-    private val clubSlug = requireNotNull(savedStateHandle.get<String>("clubSlug"))
-
     /** 0 until the user picks one: the route's year, or else the latest released. */
-    private val requestedYear = savedStateHandle.getStateFlow(KEY_YEAR, savedStateHandle.get<Int>("year") ?: 0)
+    private val requestedYear = savedStateHandle.getStateFlow(KEY_YEAR, year)
 
     private val loaded = MutableStateFlow<AsyncResult<Loaded>>(AsyncResult.Loading)
 

@@ -1,6 +1,5 @@
 package cobresun.movieclub.app.lists
 
-import androidx.lifecycle.SavedStateHandle
 import cobresun.movieclub.app.club.domain.ApiError
 import cobresun.movieclub.app.club.domain.ClubFeatures
 import cobresun.movieclub.app.club.domain.ClubRepository
@@ -129,7 +128,7 @@ class ListItemRetryTest {
     }
 
     private fun TestScope.setUpViewModel(repo: FakeLists): ListsViewModel {
-        val vm = ListsViewModel(SavedStateHandle(mapOf("clubSlug" to "club")), repo, Members, Clubs, NoCollapsed, NoDetails, NoComments)
+        val vm = ListsViewModel("club", repo, Members, Clubs, NoCollapsed, NoDetails, NoComments)
         advanceUntilIdle()
         return vm
     }

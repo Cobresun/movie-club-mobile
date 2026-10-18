@@ -72,6 +72,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 /** Web `clubTypeInvite(type).shareText`. */
 internal fun ClubType.inviteShareText() = when (this) {
@@ -85,8 +86,12 @@ internal fun ClubType.inviteShareText() = when (this) {
  */
 @Composable
 fun ClubInviteScreenRoot(
+    clubSlug: String,
+    clubName: String,
+    /** A `ClubType.value`. */
+    clubType: String,
     onGoToClub: () -> Unit,
-    viewModel: ClubInviteViewModel = koinViewModel(),
+    viewModel: ClubInviteViewModel = koinViewModel { parametersOf(clubSlug, clubName, clubType) },
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val haptics = koinInject<HapticFeedback>()

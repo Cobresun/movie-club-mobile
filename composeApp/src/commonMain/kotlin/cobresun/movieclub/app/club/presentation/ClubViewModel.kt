@@ -17,18 +17,17 @@ enum class ClubTab { REVIEWS, LISTS, STATS, AWARDS }
  * `ReviewsViewModel`; [ClubScreenRoot] coordinates between them.
  */
 class ClubViewModel(
+    /** Slug of the club this screen shows. */
+    val clubSlug: String,
+    /** The tab the route names (switching clubs keeps the section); null for the remembered one. */
+    initialTab: ClubTab?,
     private val savedStateHandle: SavedStateHandle,
     private val lastClubStore: LastClubStore,
 ) : ViewModel() {
-    /** Slug of the club this screen shows (navigation argument). */
-    val clubSlug: String = requireNotNull(savedStateHandle.get<String>("clubSlug"))
-
-    val selectedTab: StateFlow<ClubTab> = savedStateHandle.getStateFlow(KEY_TAB, ClubTab.REVIEWS)
-
     init {
-        // A tab named by the route (switching clubs keeps the section) beats the remembered one.
-        val routeTab = savedStateHandle.get<String>("tab")?.let { name -> ClubTab.entries.firstOrNull { it.name == name } }
-        if (routeTab != null && !savedStateHandle.contains(KEY_TAB)) savedStateHandle[KEY_TAB] = routeTab
+        // Before anything reads the tab: `getStateFlow` stores its default in the handle.
+        // A restored tab wins, then the one the route names.
+        if (initialTab != null && !savedStateHandle.contains(KEY_TAB)) savedStateHandle[KEY_TAB] = initialTab
     }
 
     private val _tabResolved = MutableStateFlow(savedStateHandle.contains(KEY_TAB))
@@ -36,13 +35,15 @@ class ClubViewModel(
     /** False until the tab last used in this club has been restored (a few ms on open). */
     val tabResolved: StateFlow<Boolean> = _tabResolved.asStateFlow()
 
+    val selectedTab: StateFlow<ClubTab> = savedStateHandle.getStateFlow(KEY_TAB, ClubTab.REVIEWS)
+
     init {
         if (!_tabResolved.value) {
             viewModelScope.launch {
                 val stored = lastClubStore.getSection(clubSlug)
                     ?.let { name -> ClubTab.entries.firstOrNull { it.name == name } }
                 // A tab chosen meanwhile (e.g. by a deep link) wins over the remembered one.
-                if (stored != null && !savedStateHandle.contains(KEY_TAB)) savedStateHandle[KEY_TAB] = stored
+                if (stored != null && !_tabResolved.value) savedStateHandle[KEY_TAB] = stored
                 _tabResolved.value = true
             }
         }
@@ -55,7 +56,7 @@ class ClubViewModel(
     }
 
     companion object {
-        /** Saved-state key of the selected tab; other screens may set it to switch tabs on return. */
+        /** Saved-state key of the selected tab. */
         const val KEY_TAB = "club_tab"
     }
 }

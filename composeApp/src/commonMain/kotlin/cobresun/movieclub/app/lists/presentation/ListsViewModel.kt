@@ -1,6 +1,5 @@
 package cobresun.movieclub.app.lists.presentation
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cobresun.movieclub.app.club.domain.ClubRepository
@@ -183,7 +182,7 @@ sealed interface ListsAction {
 }
 
 class ListsViewModel(
-    savedStateHandle: SavedStateHandle,
+    private val clubSlug: String,
     private val listsRepository: ListsRepository,
     private val memberRepository: MemberRepository,
     private val clubRepository: ClubRepository,
@@ -191,8 +190,6 @@ class ListsViewModel(
     private val workDetailsRepository: WorkDetailsRepository,
     private val commentsRepository: ReviewCommentsRepository,
 ) : ViewModel() {
-    private val clubSlug = requireNotNull(savedStateHandle.get<String>("clubSlug"))
-
     private val _state = MutableStateFlow(ListsState())
     val state = _state.asStateFlow()
 

@@ -17,6 +17,7 @@ import cobresun.movieclub.app.club.data.repository.ClubRepositoryImpl
 import cobresun.movieclub.app.club.domain.ClubRepository
 import cobresun.movieclub.app.club.presentation.ClubInviteViewModel
 import cobresun.movieclub.app.club.presentation.ClubSettingsViewModel
+import cobresun.movieclub.app.club.presentation.ClubTab
 import cobresun.movieclub.app.club.presentation.ClubViewModel
 import cobresun.movieclub.app.core.data.AppConnectivity
 import cobresun.movieclub.app.core.data.HttpClientFactory
@@ -69,6 +70,7 @@ import cobresun.movieclub.app.stats.presentation.WrappedViewModel
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
+import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
@@ -77,6 +79,9 @@ expect val platformModule: Module
 
 // Constructor references (`singleOf` / `viewModelOf`) by default; a lambda only where a
 // definition needs more than `get()` for each parameter (defaults, callbacks, factories).
+// Screens pass their route's arguments with `koinViewModel { parametersOf(...) }`: a lone
+// slug resolves by type, so `viewModelOf` still fits; several (or nullable) ones are
+// destructured in a lambda, in constructor order.
 
 /** Session plumbing every feature shares: HTTP client, cookies, caches, connectivity. */
 val coreModule = module {
@@ -112,16 +117,18 @@ val memberModule = module {
     }
     viewModelOf(::MemberViewModel)
     viewModelOf(::CreateClubViewModel)
-    viewModelOf(::JoinClubViewModel)
+    viewModel { (token: String?) -> JoinClubViewModel(token, get()) }
     viewModelOf(::ProfileViewModel)
 }
 
 val clubModule = module {
     singleOf(::KtorClubDataSource) { bind<ClubDataSource>() }
     singleOf(::ClubRepositoryImpl) { bind<ClubRepository>() }
-    viewModelOf(::ClubViewModel)
+    viewModel { (clubSlug: String, initialTab: ClubTab?) -> ClubViewModel(clubSlug, initialTab, get(), get()) }
     viewModelOf(::ClubSettingsViewModel)
-    viewModelOf(::ClubInviteViewModel)
+    viewModel { (clubSlug: String, clubName: String, clubType: String) ->
+        ClubInviteViewModel(clubSlug, clubName, clubType, get(), get())
+    }
 }
 
 val reviewsModule = module {
@@ -133,7 +140,7 @@ val reviewsModule = module {
         bind<ReviewCommentsRepository>()
     }
     viewModelOf(::ReviewsViewModel)
-    viewModelOf(::SharedReviewViewModel)
+    viewModel { (clubSlug: String, workId: String) -> SharedReviewViewModel(clubSlug, workId, get()) }
 }
 
 val listsModule = module {
@@ -141,7 +148,7 @@ val listsModule = module {
     singleOf(::ListsRepositoryImpl) { bind<ListsRepository>() }
     singleOf(::CollapsedListsStoreImpl) { bind<CollapsedListsStore>() }
     viewModelOf(::ListsViewModel)
-    viewModelOf(::SharedListViewModel)
+    viewModel { (clubSlug: String, listId: String) -> SharedListViewModel(clubSlug, listId, get(), get()) }
 }
 
 val awardsModule = module {
@@ -164,7 +171,7 @@ val searchModule = module {
 val statsModule = module {
     singleOf(::StatsRepositoryImpl) { bind<StatsRepository>() }
     viewModelOf(::StatsViewModel)
-    viewModelOf(::WrappedViewModel)
+    viewModel { (clubSlug: String, year: Int) -> WrappedViewModel(clubSlug, year, get(), get(), get(), get()) }
 }
 
 /** Every shared feature module; [initKoin] adds [platformModule] alongside. */

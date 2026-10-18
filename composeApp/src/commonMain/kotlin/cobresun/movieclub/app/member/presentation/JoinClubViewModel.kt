@@ -1,6 +1,5 @@
 package cobresun.movieclub.app.member.presentation
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cobresun.movieclub.app.club.domain.ClubRepository
@@ -39,7 +38,8 @@ sealed interface JoinClubEvent {
 
 /** Looks up an invite as soon as a token-shaped value is pasted, then joins on confirm. */
 class JoinClubViewModel(
-    savedStateHandle: SavedStateHandle,
+    /** Pre-fills the invite (e.g. from a join-club link). */
+    token: String?,
     private val clubRepository: ClubRepository,
 ) : ViewModel() {
     private val _state = MutableStateFlow(JoinClubState())
@@ -51,7 +51,7 @@ class JoinClubViewModel(
     private var lookupJob: Job? = null
 
     init {
-        savedStateHandle.get<String>("token")?.takeIf { it.isNotBlank() }?.let {
+        token?.takeIf { it.isNotBlank() }?.let {
             onAction(JoinClubAction.OnInputChanged(it))
         }
     }

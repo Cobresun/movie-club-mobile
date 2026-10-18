@@ -1,6 +1,5 @@
 package cobresun.movieclub.app.app
 
-import cobresun.movieclub.app.core.presentation.NavMotion
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,9 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation3.runtime.entryProvider
 import cobresun.movieclub.app.auth.presentation.AuthAction
 import cobresun.movieclub.app.auth.presentation.AuthScreenRoot
 import cobresun.movieclub.app.auth.presentation.AuthViewModel
@@ -77,55 +74,34 @@ private fun AppNavigation(
     isAuthenticated: Boolean,
     authViewModel: AuthViewModel
 ) {
-    val navController = rememberNavController()
+    val backStack = rememberRouteBackStack(if (isAuthenticated) Route.ClubGraph else Route.LandingPage)
 
-    // Handle logout - navigate to landing page when navigation event received
+    // Handle logout - back to the landing page, with nothing to go back to
     LaunchedEffect(Unit) {
         authViewModel.navigationEvents.collect { event ->
             when (event) {
-                is AuthViewModel.AuthNavigationEvent.NavigateToLandingPage -> {
-                    navController.navigate(Route.LandingPage) {
-                        // Clear entire backstack when logging out
-                        popUpTo(0) {
-                            inclusive = true
-                        }
-                    }
-                }
+                is AuthViewModel.AuthNavigationEvent.NavigateToLandingPage -> backStack.resetTo(Route.LandingPage)
             }
         }
     }
 
-    NavHost(
-        navController = navController,
-        startDestination = if (isAuthenticated) Route.ClubGraph else Route.LandingPage,
-        enterTransition = { NavMotion.enter },
-        exitTransition = { NavMotion.exit },
-        popEnterTransition = { NavMotion.enter },
-        popExitTransition = { NavMotion.exit },
-    ) {
-        composable<Route.LandingPage> {
-            LandingPageScreen(
-                onAuthClick = {
-                    navController.navigate(Route.AuthGraph)
-                }
-            )
-        }
+    RouteDisplay(
+        backStack = backStack,
+        entryProvider = entryProvider {
+            entry<Route.LandingPage> {
+                LandingPageScreen(onAuthClick = { backStack.push(Route.AuthGraph) })
+            }
 
-        composable<Route.AuthGraph> {
-            AuthScreenRoot(
-                onAuthorized = {
-                    navController.navigate(Route.ClubGraph) {
-                        // Clear entire backstack including LandingPage and AuthGraph
-                        popUpTo(Route.LandingPage) {
-                            inclusive = true
-                        }
-                    }
-                }
-            )
-        }
+            entry<Route.AuthGraph> {
+                AuthScreenRoot(
+                    // Drops LandingPage and AuthGraph: back leaves the app
+                    onAuthorized = { backStack.resetTo(Route.ClubGraph) }
+                )
+            }
 
-        composable<Route.ClubGraph> {
-            ClubsScreenRoot(authViewModel = authViewModel)
-        }
-    }
+            entry<Route.ClubGraph> {
+                ClubsScreenRoot(authViewModel = authViewModel)
+            }
+        },
+    )
 }

@@ -187,6 +187,7 @@ sealed interface ReviewsAction {
 }
 
 class ReviewsViewModel(
+    private val clubSlug: String,
     private val savedStateHandle: SavedStateHandle,
     private val reviewsRepository: ReviewsRepository,
     private val commentsRepository: ReviewCommentsRepository,
@@ -195,7 +196,6 @@ class ReviewsViewModel(
     private val listsRepository: ListsRepository,
     private val workDetailsRepository: WorkDetailsRepository,
 ) : ViewModel() {
-    private val clubSlug = requireNotNull(savedStateHandle.get<String>("clubSlug"))
 
     // The search text and open details sheet survive process death like the selected tab does.
     private val _state = MutableStateFlow(

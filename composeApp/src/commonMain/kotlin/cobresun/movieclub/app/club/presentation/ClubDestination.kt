@@ -1,6 +1,5 @@
 package cobresun.movieclub.app.club.presentation
 
-import cobresun.movieclub.app.core.presentation.NavMotion
 import cobresun.movieclub.app.stats.presentation.SharedStatisticsScreenRoot
 import cobresun.movieclub.app.lists.presentation.SharedListScreenRoot
 import androidx.compose.foundation.background
@@ -66,12 +65,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.toRoute
+import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
 import cobresun.movieclub.app.app.Route
+import cobresun.movieclub.app.app.RouteDisplay
+import cobresun.movieclub.app.app.pop
+import cobresun.movieclub.app.app.push
+import cobresun.movieclub.app.app.rememberRouteBackStack
+import cobresun.movieclub.app.app.resetTo
 import cobresun.movieclub.app.auth.presentation.AuthAction
 import cobresun.movieclub.app.auth.presentation.AuthViewModel
 import cobresun.movieclub.app.core.domain.AsyncResult
@@ -83,7 +85,6 @@ import cobresun.movieclub.app.app.DeepLink
 import cobresun.movieclub.app.app.DeepLinks
 import cobresun.movieclub.app.app.ClubSection
 import cobresun.movieclub.app.reviews.presentation.SharedReviewScreenRoot
-import androidx.navigation.NavDestination.Companion.hasRoute
 import cobresun.movieclub.app.member.presentation.MemberViewModel
 import cobresun.movieclub.app.member.presentation.ProfileScreenRoot
 import cobresun.movieclub.app.stats.presentation.WrappedScreenRoot
@@ -137,13 +138,6 @@ fun ClubsScreenRoot(
     )
 }
 
-private fun NavHostController.navigateClearingStack(route: Route) {
-    navigate(route) {
-        popUpTo(graph.id) { inclusive = true }
-        launchSingleTop = true
-    }
-}
-
 @Composable
 fun ClubsScreen(
     clubs: AsyncResult<List<Club>>,
@@ -153,7 +147,47 @@ fun ClubsScreen(
     memberViewModel: MemberViewModel,
     isLoggingOut: Boolean = false,
 ) {
-    val navController = rememberNavController()
+    // Back online: clubs, profile and members shown meanwhile came from storage.
+    OnReconnect { memberViewModel.refresh() }
+
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
+        when (clubs) {
+            is AsyncResult.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            is AsyncResult.Error -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                ErrorMessage(
+                    message = "Couldn't load your clubs. Check your connection and try again.",
+                    onRetry = memberViewModel::refresh,
+                )
+            }
+            // Clubs stay loaded once they are (refreshes keep them on screen), so the shell isn't torn down.
+            is AsyncResult.Success -> ClubShell(
+                clubs = clubs.data,
+                me = me,
+                lastClubSlug = lastClubSlug,
+                onLogout = onLogout,
+                memberViewModel = memberViewModel,
+                isLoggingOut = isLoggingOut,
+            )
+        }
+    }
+}
+
+/** The signed-in shell: the club back stack, its header locals, and the switcher and account sheets. */
+@Composable
+private fun ClubShell(
+    clubs: List<Club>,
+    me: Member?,
+    lastClubSlug: String?,
+    onLogout: () -> Unit,
+    memberViewModel: MemberViewModel,
+    isLoggingOut: Boolean,
+) {
+    // Starts on the default club; later changes navigate explicitly.
+    val backStack = rememberRouteBackStack(
+        defaultClubSlug(clubs, lastClubSlug)?.let { Route.Club(it) } ?: Route.EmptyClubs
+    )
     val haptics = koinInject<HapticFeedback>()
 
     var currentClubSlug by rememberSaveable { mutableStateOf<String?>(null) }
@@ -169,33 +203,28 @@ fun ClubsScreen(
     /** [tab] null reopens the tab last used in that club. */
     fun openClub(slug: String, tab: ClubTab? = null) {
         selectClub(slug)
-        navController.navigateClearingStack(Route.Club(slug, tab?.name))
+        backStack.resetTo(Route.Club(slug, tab?.name))
     }
 
     // Keep the selection valid when the club list changes (left, removed, renamed slug).
     LaunchedEffect(clubs) {
-        if (clubs !is AsyncResult.Success) return@LaunchedEffect
-        val list = clubs.data
         val selected = currentClubSlug
         when {
-            list.isEmpty() -> if (selected != null) {
+            clubs.isEmpty() -> if (selected != null) {
                 currentClubSlug = null
-                navController.navigateClearingStack(Route.EmptyClubs)
+                backStack.resetTo(Route.EmptyClubs)
             }
-            // Matches ClubNavHost's start destination.
-            selected == null -> selectClub(defaultClubSlug(list, lastClubSlug))
-            list.none { it.slug == selected } -> openClub(list.first().slug)
+            // Matches the back stack's start route.
+            selected == null -> selectClub(defaultClubSlug(clubs, lastClubSlug))
+            clubs.none { it.slug == selected } -> openClub(clubs.first().slug)
         }
     }
 
-    val clubList = (clubs as? AsyncResult.Success)?.data.orEmpty()
-    val currentClub = clubList.firstOrNull { it.slug == currentClubSlug }
+    val currentClub = clubs.firstOrNull { it.slug == currentClubSlug }
     val memberState by memberViewModel.state.collectAsStateWithLifecycle()
     val currentMembers = currentClubSlug?.let { memberState.members[it] }
     val currentMeta = clubMetaLine(currentClub?.type, currentMembers?.size)
     LaunchedEffect(currentClubSlug) { currentClubSlug?.let(memberViewModel::loadMembers) }
-    // Back online: clubs, profile and members shown meanwhile came from storage.
-    OnReconnect { memberViewModel.refresh() }
 
     CompositionLocalProvider(
         LocalClubSwitcher provides { showSwitcher = true },
@@ -206,34 +235,20 @@ fun ClubsScreen(
         LocalCurrentClubMembers provides currentMembers.orEmpty(),
         LocalClubTabShown provides { currentTab = it },
     ) {
-        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
-            when (clubs) {
-                is AsyncResult.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-                is AsyncResult.Error -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    ErrorMessage(
-                        message = "Couldn't load your clubs. Check your connection and try again.",
-                        onRetry = memberViewModel::refresh,
-                    )
-                }
-                is AsyncResult.Success -> ClubNavHost(
-                    initialClubs = clubs.data,
-                    lastClubSlug = lastClubSlug,
-                    navController = navController,
-                    memberViewModel = memberViewModel,
-                    onOpenClub = { openClub(it) },
-                    onSlugChanged = { selectClub(it) },
-                    onLogout = onLogout,
-                    isLoggingOut = isLoggingOut,
-                )
-            }
-        }
+        ClubNavHost(
+            initialClubs = clubs,
+            backStack = backStack,
+            memberViewModel = memberViewModel,
+            onOpenClub = { openClub(it) },
+            onSlugChanged = { selectClub(it) },
+            onLogout = onLogout,
+            isLoggingOut = isLoggingOut,
+        )
     }
 
     if (showSwitcher) {
         ClubSwitcherSheet(
-            clubs = clubList,
+            clubs = clubs,
             current = currentClub,
             meta = currentMeta,
             onDismiss = { showSwitcher = false },
@@ -245,8 +260,8 @@ fun ClubsScreen(
                     ?: ClubTab.REVIEWS
                 openClub(club.slug, tab)
             },
-            onSettings = { club -> navController.navigate(Route.ClubSettings(club.slug)) },
-            onCreateClub = { navController.navigate(Route.CreateClub) },
+            onSettings = { club -> backStack.push(Route.ClubSettings(club.slug)) },
+            onCreateClub = { backStack.push(Route.CreateClub) },
         )
     }
     if (showAccount) {
@@ -254,7 +269,7 @@ fun ClubsScreen(
             me = me,
             isLoggingOut = isLoggingOut,
             onDismiss = { showAccount = false },
-            onProfile = { navController.navigate(Route.Profile) },
+            onProfile = { backStack.push(Route.Profile) },
             onLogout = onLogout,
         )
     }
@@ -263,54 +278,49 @@ fun ClubsScreen(
 @Composable
 private fun ClubNavHost(
     initialClubs: List<Club>,
-    lastClubSlug: String?,
-    navController: NavHostController,
+    backStack: NavBackStack<NavKey>,
     memberViewModel: MemberViewModel,
     onOpenClub: (String) -> Unit,
     onSlugChanged: (String) -> Unit,
     onLogout: () -> Unit,
     isLoggingOut: Boolean,
 ) {
-    // Start destination is fixed at first composition; later changes navigate explicitly.
-    val startDestination = remember {
-        defaultClubSlug(initialClubs, lastClubSlug)?.let { Route.Club(it) } ?: Route.EmptyClubs
-    }
+    // A tab for the club screen to switch to when it shows again (Wrapped's "go to reviews").
+    var tabRequest by remember { mutableStateOf<ClubTab?>(null) }
     // Invite links opened from outside the app (held while signed out, consumed once signed in).
     val pendingLink by DeepLinks.pending.collectAsStateWithLifecycle()
     LaunchedEffect(pendingLink) {
         when (val link = pendingLink) {
             is DeepLink.JoinClub -> {
                 DeepLinks.consume(link)
-                navController.navigate(Route.JoinClub(link.token))
+                backStack.push(Route.JoinClub(link.token))
             }
             // Club and shared-review links: bring that club's screen up; ClubScreenRoot
             // consumes the link once it shows (tab + review details).
             is DeepLink.Club -> {
                 val memberSlugs = (memberViewModel.state.value.clubs as? AsyncResult.Success)?.data?.map { it.slug }
                     ?: initialClubs.map { it.slug }
-                val entry = navController.currentBackStackEntry
-                val onClub = entry?.destination?.hasRoute<Route.Club>() == true &&
-                    entry.toRoute<Route.Club>().clubSlug == link.slug
+                val onClub = (backStack.lastOrNull() as? Route.Club)?.clubSlug == link.slug
                 when {
                     link.slug !in memberSlugs -> {
                         DeepLinks.consume(link)
                         // Not in that club: shared reviews, lists and statistics open as their public pages.
                         when {
-                            link.reviewWorkId != null -> navController.navigate(Route.SharedReview(link.slug, link.reviewWorkId))
-                            link.listId != null -> navController.navigate(Route.SharedList(link.slug, link.listId))
-                            link.section == ClubSection.STATISTICS -> navController.navigate(Route.SharedStatistics(link.slug))
-                            else -> navController.navigate(Route.ClubNotFound)
+                            link.reviewWorkId != null -> backStack.push(Route.SharedReview(link.slug, link.reviewWorkId))
+                            link.listId != null -> backStack.push(Route.SharedList(link.slug, link.listId))
+                            link.section == ClubSection.STATISTICS -> backStack.push(Route.SharedStatistics(link.slug))
+                            else -> backStack.push(Route.ClubNotFound)
                         }
                     }
                     link.section == ClubSection.SETTINGS -> {
                         DeepLinks.consume(link)
                         if (!onClub) onOpenClub(link.slug)
-                        navController.navigate(Route.ClubSettings(link.slug))
+                        backStack.push(Route.ClubSettings(link.slug))
                     }
                     link.section == ClubSection.WRAPPED -> {
                         DeepLinks.consume(link)
                         if (!onClub) onOpenClub(link.slug)
-                        navController.navigate(Route.Wrapped(link.slug, link.wrappedYear))
+                        backStack.push(Route.Wrapped(link.slug, link.wrappedYear))
                     }
                     !onClub -> onOpenClub(link.slug)
                 }
@@ -318,112 +328,122 @@ private fun ClubNavHost(
             null -> Unit
         }
     }
-    NavHost(
-        navController = navController,
-        startDestination = startDestination,
-        enterTransition = { NavMotion.enter },
-        exitTransition = { NavMotion.exit },
-        popEnterTransition = { NavMotion.enter },
-        popExitTransition = { NavMotion.exit },
-    ) {
-        composable<Route.Club> { entry ->
-            val slug = entry.toRoute<Route.Club>().clubSlug
-            ClubScreenRoot(onOpenWrapped = { year -> navController.navigate(Route.Wrapped(slug, year)) })
-        }
+    RouteDisplay(
+        backStack = backStack,
+        entryProvider = entryProvider {
+            entry<Route.Club> { route ->
+                ClubScreenRoot(
+                    clubSlug = route.clubSlug,
+                    initialTab = ClubTab.entries.firstOrNull { it.name == route.tab },
+                    tabRequest = tabRequest,
+                    onTabRequestHandled = { tabRequest = null },
+                    onOpenWrapped = { year -> backStack.push(Route.Wrapped(route.clubSlug, year)) },
+                )
+            }
 
-        composable<Route.Wrapped> {
-            WrappedScreenRoot(
-                onClose = { navController.popBackStack() },
-                onGoToReviews = {
-                    navController.previousBackStackEntry?.savedStateHandle?.set(ClubViewModel.KEY_TAB, ClubTab.REVIEWS)
-                    navController.popBackStack()
-                },
-            )
-        }
+            entry<Route.Wrapped> { route ->
+                WrappedScreenRoot(
+                    clubSlug = route.clubSlug,
+                    year = route.year,
+                    onClose = { backStack.pop() },
+                    onGoToReviews = {
+                        tabRequest = ClubTab.REVIEWS
+                        backStack.pop()
+                    },
+                )
+            }
 
-        // Web routes club-less members to the new-club view, framed as onboarding.
-        composable<Route.EmptyClubs> {
-            CreateClubScreenRoot(
-                isFirstClub = true,
-                onNavigateBack = null,
-                onNavigateToClub = { clubSlug, name, type ->
-                    memberViewModel.refresh()
-                    onOpenClub(clubSlug)
-                    navController.navigate(Route.ClubInvite(clubSlug, name, type.value))
-                },
-                onJoin = { token -> navController.navigate(Route.JoinClub(token)) },
-                topEnd = { AccountButton() },
-            )
-        }
+            // Web routes club-less members to the new-club view, framed as onboarding.
+            entry<Route.EmptyClubs> {
+                CreateClubScreenRoot(
+                    isFirstClub = true,
+                    onNavigateBack = null,
+                    onNavigateToClub = { clubSlug, name, type ->
+                        memberViewModel.refresh()
+                        onOpenClub(clubSlug)
+                        backStack.push(Route.ClubInvite(clubSlug, name, type.value))
+                    },
+                    onJoin = { token -> backStack.push(Route.JoinClub(token)) },
+                    topEnd = { AccountButton() },
+                )
+            }
 
-        composable<Route.CreateClub> {
-            CreateClubScreenRoot(
-                onNavigateBack = { navController.popBackStack() },
-                onJoin = { token -> navController.navigate(Route.JoinClub(token)) },
-                onNavigateToClub = { clubSlug, name, type ->
-                    memberViewModel.refresh()
-                    onOpenClub(clubSlug)
-                    // The club sits underneath, so "Go to the club" (or back) lands there.
-                    navController.navigate(Route.ClubInvite(clubSlug, name, type.value))
-                }
-            )
-        }
-
-        composable<Route.ClubInvite> {
-            ClubInviteScreenRoot(onGoToClub = { navController.popBackStack() })
-        }
-
-        composable<Route.JoinClub> {
-            val memberState by memberViewModel.state.collectAsStateWithLifecycle()
-            JoinClubScreenRoot(
-                memberClubSlugs = (memberState.clubs as? AsyncResult.Success)?.data.orEmpty().map { it.slug }.toSet(),
-                onNavigateBack = { navController.popBackStack() },
-                onJoined = { clubSlug ->
-                    memberViewModel.refresh()
-                    onOpenClub(clubSlug)
-                }
-            )
-        }
-
-        composable<Route.ClubNotFound> {
-            ClubNotFoundScreen(onBrowseClubs = { navController.popBackStack() })
-        }
-        composable<Route.SharedList> {
-            SharedListScreenRoot(onBack = { navController.popBackStack() })
-        }
-        composable<Route.SharedStatistics> {
-            SharedStatisticsScreenRoot(onBack = { navController.popBackStack() })
-        }
-        composable<Route.SharedReview> {
-            SharedReviewScreenRoot(onBack = { navController.popBackStack() })
-        }
-
-        composable<Route.Profile> {
-            ProfileScreenRoot(
-                onNavigateBack = { navController.popBackStack() },
-                onSignOut = onLogout,
-                isSigningOut = isLoggingOut,
-            )
-        }
-
-        composable<Route.ClubSettings> { entry ->
-            val routeSlug = entry.toRoute<Route.ClubSettings>().clubSlug
-            // Members may have been removed: refresh the header's count on the way out.
-            DisposableEffect(routeSlug) { onDispose { memberViewModel.loadMembers(routeSlug) } }
-            ClubSettingsScreenRoot(
-                onNavigateBack = { navController.popBackStack() },
-                // The shell's club-list effect moves to another club (or the empty state).
-                onNavigateAfterLeave = { memberViewModel.refresh() },
-                onClubUpdated = { newSlug ->
-                    memberViewModel.refresh()
-                    if (newSlug != routeSlug) {
-                        // Routes are keyed by slug: rebuild the stack on the new one.
-                        onSlugChanged(newSlug)
-                        navController.navigateClearingStack(Route.Club(newSlug))
-                        navController.navigate(Route.ClubSettings(newSlug))
+            entry<Route.CreateClub> {
+                CreateClubScreenRoot(
+                    onNavigateBack = { backStack.pop() },
+                    onJoin = { token -> backStack.push(Route.JoinClub(token)) },
+                    onNavigateToClub = { clubSlug, name, type ->
+                        memberViewModel.refresh()
+                        onOpenClub(clubSlug)
+                        // The club sits underneath, so "Go to the club" (or back) lands there.
+                        backStack.push(Route.ClubInvite(clubSlug, name, type.value))
                     }
-                }
-            )
-        }
-    }
+                )
+            }
+
+            entry<Route.ClubInvite> { route ->
+                ClubInviteScreenRoot(
+                    clubSlug = route.clubSlug,
+                    clubName = route.clubName,
+                    clubType = route.clubType,
+                    onGoToClub = { backStack.pop() },
+                )
+            }
+
+            entry<Route.JoinClub> { route ->
+                val memberState by memberViewModel.state.collectAsStateWithLifecycle()
+                JoinClubScreenRoot(
+                    token = route.token,
+                    memberClubSlugs = (memberState.clubs as? AsyncResult.Success)?.data.orEmpty().map { it.slug }.toSet(),
+                    onNavigateBack = { backStack.pop() },
+                    onJoined = { clubSlug ->
+                        memberViewModel.refresh()
+                        onOpenClub(clubSlug)
+                    }
+                )
+            }
+
+            entry<Route.ClubNotFound> {
+                ClubNotFoundScreen(onBrowseClubs = { backStack.pop() })
+            }
+            entry<Route.SharedList> { route ->
+                SharedListScreenRoot(clubSlug = route.clubSlug, listId = route.listId, onBack = { backStack.pop() })
+            }
+            entry<Route.SharedStatistics> { route ->
+                SharedStatisticsScreenRoot(clubSlug = route.clubSlug, onBack = { backStack.pop() })
+            }
+            entry<Route.SharedReview> { route ->
+                SharedReviewScreenRoot(clubSlug = route.clubSlug, workId = route.workId, onBack = { backStack.pop() })
+            }
+
+            entry<Route.Profile> {
+                ProfileScreenRoot(
+                    onNavigateBack = { backStack.pop() },
+                    onSignOut = onLogout,
+                    isSigningOut = isLoggingOut,
+                )
+            }
+
+            entry<Route.ClubSettings> { route ->
+                val routeSlug = route.clubSlug
+                // Members may have been removed: refresh the header's count on the way out.
+                DisposableEffect(routeSlug) { onDispose { memberViewModel.loadMembers(routeSlug) } }
+                ClubSettingsScreenRoot(
+                    clubSlug = routeSlug,
+                    onNavigateBack = { backStack.pop() },
+                    // The shell's club-list effect moves to another club (or the empty state).
+                    onNavigateAfterLeave = { memberViewModel.refresh() },
+                    onClubUpdated = { newSlug ->
+                        memberViewModel.refresh()
+                        if (newSlug != routeSlug) {
+                            // Routes are keyed by slug: rebuild the stack on the new one.
+                            onSlugChanged(newSlug)
+                            backStack.resetTo(Route.Club(newSlug))
+                            backStack.push(Route.ClubSettings(newSlug))
+                        }
+                    }
+                )
+            }
+        },
+    )
 }

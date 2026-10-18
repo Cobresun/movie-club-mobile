@@ -77,6 +77,7 @@ import cobresun.movieclub.app.stats.presentation.StatsAction
 import cobresun.movieclub.app.stats.presentation.StatsScreen
 import cobresun.movieclub.app.stats.presentation.StatsViewModel
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 import cobresun.movieclub.app.core.presentation.OfflineBanner
 import cobresun.movieclub.app.core.presentation.OnReconnect
 import cobresun.movieclub.app.awards.presentation.AwardsAction
@@ -90,15 +91,26 @@ import kotlinx.coroutines.flow.map
  */
 @Composable
 fun ClubScreenRoot(
+    clubSlug: String,
+    /** The tab the route names; null reopens the one last used in this club. */
+    initialTab: ClubTab?,
+    /** A tab to switch to (e.g. coming back from Wrapped); [onTabRequestHandled] clears it. */
+    tabRequest: ClubTab?,
+    onTabRequestHandled: () -> Unit,
     /** Opens Club Wrapped at a year (0 for the latest). */
     onOpenWrapped: (year: Int) -> Unit = {},
-    clubViewModel: ClubViewModel = koinViewModel(),
-    listsViewModel: ListsViewModel = koinViewModel(),
-    reviewsViewModel: ReviewsViewModel = koinViewModel(),
-    statsViewModel: StatsViewModel = koinViewModel(),
-    awardsViewModel: AwardsViewModel = koinViewModel(),
+    clubViewModel: ClubViewModel = koinViewModel { parametersOf(clubSlug, initialTab) },
+    listsViewModel: ListsViewModel = koinViewModel { parametersOf(clubSlug) },
+    reviewsViewModel: ReviewsViewModel = koinViewModel { parametersOf(clubSlug) },
+    statsViewModel: StatsViewModel = koinViewModel { parametersOf(clubSlug) },
+    awardsViewModel: AwardsViewModel = koinViewModel { parametersOf(clubSlug) },
 ) {
     val selectedTab by clubViewModel.selectedTab.collectAsStateWithLifecycle()
+    LaunchedEffect(tabRequest) {
+        val tab = tabRequest ?: return@LaunchedEffect
+        clubViewModel.selectTab(tab)
+        onTabRequestHandled()
+    }
     val tabResolved by clubViewModel.tabResolved.collectAsStateWithLifecycle()
     val reportTab = LocalClubTabShown.current
     LaunchedEffect(selectedTab, tabResolved) { if (tabResolved) reportTab(selectedTab) }

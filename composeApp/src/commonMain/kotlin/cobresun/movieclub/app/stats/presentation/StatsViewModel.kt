@@ -1,6 +1,5 @@
 package cobresun.movieclub.app.stats.presentation
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cobresun.movieclub.app.club.domain.ClubRepository
@@ -45,14 +44,12 @@ sealed interface StatsAction {
 }
 
 class StatsViewModel(
-    savedStateHandle: SavedStateHandle,
+    private val clubSlug: String,
     private val reviewsRepository: ReviewsRepository,
     private val clubRepository: ClubRepository,
     private val memberRepository: MemberRepository,
     private val statsRepository: StatsRepository,
 ) : ViewModel() {
-    private val clubSlug = requireNotNull(savedStateHandle.get<String>("clubSlug"))
-
     private val _state = MutableStateFlow(StatsState())
     val state = _state.asStateFlow()
 

@@ -76,12 +76,14 @@ import cobresun.movieclub.app.member.presentation.components.icon
 import cobresun.movieclub.app.member.presentation.components.label
 import cobresun.movieclub.app.member.presentation.platform.rememberShareSheet
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 private const val SLUG_PREFIX = "movie-club.app/club/"
 
 @Composable
 fun ClubSettingsScreenRoot(
-    viewModel: ClubSettingsViewModel = koinViewModel(),
+    clubSlug: String,
+    viewModel: ClubSettingsViewModel = koinViewModel { parametersOf(clubSlug) },
     onNavigateBack: () -> Unit,
     onNavigateAfterLeave: () -> Unit,
     onClubUpdated: (newSlug: String) -> Unit,

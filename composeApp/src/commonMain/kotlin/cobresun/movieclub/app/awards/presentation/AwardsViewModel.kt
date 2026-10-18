@@ -1,6 +1,5 @@
 package cobresun.movieclub.app.awards.presentation
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cobresun.movieclub.app.awards.domain.AwardCategory
@@ -156,14 +155,12 @@ sealed interface AwardsAction {
 }
 
 class AwardsViewModel(
-    savedStateHandle: SavedStateHandle,
+    private val clubSlug: String,
     private val awardsRepository: AwardsRepository,
     private val reviewsRepository: ReviewsRepository,
     private val clubRepository: ClubRepository,
     private val memberRepository: MemberRepository,
 ) : ViewModel() {
-    private val clubSlug = requireNotNull(savedStateHandle.get<String>("clubSlug"))
-
     private val _state = MutableStateFlow(AwardsState())
     val state = _state.asStateFlow()
 

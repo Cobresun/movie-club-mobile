@@ -1,8 +1,10 @@
 package cobresun.movieclub.app.core.presentation
 
+import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -36,11 +38,13 @@ fun Modifier.fadeUpOnAppear(durationMillis: Int = AppMotion.SLOW, delayMillis: I
 }
 
 /**
- * Screen-to-screen transitions for NavHosts. navigation-compose defaults to a
- * 700ms crossfade, which keeps two full screens composed and drawing long
- * enough to read as lag.
+ * Screen-to-screen transitions for nav displays. Navigation 3's default 500ms
+ * slides keep two full screens composed and drawing long enough to read as lag.
  */
 object NavMotion {
     val enter: androidx.compose.animation.EnterTransition = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220))
     val exit: androidx.compose.animation.ExitTransition = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(150))
+
+    /** A fresh transform each time: [ContentTransform] holds per-transition state. */
+    fun transition(): ContentTransform = enter togetherWith exit
 }

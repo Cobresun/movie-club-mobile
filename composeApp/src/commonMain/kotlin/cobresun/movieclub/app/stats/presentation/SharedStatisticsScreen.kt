@@ -30,9 +30,14 @@ import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.presentation.components.ErrorState
 import cobresun.movieclub.app.core.presentation.toUserMessage
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @Composable
-fun SharedStatisticsScreenRoot(onBack: () -> Unit, viewModel: StatsViewModel = koinViewModel()) {
+fun SharedStatisticsScreenRoot(
+    clubSlug: String,
+    onBack: () -> Unit,
+    viewModel: StatsViewModel = koinViewModel { parametersOf(clubSlug) },
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { viewModel.onAction(StatsAction.Shown) }
     SharedStatisticsScreen(state, onBack = onBack, onRetry = { viewModel.onAction(StatsAction.Refresh) })

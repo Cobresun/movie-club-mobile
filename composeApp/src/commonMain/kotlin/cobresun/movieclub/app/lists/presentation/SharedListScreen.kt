@@ -30,7 +30,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
@@ -52,6 +51,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 data class SharedListState(
     val clubName: String = "",
@@ -64,12 +64,11 @@ data class SharedListState(
 
 /** Loads a shared list for a club the user may not be in; the endpoints are public. */
 class SharedListViewModel(
-    savedStateHandle: SavedStateHandle,
+    private val clubSlug: String,
+    private val listId: String,
     private val listsRepository: ListsRepository,
     private val clubRepository: ClubRepository,
 ) : ViewModel() {
-    private val clubSlug = requireNotNull(savedStateHandle.get<String>("clubSlug"))
-    private val listId = requireNotNull(savedStateHandle.get<String>("listId"))
 
     private val _state = MutableStateFlow(SharedListState(clubName = clubSlug))
     val state = _state.asStateFlow()
@@ -108,7 +107,12 @@ class SharedListViewModel(
 }
 
 @Composable
-fun SharedListScreenRoot(onBack: () -> Unit, viewModel: SharedListViewModel = koinViewModel()) {
+fun SharedListScreenRoot(
+    clubSlug: String,
+    listId: String,
+    onBack: () -> Unit,
+    viewModel: SharedListViewModel = koinViewModel { parametersOf(clubSlug, listId) },
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     SharedListScreen(state, onBack = onBack, onRetry = viewModel::load)
 }

@@ -52,11 +52,17 @@ import cobresun.movieclub.app.reviews.domain.SharedReview
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 import kotlin.math.round
 import kotlin.time.Instant
 
 @Composable
-fun SharedReviewScreenRoot(onBack: () -> Unit, viewModel: SharedReviewViewModel = koinViewModel()) {
+fun SharedReviewScreenRoot(
+    clubSlug: String,
+    workId: String,
+    onBack: () -> Unit,
+    viewModel: SharedReviewViewModel = koinViewModel { parametersOf(clubSlug, workId) },
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     SharedReviewScreen(state, onBack = onBack, onRetry = viewModel::load)
 }
