@@ -19,6 +19,10 @@ import cobresun.movieclub.app.lists.domain.WorkList
 import cobresun.movieclub.app.lists.domain.ListedWork
 import cobresun.movieclub.app.lists.data.mappers.toListedWork
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.datetime.TimeZone
+
 class ListsRepositoryImpl(
     private val dataSource: ListsDataSource,
 ) : ListsRepository {
@@ -30,10 +34,21 @@ class ListsRepositoryImpl(
         }
 
     override suspend fun getItems(clubSlug: String, listId: String): Result<List<Work>, DataError.Remote> =
-        dataSource.getItems(clubSlug, listId).map { items -> items.map { it.toWork() } }
+        dataSource.getItems(clubSlug, listId).let { result ->
+            // Each item walks a JSON tree; keep that off the main thread.
+            withContext(Dispatchers.Default) {
+                val zone = TimeZone.currentSystemDefault()
+                result.map { items -> items.map { it.toWork(zone) } }
+            }
+        }
 
     override suspend fun getAllItems(clubSlug: String): Result<List<ListedWork>, DataError.Remote> =
-        dataSource.getAllItems(clubSlug).map { items -> items.map { it.toListedWork() } }
+        dataSource.getAllItems(clubSlug).let { result ->
+            withContext(Dispatchers.Default) {
+                val zone = TimeZone.currentSystemDefault()
+                result.map { items -> items.map { it.toListedWork(zone) } }
+            }
+        }
 
     override suspend fun createList(clubSlug: String, title: String): Result<WorkList, DataError.Remote> =
         dataSource.createList(clubSlug, ListTitleDto(title.trim())).map { it.toWorkList() }

@@ -8,7 +8,9 @@ import io.ktor.client.call.body
 import io.ktor.client.network.sockets.SocketTimeoutException
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.json.Json
 
@@ -37,7 +39,11 @@ fun statusToRemote(status: Int): DataError.Remote = when (status) {
  * Like core `safeCall`, but keeps the server's error message and tolerates
  * non-JSON success bodies when [T] is [Unit].
  */
-suspend inline fun <reified T> apiCall(execute: () -> HttpResponse): Result<T, ApiError> {
+suspend inline fun <reified T> apiCall(crossinline execute: suspend () -> HttpResponse): Result<T, ApiError> =
+    // Off the main thread, like core safeCall: Ktor decodes on the caller's context.
+    withContext(Dispatchers.Default) { apiCallHere<T> { execute() } }
+
+suspend inline fun <reified T> apiCallHere(execute: () -> HttpResponse): Result<T, ApiError> {
     val response = try {
         execute()
     } catch (e: SocketTimeoutException) {

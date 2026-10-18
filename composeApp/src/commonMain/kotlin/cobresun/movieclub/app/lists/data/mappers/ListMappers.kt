@@ -6,11 +6,12 @@ import cobresun.movieclub.app.lists.data.dto.SourcedListItemDto
 import cobresun.movieclub.app.lists.data.dto.WorkListDto
 import cobresun.movieclub.app.lists.domain.ListedWork
 import cobresun.movieclub.app.lists.domain.WorkList
+import kotlinx.datetime.TimeZone
 
 fun WorkListDto.toWorkList(): WorkList = WorkList(id = id, title = title, itemCount = itemCount)
 
-fun SourcedListItemDto.toListedWork(): ListedWork = ListedWork(
-    work = WorkListItemDto(id, type, title, createdDate, imageUrl, externalId, addedBy, externalData).toWork(),
+fun SourcedListItemDto.toListedWork(timeZone: TimeZone = TimeZone.currentSystemDefault()): ListedWork = ListedWork(
+    work = WorkListItemDto(id, type, title, createdDate, imageUrl, externalId, addedBy, externalData).toWork(timeZone),
     listId = sourceListId,
     listTitle = sourceListTitle,
 )

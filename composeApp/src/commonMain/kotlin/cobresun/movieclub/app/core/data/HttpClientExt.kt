@@ -6,10 +6,22 @@ import cobresun.movieclub.app.core.domain.Result
 import io.ktor.client.call.NoTransformationFoundException
 import io.ktor.client.call.body
 import io.ktor.client.statement.HttpResponse
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.ensureActive
 
+/**
+ * Runs the request and decodes its body off the main thread: callers are
+ * usually in viewModelScope (Main), and Ktor decodes on the caller's context,
+ * so big payloads would otherwise block frames.
+ */
 suspend inline fun <reified T> safeCall(
+    crossinline execute: suspend () -> HttpResponse
+): Result<T, DataError.Remote> = withContext(Dispatchers.Default) { safeCallHere<T> { execute() } }
+
+/** [safeCall] on the current dispatcher. */
+suspend inline fun <reified T> safeCallHere(
     execute: () -> HttpResponse
 ): Result<T, DataError.Remote> {
     val response = try {

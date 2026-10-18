@@ -29,6 +29,8 @@ import cobresun.movieclub.app.reviews.domain.ReviewComment
 import cobresun.movieclub.app.reviews.domain.ReviewCommentsRepository
 import cobresun.movieclub.app.reviews.domain.ReviewsRepository
 import cobresun.movieclub.app.reviews.domain.ScoreScale
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class ReviewsRepositoryImpl(
     private val dataSource: ReviewsDataSource,
@@ -44,11 +46,20 @@ class ReviewsRepositoryImpl(
     }
 
     override suspend fun getMyScoredWorks(): Result<List<ScoredWork>, DataError.Remote> =
-        dataSource.getMyScores().map { items -> items.map { it.toScoredWork() } }
+        dataSource.getMyScores().let { result ->
+            // Mapping walks each work's JSON tree; keep it off the main thread.
+            withContext(Dispatchers.Default) {
+                val zone = TimeZone.currentSystemDefault()
+                result.map { items -> items.map { it.toScoredWork(zone) } }
+            }
+        }
 
     override suspend fun getReviews(clubSlug: String): Result<List<Review>, DataError.Remote> =
-        dataSource.getReviews(clubSlug).map { items ->
-            items.map { it.toReview() }.sortedByDescending { it.work.addedAt }
+        dataSource.getReviews(clubSlug).let { result ->
+            withContext(Dispatchers.Default) {
+                val zone = TimeZone.currentSystemDefault()
+                result.map { items -> items.map { it.toReview(zone) }.sortedByDescending { it.work.addedAt } }
+            }
         }
 
     override suspend fun addReview(clubSlug: String, work: NewWork): Result<Unit, DataError.Remote> =

@@ -22,12 +22,12 @@ import cobresun.movieclub.app.reviews.domain.ScoredWork
 
 private const val AVERAGE_KEY = "average"
 
-fun MemberScoredWorkDto.toScoredWork(): ScoredWork {
+fun MemberScoredWorkDto.toScoredWork(timeZone: TimeZone = TimeZone.currentSystemDefault()): ScoredWork {
     // Reuse the list-item mapper for poster selection and metadata parsing.
     val work = WorkListItemDto(
         id = workId, type = type, title = title, createdDate = scoredDate,
         imageUrl = imageUrl, externalId = externalId, externalData = externalData,
-    ).toWork()
+    ).toWork(timeZone)
     return ScoredWork(
         workId = workId,
         type = work.type,
