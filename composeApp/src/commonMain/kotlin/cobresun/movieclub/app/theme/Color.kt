@@ -1,6 +1,7 @@
 package cobresun.movieclub.app.theme
 
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
 // Brand Colors (match the web app)
@@ -50,6 +51,25 @@ fun chartSeriesColor(index: Int): Color = ChartSeriesColors[index.mod(ChartSerie
 val Red80 = Color(0xFFEF5350)
 val Red40 = Color(0xFF8E2424)
 val Red90 = Color(0xFFFFCDD2)
+
+// Light Surface Colors (cool grays from the same family as the dark ones)
+val LightGray99 = Color(0xFFFFFFFF)
+val LightGray97 = Color(0xFFF5F7FA)  // Background
+val LightGray95 = Color(0xFFEEF1F5)  // Low container
+val LightGray93 = Color(0xFFE8EBF0)  // Container
+val LightGray90 = Color(0xFFE1E5EB)  // Cards, chips
+val LightGray87 = Color(0xFFD9DEE5)  // Highest container
+val LightGray78 = Color(0xFFC3C9D2)  // Outline variant
+val LightGray50 = Color(0xFF79808B)  // Outline
+val LightGray35 = Color(0xFF4F5663)  // Subdued text
+val Ink10 = Color(0xFF15181D)        // Text
+val HighlightDeep = Color(0xFF1565C0)        // Light-scheme accent (the highlight, darkened for contrast)
+val HighlightDeepContainer = Color(0xFFD6E8FF)
+val Gold30 = Color(0xFF6B5400)
+val GoldContainerLight = Color(0xFFFFE9A6)
+val Red50 = Color(0xFFC62828)
+val RedContainerLight = Color(0xFFFFDAD6)
+val Red10 = Color(0xFF410002)
 
 // Pure Colors
 val White = Color(0xFFFFFFFF)
@@ -104,6 +124,59 @@ val MovieClubDarkColorScheme = darkColorScheme(
     inverseSurface = DarkGray90,
     inverseOnSurface = DarkGray20,
     inversePrimary = Blue30,
+
+    scrim = Black
+)
+
+/**
+ * Movie Club Material 3 Light Color Scheme.
+ *
+ * The same roles on light cool-gray surfaces. Accents are darkened (#1976D2 primary,
+ * #1565C0 highlight, deep gold) so text and icons keep at least 4.5:1 on the surfaces.
+ */
+val MovieClubLightColorScheme = lightColorScheme(
+    primary = Blue40,
+    onPrimary = White,
+    primaryContainer = Blue90,
+    onPrimaryContainer = Blue30,
+
+    secondary = HighlightDeep,
+    onSecondary = White,
+    secondaryContainer = HighlightDeepContainer,
+    onSecondaryContainer = Blue30,
+
+    tertiary = Gold40,
+    onTertiary = White,
+    tertiaryContainer = GoldContainerLight,
+    onTertiaryContainer = Gold30,
+
+    error = Red50,
+    onError = White,
+    errorContainer = RedContainerLight,
+    onErrorContainer = Red10,
+
+    background = LightGray97,
+    onBackground = Ink10,
+
+    surface = LightGray97,
+    onSurface = Ink10,
+    surfaceVariant = LightGray90,
+    onSurfaceVariant = LightGray35,
+    surfaceDim = LightGray87,
+    surfaceBright = LightGray99,
+    surfaceContainerLowest = LightGray99,
+    surfaceContainerLow = LightGray95,
+    surfaceContainer = LightGray93,
+    surfaceContainerHigh = LightGray90,
+    surfaceContainerHighest = LightGray87,
+
+    outline = LightGray50,
+    outlineVariant = LightGray78,
+
+    surfaceTint = Blue40,
+    inverseSurface = DarkGray30,
+    inverseOnSurface = DarkGray90,
+    inversePrimary = Blue90,
 
     scrim = Black
 )

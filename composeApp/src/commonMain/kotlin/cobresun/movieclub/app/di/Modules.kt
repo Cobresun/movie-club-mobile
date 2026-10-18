@@ -20,6 +20,7 @@ import cobresun.movieclub.app.club.presentation.ClubSettingsViewModel
 import cobresun.movieclub.app.club.presentation.ClubTab
 import cobresun.movieclub.app.club.presentation.ClubViewModel
 import cobresun.movieclub.app.core.data.AppConnectivity
+import cobresun.movieclub.app.core.data.AppearanceSettingsImpl
 import cobresun.movieclub.app.core.data.HttpClientFactory
 import cobresun.movieclub.app.core.data.LastClubStoreImpl
 import cobresun.movieclub.app.core.data.OfflineStore
@@ -27,9 +28,11 @@ import cobresun.movieclub.app.core.data.SessionCaches
 import cobresun.movieclub.app.core.data.SessionCookieStorage
 import cobresun.movieclub.app.core.data.SessionCookieStorageImpl
 import cobresun.movieclub.app.core.data.WorkDetailsRepositoryImpl
+import cobresun.movieclub.app.core.domain.AppearanceSettings
 import cobresun.movieclub.app.core.domain.Connectivity
 import cobresun.movieclub.app.core.domain.LastClubStore
 import cobresun.movieclub.app.core.domain.WorkDetailsRepository
+import cobresun.movieclub.app.core.presentation.AppearanceViewModel
 import cobresun.movieclub.app.core.presentation.ConnectivityViewModel
 import cobresun.movieclub.app.lists.data.CollapsedListsStoreImpl
 import cobresun.movieclub.app.lists.data.network.KtorListsDataSource
@@ -97,6 +100,8 @@ val coreModule = module {
     single<SessionCookieStorage> { SessionCookieStorageImpl(get()) }
     single { HttpClientFactory.create(get(), get(), get()) }
     singleOf(::LastClubStoreImpl) { bind<LastClubStore>() }
+    singleOf(::AppearanceSettingsImpl) { bind<AppearanceSettings>() }
+    viewModelOf(::AppearanceViewModel)
     singleOf(::WorkDetailsRepositoryImpl) { bind<WorkDetailsRepository>() }
 
     // Connectivity: the platform monitor, plus what to do when the network returns

@@ -1,22 +1,6 @@
 package cobresun.movieclub.app.member.presentation
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.Button
-import androidx.compose.material3.Switch
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.ImeAction
-import org.jetbrains.compose.resources.decodeToImageBitmap
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -27,18 +11,30 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.SettingsBrightness
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,15 +43,24 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -63,24 +68,30 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cobresun.movieclub.app.core.domain.AsyncResult
-import cobresun.movieclub.app.member.domain.Member
+import cobresun.movieclub.app.core.domain.ThemeMode
+import cobresun.movieclub.app.core.presentation.AppearanceViewModel
 import cobresun.movieclub.app.core.presentation.components.ErrorMessage
 import cobresun.movieclub.app.core.presentation.components.MemberAvatar
+import cobresun.movieclub.app.core.presentation.components.SettingsDivider
 import cobresun.movieclub.app.core.presentation.components.SettingsGroup
 import cobresun.movieclub.app.core.presentation.components.SettingsRow
 import cobresun.movieclub.app.core.presentation.components.SettingsSectionHeader
 import cobresun.movieclub.app.core.presentation.components.SettingsTopBar
 import cobresun.movieclub.app.core.presentation.platform.rememberImagePicker
+import cobresun.movieclub.app.member.domain.Member
+import org.jetbrains.compose.resources.decodeToImageBitmap
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun ProfileScreenRoot(
     viewModel: ProfileViewModel = koinViewModel(),
+    appearanceViewModel: AppearanceViewModel = koinViewModel(),
     onNavigateBack: () -> Unit,
     onSignOut: () -> Unit,
     isSigningOut: Boolean,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val themeMode by appearanceViewModel.themeMode.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(state.message) {
         state.message?.let {
@@ -116,6 +127,8 @@ fun ProfileScreenRoot(
                     state = state,
                     onAction = viewModel::onAction,
                     onPickPhoto = pickImage,
+                    themeMode = themeMode,
+                    onThemeMode = appearanceViewModel::setThemeMode,
                     onSignOut = onSignOut,
                     isSigningOut = isSigningOut,
                 )
@@ -142,6 +155,8 @@ private fun ProfileContent(
     state: ProfileState,
     onAction: (ProfileAction) -> Unit,
     onPickPhoto: () -> Unit,
+    themeMode: ThemeMode,
+    onThemeMode: (ThemeMode) -> Unit,
     onSignOut: () -> Unit,
     isSigningOut: Boolean,
 ) {
@@ -165,6 +180,9 @@ private fun ProfileContent(
         SettingsSectionHeader("Password")
         PasswordForm(state, onAction)
 
+        SettingsSectionHeader("Appearance")
+        AppearanceGroup(themeMode, onThemeMode)
+
         Spacer(Modifier.height(24.dp))
         SettingsGroup {
             SettingsRow(
@@ -176,6 +194,33 @@ private fun ProfileContent(
             )
         }
         Spacer(Modifier.height(32.dp).navigationBarsPadding())
+    }
+}
+
+/** Dark (the default, like the web app), Light, or following the system setting. */
+@Composable
+private fun AppearanceGroup(selected: ThemeMode, onSelect: (ThemeMode) -> Unit) {
+    SettingsGroup(Modifier.selectableGroup()) {
+        ThemeMode.entries.forEachIndexed { index, mode ->
+            if (index > 0) SettingsDivider()
+            val isSelected = mode == selected
+            SettingsRow(
+                title = when (mode) {
+                    ThemeMode.DARK -> "Dark"
+                    ThemeMode.LIGHT -> "Light"
+                    ThemeMode.SYSTEM -> "Match system"
+                },
+                icon = when (mode) {
+                    ThemeMode.DARK -> Icons.Outlined.DarkMode
+                    ThemeMode.LIGHT -> Icons.Outlined.LightMode
+                    ThemeMode.SYSTEM -> Icons.Outlined.SettingsBrightness
+                },
+                modifier = Modifier.selectable(selected = isSelected, role = Role.RadioButton, onClick = { onSelect(mode) }),
+                trailing = {
+                    if (isSelected) Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
+                },
+            )
+        }
     }
 }
 

@@ -25,7 +25,6 @@ import platform.UIKit.UIImage
 import platform.UIKit.UITabBar
 import platform.UIKit.UITabBarDelegateProtocol
 import platform.UIKit.UITabBarItem
-import platform.UIKit.UIUserInterfaceStyle
 import platform.darwin.NSObject
 
 /**
@@ -54,10 +53,8 @@ actual fun PlatformTabBar(
         if (LocalNativeChromeVisible.current) {
             UIKitView(
                 factory = {
-                    UITabBar().apply {
-                        this.delegate = delegate
-                        overrideUserInterfaceStyle = UIUserInterfaceStyle.UIUserInterfaceStyleDark
-                    }
+                    // Light or dark from the window, which AppTheme sets to match Compose.
+                    UITabBar().apply { this.delegate = delegate }
                 },
                 // Runs on every recomposition of the shell; touch UIKit only on real changes,
                 // since interop updates are synced with Compose's frame.

@@ -42,7 +42,6 @@ import platform.UIKit.UIModalPresentationPageSheet
 import platform.UIKit.UIPresentationController
 import platform.UIKit.UISheetPresentationControllerDelegateProtocol
 import platform.UIKit.UISheetPresentationControllerDetent
-import platform.UIKit.UIUserInterfaceStyle
 import platform.UIKit.UIViewController
 import platform.UIKit.sheetPresentationController
 import platform.UIKit.transitionCoordinator
@@ -133,8 +132,8 @@ private class SheetHost(
     private val controller: UIViewController = ComposeUIViewController(
         configure = { onFocusBehavior = OnFocusBehavior.DoNothing },
     ) { SheetRoot() }.apply {
+        // Light or dark from the window, which AppTheme sets to match Compose.
         modalPresentationStyle = UIModalPresentationPageSheet
-        overrideUserInterfaceStyle = UIUserInterfaceStyle.UIUserInterfaceStyleDark
         sheetPresentationController?.let { sheet ->
             sheet.detents = listOf(
                 UISheetPresentationControllerDetent.customDetentWithIdentifier("content") { context ->

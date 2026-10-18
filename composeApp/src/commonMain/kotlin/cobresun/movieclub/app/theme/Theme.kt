@@ -5,6 +5,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,17 +33,34 @@ val MovieClubTypography = Base.copy(
     labelLarge = Base.labelLarge.copy(fontWeight = FontWeight.SemiBold),
 )
 
+/** Whether the app is drawing its dark scheme, for native chrome that needs telling (iOS tab bar, sheets). */
+val LocalDarkTheme = staticCompositionLocalOf { true }
+
 /**
- * Movie Club application theme (dark only, matching the web app).
+ * Movie Club application theme: dark by default (matching the web app), or light.
+ * Also points the system chrome (status bar, native views) at the same appearance.
  */
 @Composable
 fun AppTheme(
+    darkTheme: Boolean = true,
+    followSystem: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    MaterialTheme(
-        colorScheme = MovieClubDarkColorScheme,
-        shapes = MovieClubShapes,
-        typography = MovieClubTypography,
-        content = content
-    )
+    SystemChromeAppearance(darkTheme, followSystem)
+    CompositionLocalProvider(LocalDarkTheme provides darkTheme) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) MovieClubDarkColorScheme else MovieClubLightColorScheme,
+            shapes = MovieClubShapes,
+            typography = MovieClubTypography,
+            content = content
+        )
+    }
 }
+
+/**
+ * Light or dark status-bar icons (Android) / window appearance (iOS) to match [darkTheme].
+ * With [followSystem] iOS clears its override instead: the window's traits are what
+ * `isSystemInDarkTheme` reads there, so pinning them would hide the system's setting.
+ */
+@Composable
+internal expect fun SystemChromeAppearance(darkTheme: Boolean, followSystem: Boolean)
