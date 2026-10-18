@@ -123,6 +123,13 @@ fun AddWorkSheet(
     val sheetState = rememberAppSheetState()
     val focusManager = LocalFocusManager.current
     val gridState = rememberLazyGridState()
+    // The field owns its text: echoing it back through the view model's flow lands a
+    // frame late, and iOS then resets the cursor to the start mid-word.
+    var queryText by remember { mutableStateOf("") }
+    val onQueryChange = { text: String ->
+        queryText = text
+        viewModel.onQueryChange(text)
+    }
 
     LaunchedEffect(workType, clubSlug) { viewModel.start(workType, browsing = fromLists == null, clubSlug = clubSlug) }
 
@@ -138,13 +145,13 @@ fun AddWorkSheet(
             )
             Spacer(Modifier.height(12.dp))
             TextField(
-                value = state.query,
-                onValueChange = viewModel::onQueryChange,
+                value = queryText,
+                onValueChange = onQueryChange,
                 placeholder = { Text(if (fromLists != null) "Filter your lists or search" else "Type to filter or search") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
-                    if (state.query.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.onQueryChange("") }) {
+                    if (queryText.isNotEmpty()) {
+                        IconButton(onClick = { onQueryChange("") }) {
                             Icon(Icons.Default.Close, contentDescription = "Clear search")
                         }
                     }
@@ -184,7 +191,7 @@ fun AddWorkSheet(
             }
             Spacer(Modifier.height(12.dp))
 
-            val query = state.query.trim()
+            val query = queryText.trim()
             val lists = fromLists
             var listFilter by remember { mutableStateOf<String?>(null) }
             var showAllPicks by remember { mutableStateOf(false) }
