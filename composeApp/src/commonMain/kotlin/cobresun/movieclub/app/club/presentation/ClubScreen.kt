@@ -159,7 +159,7 @@ fun ClubScreenRoot(
             ClubSection.LISTS -> clubViewModel.selectTab(ClubTab.LISTS)
             ClubSection.STATISTICS -> clubViewModel.selectTab(ClubTab.STATS)
             ClubSection.AWARDS -> clubViewModel.selectTab(ClubTab.AWARDS)
-            ClubSection.SETTINGS, null -> Unit
+            ClubSection.SETTINGS, ClubSection.WRAPPED, null -> Unit
         }
         link.reviewWorkId?.let { reviewsViewModel.onAction(ReviewsAction.OpenDetail(it)) }
     }

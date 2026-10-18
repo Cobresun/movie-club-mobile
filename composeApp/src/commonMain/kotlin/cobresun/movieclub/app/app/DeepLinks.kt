@@ -12,15 +12,17 @@ sealed interface DeepLink {
      * A club page: `/club/<slug>[/<section>]`, or a shared review/list/statistics
      * link (`/share/club/<slug>/review/<workId>`). [reviewWorkId] opens that
      * review's details; a null [section] keeps whatever tab the club shows.
+     * [wrappedYear] is the year of a `/club/<slug>/wrapped[/<year>]` link (0: latest).
      */
     data class Club(
         val slug: String,
         val section: ClubSection? = null,
         val reviewWorkId: String? = null,
+        val wrappedYear: Int = 0,
     ) : DeepLink
 }
 
-enum class ClubSection { REVIEWS, LISTS, STATISTICS, AWARDS, SETTINGS }
+enum class ClubSection { REVIEWS, LISTS, STATISTICS, AWARDS, SETTINGS, WRAPPED }
 
 /**
  * Entry point for URLs handed to the app by the OS (Android intents, iOS `onOpenURL`).
@@ -82,7 +84,13 @@ object DeepLinks {
                 "lists", "watch-list" -> ClubSection.LISTS
                 "statistics" -> ClubSection.STATISTICS
                 "awards" -> ClubSection.AWARDS
-                "club", "settings" -> ClubSection.SETTINGS
+                // The invite page web shows after creating a club; settings has the invite link.
+                "club", "settings", "invite" -> ClubSection.SETTINGS
+                "wrapped" -> return DeepLink.Club(
+                    path[1],
+                    ClubSection.WRAPPED,
+                    wrappedYear = path.getOrNull(3)?.takeIf { it.length == 4 }?.toIntOrNull() ?: 0,
+                )
                 else -> null
             }
             return DeepLink.Club(path[1], section)

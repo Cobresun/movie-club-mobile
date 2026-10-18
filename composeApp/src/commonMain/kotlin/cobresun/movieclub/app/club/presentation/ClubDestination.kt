@@ -296,6 +296,11 @@ private fun ClubNavHost(
                         if (!onClub) onOpenClub(link.slug)
                         navController.navigate(Route.ClubSettings(link.slug))
                     }
+                    link.section == ClubSection.WRAPPED -> {
+                        DeepLinks.consume(link)
+                        if (!onClub) onOpenClub(link.slug)
+                        navController.navigate(Route.Wrapped(link.slug, link.wrappedYear))
+                    }
                     !onClub -> onOpenClub(link.slug)
                 }
             }

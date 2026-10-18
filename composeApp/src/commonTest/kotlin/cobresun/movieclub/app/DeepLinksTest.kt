@@ -46,7 +46,6 @@ class DeepLinksTest {
         assertEquals(DeepLink.Club("c", ClubSection.LISTS), DeepLinks.parse("https://movie-club.app/club/c/watch-list"))
         assertEquals(DeepLink.Club("c", ClubSection.AWARDS), DeepLinks.parse("https://movie-club.app/club/c/awards/2025"))
         assertEquals(DeepLink.Club("c", ClubSection.SETTINGS), DeepLinks.parse("movieclub://club/c/settings"))
-        assertEquals(DeepLink.Club("c"), DeepLinks.parse("https://movie-club.app/club/c/wrapped"))
     }
 
     @Test
@@ -56,5 +55,21 @@ class DeepLinksTest {
         assertEquals(DeepLink.JoinClub("xyz"), link)
         DeepLinks.consume(link!!)
         assertNull(DeepLinks.pending.value)
+    }
+
+    @Test
+    fun parsesWrappedAndInviteLinks() {
+        assertEquals(
+            DeepLink.Club("my-club", ClubSection.WRAPPED, wrappedYear = 2025),
+            DeepLinks.parse("https://movie-club.app/club/my-club/wrapped/2025"),
+        )
+        assertEquals(
+            DeepLink.Club("my-club", ClubSection.WRAPPED),
+            DeepLinks.parse("https://movie-club.app/club/my-club/wrapped"),
+        )
+        assertEquals(
+            DeepLink.Club("my-club", ClubSection.SETTINGS),
+            DeepLinks.parse("https://movie-club.app/club/my-club/invite"),
+        )
     }
 }
