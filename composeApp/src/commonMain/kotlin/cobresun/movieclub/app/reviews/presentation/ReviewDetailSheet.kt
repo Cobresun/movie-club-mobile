@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.reviews.presentation
 
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.focus.onFocusChanged
 import cobresun.movieclub.app.core.presentation.dismissKeyboardOnTapOrDrag
 import androidx.compose.runtime.getValue
@@ -393,22 +394,25 @@ private fun ScoreTileView(tile: ScoreTile, index: Int, hidden: Boolean, poppedAt
         pop.snapTo(0f)
         pop.animateTo(1f, tween(700, easing = EmphasizedEasing))
     }
-    val p = pop.value
-    val popScale = keyframe(p, 1f, 1.12f, 0.97f, 1.05f, 1f)
-    val popRotation = keyframe(p, 0f, -2.5f, 2f, -1f, 0f)
-    val ringAlpha = keyframe(p, 0f, 0.35f, 0.25f, 0.15f, 0f)
-    val ringWidth = keyframe(p, 0f, 5f, 4f, 3f, 0f)
+    // The pop is read only in the layer and draw lambdas, so the tile redraws for
+    // its 700ms without recomposing every frame; only "popping or not" recomposes.
+    val popping by remember { derivedStateOf { pop.value < 1f } }
 
     val shape = MaterialTheme.shapes.large
     Row(
         modifier
-            .zIndex(if (p < 1f) 1f else 0f)
+            .zIndex(if (popping) 1f else 0f)
             .graphicsLayer {
+                val p = pop.value
+                val popScale = keyframe(p, 1f, 1.12f, 0.97f, 1.05f, 1f)
                 scaleX = popScale
                 scaleY = popScale
-                rotationZ = popRotation
+                rotationZ = keyframe(p, 0f, -2.5f, 2f, -1f, 0f)
             }
             .drawBehind {
+                val p = pop.value
+                val ringAlpha = keyframe(p, 0f, 0.35f, 0.25f, 0.15f, 0f)
+                val ringWidth = keyframe(p, 0f, 5f, 4f, 3f, 0f)
                 if (ringAlpha > 0f) {
                     val w = ringWidth.dp.toPx()
                     drawRoundRect(

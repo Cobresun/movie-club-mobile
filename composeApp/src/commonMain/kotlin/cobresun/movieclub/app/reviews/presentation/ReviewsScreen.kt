@@ -164,7 +164,7 @@ fun ReviewsScreen(
                                     )
                                 }
                             }
-                            items(state.pendingWorks, key = { it.id }) { work ->
+                            items(state.pendingWorks, key = { it.id }, contentType = { "pending" }) { work ->
                                 PendingReviewCard(
                                     work,
                                     Modifier
@@ -193,7 +193,7 @@ fun ReviewsScreen(
                                     )
                                 }
                             }
-                            items(visible, key = { it.work.id }) { review ->
+                            items(visible, key = { it.work.id }, contentType = { "review" }) { review ->
                                 ReviewCard(
                                     review = review,
                                     members = state.members,

@@ -120,7 +120,10 @@ data class ReviewsState(
      */
     fun spotlightFact(review: Review): ReviewFact? {
         if (!isRevealed(review)) return null
-        return ReviewFacts.compute((reviews as? AsyncResult.Success)?.data.orEmpty(), review.work.id)
+        // Sorts and scans every review; reuse it until the reviews actually change.
+        return memo.get("fact-${review.work.id}", reviews) {
+            ReviewFacts.compute((reviews as? AsyncResult.Success)?.data.orEmpty(), review.work.id)
+        }
     }
 
     fun review(workId: String): Review? = (reviews as? AsyncResult.Success)?.data?.firstOrNull { it.work.id == workId }
@@ -402,7 +405,13 @@ class ReviewsViewModel(
     private fun updateReview(workId: String, transform: (Review) -> Review) {
         _state.update { s ->
             val list = (s.reviews as? AsyncResult.Success)?.data ?: return@update s
-            s.copy(reviews = AsyncResult.Success(list.map { if (it.work.id == workId) transform(it) else it }))
+            var changed = false
+            val next = list.map { review ->
+                if (review.work.id != workId) review else transform(review).also { if (it != review) changed = true }
+            }
+            // An unchanged review (e.g. a score poll tick with nothing new) emits nothing,
+            // so the grid, filters and open sheet aren't recomputed for it.
+            if (changed) s.copy(reviews = AsyncResult.Success(next)) else s
         }
     }
 
@@ -486,14 +495,16 @@ class ReviewsViewModel(
                 .onSuccess {
                     message("Score saved: ${ScoreScale.format(score)}")
                     loadMyScoredWorks()
+                    // The poll's first tick brings back the server's score id and average,
+                    // so there's no need to refetch (and re-map) every review.
                     startScorePoll(workId)
                 }
                 .onError { error ->
                     updateReview(workId) { review }
                     emitError(error, "save your score") { saveScore(workId, score) }
+                    fetchReviews()
                 }
             updateDetail(workId) { it.copy(isSavingScore = false) }
-            loadReviews(initial = false) // pick up the server's score id & average
         }
     }
 
@@ -530,7 +541,8 @@ class ReviewsViewModel(
                     updateReview(workId) { review }
                     emitError(error, "change the date")
                 }
-            loadReviews(initial = false)
+            // Quietly (no refresh spinner): the server's timestamp re-sorts the grid.
+            fetchReviews()
         }
     }
 
@@ -548,12 +560,13 @@ class ReviewsViewModel(
         updateReview(workId) { it.withScore(userId, null) }
         viewModelScope.launch {
             reviewsRepository.deleteScore(clubSlug, existing.id)
+                // The optimistic removal already recomputed the average.
                 .onSuccess { message("Your score was removed") }
                 .onError { error ->
                     updateReview(workId) { review }
                     emitError(error, "remove your score")
+                    fetchReviews()
                 }
-            loadReviews(initial = false)
         }
     }
 

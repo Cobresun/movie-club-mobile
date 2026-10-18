@@ -1,5 +1,11 @@
 package cobresun.movieclub.app.reviews.presentation
 
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.flow.collectLatest
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.WindowInsets
 import kotlinx.coroutines.delay
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -282,11 +288,17 @@ private fun CommentEditor(
     // Spoiler and Send aren't left under the keyboard.
     val bringIntoView = remember { BringIntoViewRequester() }
     var focused by remember { mutableStateOf(false) }
+    val ime = WindowInsets.ime
+    val density = LocalDensity.current
     LaunchedEffect(focused) {
-        // The viewport keeps shrinking while the keyboard animates in, so follow it.
-        if (focused) repeat(5) {
-            delay(200)
-            bringIntoView.bringIntoView()
+        if (!focused) return@LaunchedEffect
+        // The viewport shrinks while the keyboard animates in: scroll once it has
+        // settled (no change for 120ms) rather than chasing it every 200ms.
+        withTimeoutOrNull(2_000) {
+            snapshotFlow { ime.getBottom(density) }.collectLatest {
+                delay(120)
+                bringIntoView.bringIntoView()
+            }
         }
     }
     Column(Modifier.bringIntoViewRequester(bringIntoView)) {

@@ -247,9 +247,14 @@ fun SectionLabel(text: String, modifier: Modifier = Modifier) {
 }
 
 internal fun String.stripHtml(): String =
-    replace(Regex("<br\\s*/?>", RegexOption.IGNORE_CASE), "\n")
-        .replace(Regex("</p>", RegexOption.IGNORE_CASE), "\n\n")
-        .replace(Regex("<[^>]+>"), "")
+    replace(BR_TAG, "\n")
+        .replace(P_CLOSE, "\n\n")
+        .replace(ANY_TAG, "")
         .replace("&amp;", "&").replace("&quot;", "\"").replace("&#39;", "'")
         .replace("&lt;", "<").replace("&gt;", ">")
         .trim()
+
+// Compiled once, not on every recomposition of the sheets that show synopses.
+private val BR_TAG = Regex("<br\\s*/?>", RegexOption.IGNORE_CASE)
+private val P_CLOSE = Regex("</p>", RegexOption.IGNORE_CASE)
+private val ANY_TAG = Regex("<[^>]+>")
