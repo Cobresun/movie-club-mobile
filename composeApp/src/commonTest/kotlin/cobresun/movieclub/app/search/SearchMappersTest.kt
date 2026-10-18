@@ -9,6 +9,7 @@ import cobresun.movieclub.app.search.data.mappers.toSearchResult
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import cobresun.movieclub.app.search.data.mappers.similarToReason
 
 class SearchMappersTest {
     @Test
@@ -54,12 +55,12 @@ class SearchMappersTest {
 class SimilarToReasonTest {
     @Test
     fun formatsLikeIntlListFormat() {
-        assertNull(cobresun.movieclub.app.search.data.mappers.similarToReason(emptyList()))
-        assertEquals("Similar to Alien", cobresun.movieclub.app.search.data.mappers.similarToReason(listOf("Alien")))
-        assertEquals("Similar to Alien and Heat", cobresun.movieclub.app.search.data.mappers.similarToReason(listOf("Alien", "Heat")))
+        assertNull(similarToReason(emptyList()))
+        assertEquals("Similar to Alien", similarToReason(listOf("Alien")))
+        assertEquals("Similar to Alien and Heat", similarToReason(listOf("Alien", "Heat")))
         assertEquals(
             "Similar to Alien, Heat, and Up",
-            cobresun.movieclub.app.search.data.mappers.similarToReason(listOf("Alien", "Heat", "Up")),
+            similarToReason(listOf("Alien", "Heat", "Up")),
         )
     }
 }

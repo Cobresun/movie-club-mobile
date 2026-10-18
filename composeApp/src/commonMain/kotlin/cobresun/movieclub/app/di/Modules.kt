@@ -97,7 +97,7 @@ expect val platformModule: Module
 val coreModule = module {
     // Session-scoped copies of club reads, shared by the repositories below
     singleOf(::SessionCaches)
-    single<SessionCookieStorage> { SessionCookieStorageImpl(get()) }
+    singleOf(::SessionCookieStorageImpl) { bind<SessionCookieStorage>() }
     single { HttpClientFactory.create(get(), get(), get()) }
     singleOf(::LastClubStoreImpl) { bind<LastClubStore>() }
     singleOf(::AppearanceSettingsImpl) { bind<AppearanceSettings>() }

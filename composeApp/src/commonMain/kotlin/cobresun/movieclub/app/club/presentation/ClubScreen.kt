@@ -81,6 +81,7 @@ import cobresun.movieclub.app.awards.presentation.AwardsAction
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import cobresun.movieclub.app.core.domain.mapSuccess
+import cobresun.movieclub.app.core.domain.AsyncResult
 
 /**
  * A club's home: Reviews and Lists tabs with a shared snackbar and add-work
@@ -341,7 +342,7 @@ fun ClubScreenRoot(
         }
         LaunchedEffect(Unit) { listsViewModel.onAction(ListsAction.LoadAllItems) }
         val statusLabels = remember(toLists, listsState.allItems, addListId, reviewsState.reviews) {
-            val listed = (listsState.allItems as? cobresun.movieclub.app.core.domain.AsyncResult.Success)?.data.orEmpty()
+            val listed = (listsState.allItems as? AsyncResult.Success)?.data.orEmpty()
                 .mapNotNull { item -> item.work.externalId?.let { Triple(it, item.listId, item.listTitle) } }
             workStatusLabels(
                 reviewedIds = if (toLists) reviewsState.reviewedExternalIds else emptySet(),

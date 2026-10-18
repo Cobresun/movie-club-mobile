@@ -108,6 +108,7 @@ import cobresun.movieclub.app.reviews.domain.ScoreScale
 import cobresun.movieclub.app.reviews.domain.ScoreAssist
 import cobresun.movieclub.app.reviews.domain.ScoredWork
 import cobresun.movieclub.app.core.presentation.AppMotion
+import cobresun.movieclub.app.core.domain.WorkType
 
 /** Everything about one reviewed work: scores, your score, cast, comments. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -138,7 +139,7 @@ fun ReviewDetailSheet(
     val fullDetails = (detail.details as? AsyncResult.Success)?.data
     val work = if (fullDetails != null) review.work.copy(details = fullDetails) else review.work
     val myScore = review.scoreOf(currentUserId)
-    val noun = if (work.type == cobresun.movieclub.app.core.domain.WorkType.BOOK) "book" else "movie"
+    val noun = if (work.type == WorkType.BOOK) "book" else "movie"
     AppBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -199,7 +200,7 @@ fun ReviewDetailSheet(
             val cast = (work.details as? WorkDetails.Movie)?.cast.orEmpty()
             if (cast.isNotEmpty()) {
                 CastSection(cast, Modifier.padding(bottom = 20.dp))
-            } else if (detail.details is AsyncResult.Loading && work.type == cobresun.movieclub.app.core.domain.WorkType.MOVIE) {
+            } else if (detail.details is AsyncResult.Loading && work.type == WorkType.MOVIE) {
                 Row(Modifier.padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     repeat(4) { ShimmerBox(Modifier.size(64.dp), MaterialTheme.shapes.extraLarge) }
                 }
@@ -212,7 +213,7 @@ fun ReviewDetailSheet(
                 onRevealTmdb = { tmdbTapped = true },
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
             ) {
-                if (work.type == cobresun.movieclub.app.core.domain.WorkType.MOVIE) {
+                if (work.type == WorkType.MOVIE) {
                     work.externalId?.let { WatchProvidersSection(it) }
                 }
             }
