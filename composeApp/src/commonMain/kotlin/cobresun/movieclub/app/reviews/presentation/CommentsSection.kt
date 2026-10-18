@@ -1,5 +1,9 @@
 package cobresun.movieclub.app.reviews.presentation
 
+import kotlinx.coroutines.delay
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.animation.core.Animatable
@@ -274,12 +278,23 @@ private fun CommentEditor(
     var text by remember { mutableStateOf(initial) }
     var spoiler by remember { mutableStateOf(initialSpoiler) }
     val canSend = text.isNotBlank() && text.length <= MAX_COMMENT && !isPosting
-    Column {
+    // Focusing only scrolls the field itself into view; bring the whole editor in so
+    // Spoiler and Send aren't left under the keyboard.
+    val bringIntoView = remember { BringIntoViewRequester() }
+    var focused by remember { mutableStateOf(false) }
+    LaunchedEffect(focused) {
+        // The viewport keeps shrinking while the keyboard animates in, so follow it.
+        if (focused) repeat(5) {
+            delay(200)
+            bringIntoView.bringIntoView()
+        }
+    }
+    Column(Modifier.bringIntoViewRequester(bringIntoView)) {
         OutlinedTextField(
             value = text,
             onValueChange = { if (it.length <= MAX_COMMENT) text = it },
             placeholder = { Text("Write a comment…") },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused },
             shape = MaterialTheme.shapes.small,
             minLines = if (confirmLabel == null) 1 else 3,
             maxLines = 6,
