@@ -43,6 +43,7 @@ class AuthViewModel(
         is AuthAction.Logout -> logout()
         is AuthAction.ClearError -> clearError()
         is AuthAction.ResendVerificationEmail -> resendVerificationEmail(action.email)
+        is AuthAction.RetryStartup -> checkAuthentication()
     }
 
     sealed interface AuthNavigationEvent {
@@ -63,12 +64,18 @@ class AuthViewModel(
                 verifySession()
                 return@launch
             }
-            _state.update { it.copy(user = AsyncResult.Loading) }
+            _state.update { it.copy(user = AsyncResult.Loading, serverUnavailable = false) }
             when (val result = authRepository.getSession()) {
                 is Result.Success -> _state.update {
                     it.copy(user = if (result.data != null) AsyncResult.Success(Unit) else AsyncResult.Error(dataError = null))
                 }
-                is Result.Error -> _state.update { it.copy(user = AsyncResult.Error(dataError = result.error)) }
+                // The server answered but is broken (5xx, or a body we can't read): offer the web app instead.
+                is Result.Error -> _state.update {
+                    it.copy(
+                        user = AsyncResult.Error(dataError = result.error),
+                        serverUnavailable = result.error in BROKEN_SERVER_ERRORS,
+                    )
+                }
             }
         }
     }
@@ -240,9 +247,14 @@ class AuthViewModel(
 
 private val VERIFY_RETRY_DELAYS_MS = listOf(3_000L, 10_000L, 30_000L, 60_000L, 120_000L, 300_000L)
 
+/** Errors from a reachable server that mean it is broken, not just offline or slow. */
+private val BROKEN_SERVER_ERRORS = setOf(DataError.Remote.SERVER, DataError.Remote.SERIALIZATION)
+
 data class AuthState(
     val user: AsyncResult<Unit> = AsyncResult.Loading,
     val confirmationMessage: String? = null,
     val isLoggingOut: Boolean = false,
-    val lastEmail: String? = null
+    val lastEmail: String? = null,
+    /** The launch session check failed because the server is broken: show the web fallback. */
+    val serverUnavailable: Boolean = false,
 )

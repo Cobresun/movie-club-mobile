@@ -18,6 +18,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import cobresun.movieclub.app.auth.presentation.AuthAction
 import cobresun.movieclub.app.auth.presentation.AuthScreenRoot
 import cobresun.movieclub.app.auth.presentation.AuthViewModel
 import cobresun.movieclub.app.club.presentation.ClubsScreenRoot
@@ -53,11 +54,17 @@ fun App() {
                     }
 
                     is AsyncResult.Success, is AsyncResult.Error -> {
-                        val isAuthenticated = authState.user is AsyncResult.Success
-                        AppNavigation(
-                            isAuthenticated = isAuthenticated,
-                            authViewModel = authViewModel
-                        )
+                        if (authState.serverUnavailable) {
+                            ServiceUnavailableScreen(
+                                onRetry = { authViewModel.onAction(AuthAction.RetryStartup) }
+                            )
+                        } else {
+                            val isAuthenticated = authState.user is AsyncResult.Success
+                            AppNavigation(
+                                isAuthenticated = isAuthenticated,
+                                authViewModel = authViewModel
+                            )
+                        }
                     }
                 }
             }

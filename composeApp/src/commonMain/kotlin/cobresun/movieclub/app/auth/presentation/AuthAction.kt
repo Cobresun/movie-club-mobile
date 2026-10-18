@@ -11,4 +11,5 @@ sealed class AuthAction {
     data object Logout : AuthAction()
     data object ClearError : AuthAction()
     data class ResendVerificationEmail(val email: String) : AuthAction()
+    data object RetryStartup : AuthAction()
 }
