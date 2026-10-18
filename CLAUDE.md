@@ -22,7 +22,7 @@ Feature packages (`auth`, `club`, `reviews`, `lists`, ...) each have `domain/`, 
 ## Dependency Injection (Koin)
 
 - `di/Modules.kt`: one module per feature, gathered by `appModule`; `platformModule` (`Modules.android.kt` / `Modules.ios.kt`) adds platform implementations
-- Prefer the constructor DSL: `singleOf(::Impl) { bind<Interface>() }`, `viewModelOf(::X)`. Use a `single { }` lambda only when a parameter isn't a plain `get()`
+- Prefer the constructor DSL: `singleOf(::Impl) { bind<Interface>() }`, `viewModelOf(::X)`. Use a `single { }` lambda only when a parameter isn't a plain `get()`. A defaulted parameter counts: `singleOf` still asks Koin for it and crashes at launch, and `KoinModulesTest` can't catch that
 - View models with several route arguments (or a nullable one) destructure them: `viewModel { (slug: String, workId: String) -> X(slug, workId, get()) }`
 - `initKoin()` runs once per process (Android `MainApplication`, iOS `setUpKoin()`); Compose uses that instance, so no `KoinApplication`/`KoinContext`
 
@@ -31,7 +31,7 @@ Feature packages (`auth`, `club`, `reviews`, `lists`, ...) each have `domain/`, 
 - Session auth is a cookie (BetterAuth) handled by Ktor `HttpCookies`, persisted in DataStore. Cookie rules are in `core/data/CookieJar.kt`; see `auth/CLAUDE.md`
 - Data sources wrap requests in `safeCall` (→ `Result<T, DataError.Remote>`) or `apiCall` (→ `Result<T, ApiError>`, which keeps the server's message and HTTP status). Use `apiCall` when the server explains failures (slug taken, invite expired)
 - Both wrappers decode off the main thread. Ktor decodes on the caller's dispatcher, which is Main from `viewModelScope`
-- User-facing error text always comes from `toUserMessage(action)`, e.g. `"Couldn't save your score. Check your connection and try again."`. Offer Retry only when `error.isRetryable`
+- User-facing error text always comes from `toUserMessage(action)`, e.g. `"Couldn't save your score. Check your connection and try again."`: snackbars via `error.toUiMessage(action, retry)` (Retry only when retryable), error screens via `asyncError.userMessage(action)`. Convert a `Result` for state with `toAsyncResult()`
 - Log with `AppLog` (`core/platform`), never `println`. Debug lines only print in debug builds; warnings and errors also reach `AppLog.addSink` sinks
 - iOS: never call `NSLog` with varargs from Kotlin (`NSLog("%@", s)` segfaults); pass one escaped string
 
