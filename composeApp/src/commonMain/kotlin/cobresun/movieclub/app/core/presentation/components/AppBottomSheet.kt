@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,7 +59,11 @@ fun AppBottomSheet(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val chrome = platformSheetChrome
-    val maxHeight = with(LocalDensity.current) { (LocalWindowInfo.current.containerSize.height * 0.9f).toDp() }
+    // 90% of the window (web 90dvh), but never pushed under the status bar by the keyboard.
+    val density = LocalDensity.current
+    val windowHeight = LocalWindowInfo.current.containerSize.height
+    val roomAboveKeyboard = windowHeight - WindowInsets.ime.getBottom(density) - WindowInsets.statusBars.getTop(density)
+    val maxHeight = with(density) { minOf(windowHeight * 0.9f, roomAboveKeyboard.toFloat()).toDp() }
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         modifier = modifier,

@@ -1,5 +1,8 @@
 package cobresun.movieclub.app.reviews.presentation
 
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import cobresun.movieclub.app.core.presentation.components.AppBottomSheet
@@ -242,7 +245,8 @@ fun ReviewDetailSheet(
                 }
             }
         }
-        if (currentUserId != null) {
+        // While typing a comment the keyboard needs the room; the footer returns with it closed.
+        if (currentUserId != null && WindowInsets.ime.getBottom(LocalDensity.current) == 0) {
             ScoreFooter(
                 noun = noun,
                 hasScore = myScore != null,
