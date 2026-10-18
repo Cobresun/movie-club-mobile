@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository. See "Design Philosophy" section for principles that guide architectural decisions.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository. See "Layer Abstraction Boundaries" for the principles behind architectural decisions.
 
 ## Project Overview
 
@@ -58,7 +58,7 @@ Presentation -> Domain <- Data
 Presentation layer can access Domain, and Data layer can access Domain, but Domain can never access either of them.
 Presentation cannot access Data, and Data cannot access Presentation.
 
-See the "Design Philosophy" section below for detailed guidance on maintaining these boundaries.
+See "Layer Abstraction Boundaries" below for detailed guidance on maintaining these boundaries.
 
 ### Dependency Injection
 Uses **Koin** (4.2) for DI:
@@ -88,11 +88,12 @@ Uses **Koin** (4.2) for DI:
 
 ### Theming
 
-The app uses Material Design 3 with a complete dark color scheme.
+The app uses Material Design 3 with a dark scheme (default, like the web app) and a light one; the user picks Dark / Light / Match system under Profile → Appearance (`AppearanceSettings`, DataStore).
 
 **Theme Structure:**
-- `/theme/Color.kt` - Color palette and ColorScheme definitions
-- `/theme/Theme.kt` - AppTheme composable configuration
+- `/theme/Color.kt` - Color palette and `MovieClubDarkColorScheme` / `MovieClubLightColorScheme`
+- `/theme/Theme.kt` - `AppTheme(darkTheme, followSystem)`, shapes, typography, `LocalDarkTheme`; `SystemChromeAppearance` (expect/actual) sets Android bar icons and the iOS window's `overrideUserInterfaceStyle` (cleared for Match system, since iOS `isSystemInDarkTheme` reads the window). Native iOS views (tab bar, sheets) inherit the window's style; don't force one on them
+- `core/presentation/AppearanceViewModel.kt` - `AppearanceTheme`, used by `App`
 
 **Color Usage Guidelines:**
 - Always use `MaterialTheme.colorScheme.*` properties
@@ -107,14 +108,9 @@ The app uses Material Design 3 with a complete dark color scheme.
   - `outline` - Borders and dividers
 
 **Adding New Colors:**
-1. Define color value in `Color.kt` palette (e.g., `val Purple80 = Color(0xFF...)`)
-2. Add to `MovieClubDarkColorScheme` using appropriate Material 3 role
+1. Define color values in `Color.kt` palette (e.g., `val Purple80 = Color(0xFF...)`)
+2. Add to both `MovieClubDarkColorScheme` and `MovieClubLightColorScheme` with the same Material 3 role (keep 4.5:1 text contrast in light)
 3. Use `MaterialTheme.colorScheme.{role}` in composables
-
-**Future Enhancements:**
-- Light theme support (add `MovieClubLightColorScheme`)
-- Custom typography (add `Type.kt`)
-- Custom shapes (add `Shape.kt`)
 
 Reference: [Material Design 3 Color System](https://m3.material.io/styles/color/roles)
 
@@ -131,7 +127,7 @@ Uses **Navigation 3** (`org.jetbrains.androidx.navigation3`): back stacks are pl
 - `AsyncResult<T>` wrapper for async operations (Loading, Success, Error states)
 - `collectAsStateWithLifecycle()` in Composables
 
-See "Design Philosophy - Error Handling" for best practices on handling errors in ViewModels.
+See "Error Handling" below.
 
 ### Layer Abstraction Boundaries
 
@@ -171,31 +167,14 @@ class ClubViewModel(
 )
 ```
 
-#### Gradual Improvements
+### Error Handling
+- `DataError.Remote` (domain) carries `isRetryable` and `isConnectivityFailure`; `ApiError` (core/domain) adds the server's message and HTTP status for writes whose failures the server explains
+- Data sources call `safeCall` (`Result<T, DataError.Remote>`) or `apiCall` (`Result<T, ApiError>`, in `core/data/ApiCall.kt`); both classify exceptions with `classifyNetworkException` and map statuses with `statusToRemote`
+- View models turn errors into text with `toUserMessage(action)` (`core/presentation/ErrorMessages.kt`) and offer Retry (snackbar `UiMessage` or `ErrorMessage`) when `isRetryable`
+- Logging: `AppLog` (`core/platform`), never `println`. Debug lines (the HTTP log) only in debug builds; warnings/errors also go to `AppLog.addSink` sinks, the hook for crash/error reporting. Server and decoding failures are logged as warnings by the call wrappers
+- Stale data: `OfflineStore.staleKeys` tracks answers served from disk after a failed fetch; `Connectivity.showingSavedData` drives the club shell's banner ("Can't reach the server · showing saved data", tap = `Connectivity.retry()`)
 
-**Short-term (low effort):**
-- Add helper function `DataError.Remote.toUserMessage(): String` to centralize error messages
-- Remove println statements, add proper logging framework
-- Add `isRetryable()` property to DataError types
-
-**Medium-term (moderate effort):**
-- Enhance DataError with context:
-  ```kotlin
-  sealed class DataError {
-      data class Remote(
-          val type: RemoteErrorType,
-          val httpCode: Int? = null,
-          val message: String? = null
-      ) : DataError
-  }
-  ```
-- Add retry mechanism to ViewModels for transient errors
-- Distinguish "loading cached data" from "loading fresh data" in UI
-
-**Long-term (higher effort):**
-- Implement proper error boundaries (separate flows for data vs errors)
-- Add error analytics/monitoring
-- Create user-facing error recovery UI (pull-to-refresh, retry buttons)
+Open cleanup work lives in the `tech-debt-backlog` skill.
 
 ## Development Notes
 
@@ -204,5 +183,4 @@ class ClubViewModel(
 - Content scrolls beneath the iOS glass tab bar: `ClubScreen` skips the bottom Scaffold padding where `tabBarOverlaysContent` is true and provides `LocalTabBarInset`; tab screens add it to their list `contentPadding` and FAB offsets (it is 0.dp on Android).
 - Deep links: `app/DeepLinks.kt` parses `https://movie-club.app/join-club/<token>`, `/club/<slug>[/<section>]` and shared reviews `/share/club/<slug>/review/<workId>` (plus the `movieclub://` equivalents); Android `MainActivity` and iOS `onOpenURL` call `DeepLinks.handle`. `ClubNavHost` consumes invite links once signed in and opens the linked club; `ClubScreenRoot` then consumes club links (tab + review details sheet). Verified Android App Links / iOS universal links would need `/.well-known/assetlinks.json` and `apple-app-site-association` on the web host.
 - Material 3 Expressive APIs (`MotionScheme.expressive()`, etc.) are internal in the stable CMP material3 1.9.0 artifact, so they aren't used yet.
-- The app currently uses a dark color scheme by default (see `AppTheme` in `app/App.kt`)
 
