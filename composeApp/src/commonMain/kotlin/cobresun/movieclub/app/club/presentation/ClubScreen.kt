@@ -221,20 +221,7 @@ fun ClubScreenRoot(
         bottomBar = {
             // Wait for the restored tab, so the bar doesn't flick (or pop) from Reviews to it.
             if (!tabResolved) return@Scaffold
-            val tabs = remember(awardsAvailable) { buildList {
-                add(PlatformTab(ClubTab.REVIEWS.name, "Reviews", Icons.Outlined.StarOutline, Icons.Filled.Star, "star", "star.fill"))
-                add(
-                    PlatformTab(
-                        ClubTab.LISTS.name, "Lists",
-                        Icons.AutoMirrored.Outlined.FormatListBulleted, Icons.AutoMirrored.Filled.FormatListBulleted,
-                        "list.bullet.rectangle", "list.bullet.rectangle.fill",
-                    )
-                )
-                add(PlatformTab(ClubTab.STATS.name, "Stats", Icons.Outlined.Insights, Icons.Filled.Insights, "chart.bar", "chart.bar.fill"))
-                if (awardsAvailable) {
-                    add(PlatformTab(ClubTab.AWARDS.name, "Awards", Icons.Outlined.EmojiEvents, Icons.Filled.EmojiEvents, "trophy", "trophy.fill"))
-                }
-            } }
+            val tabs = remember(awardsAvailable) { clubTabs(awardsAvailable) }
             PlatformTabBar(
                 tabs = tabs,
                 selectedKey = selectedTab.name,
@@ -330,66 +317,13 @@ fun ClubScreenRoot(
     }
 
     addTarget?.let { target ->
-        // Collected here, only while the sheet is open (see the tabs above).
-        val listsState by listsViewModel.state.collectAsStateWithLifecycle()
-        val reviewsState by reviewsViewModel.state.collectAsStateWithLifecycle()
-        val toLists = target == ClubTab.LISTS
-        val workType = (if (toLists) listsState.clubType else reviewsState.clubType).workType
-        val destinationItems = if (toLists) addListId?.let { listsState.itemsOrEmpty(it) } else null
-        val existing = remember(toLists, destinationItems, reviewsState.reviews) {
-            if (toLists) destinationItems.orEmpty().mapNotNull { it.externalId }.toSet()
-            else reviewsState.reviewedExternalIds
-        }
-        LaunchedEffect(Unit) { listsViewModel.onAction(ListsAction.LoadAllItems) }
-        val statusLabels = remember(toLists, listsState.allItems, addListId, reviewsState.reviews) {
-            val listed = (listsState.allItems as? AsyncResult.Success)?.data.orEmpty()
-                .mapNotNull { item -> item.work.externalId?.let { Triple(it, item.listId, item.listTitle) } }
-            workStatusLabels(
-                reviewedIds = if (toLists) reviewsState.reviewedExternalIds else emptySet(),
-                listed = listed,
-                destinationListId = if (toLists) addListId else null,
-            )
-        }
-        AddWorkSheet(
-            title = if (toLists) "Add to ${listsState.list(addListId)?.title ?: "list"}" else "Add a review",
-            workType = workType,
-            existingExternalIds = existing,
-            statusLabels = statusLabels,
+        ClubAddSheet(
+            target = target,
+            listId = addListId,
             clubSlug = clubViewModel.clubSlug,
-            onPick = { result ->
-                val work = result.toNewWork()
-                if (toLists) addListId?.let { listsViewModel.onAction(ListsAction.AddWork(work, it)) }
-                else reviewsViewModel.onAction(ReviewsAction.AddReview(work))
-                addTarget = null
-            },
-            onDismiss = { addTarget = null },
-            fromLists = if (toLists) null else {
-                val listed = remember(listsState.allItems, listsState.upNextWorkId) { listsState.pickableItems }
-                val picks = remember(listed, listsState.allItems) {
-                    listsState.allItems.mapSuccess {
-                        listed.map { item ->
-                            ListPick(
-                                key = item.work.id,
-                                title = item.work.title,
-                                subtitle = item.work.posterSubtitle(),
-                                imageUrl = item.work.imageUrl,
-                                listTitle = item.listTitle,
-                                isUpNext = item.work.id == listsState.upNextWorkId,
-                            )
-                        }
-                    }
-                }
-                ListPickSection(
-                    items = picks,
-                    onPick = { pick ->
-                        listed.firstOrNull { it.work.id == pick.key }?.let { item ->
-                            reviewsViewModel.onAction(ReviewsAction.ShowPending(item.work))
-                            listsViewModel.onAction(ListsAction.MoveToReviews(item.work, item.listId))
-                        }
-                        addTarget = null
-                    },
-                )
-            },
+            listsViewModel = listsViewModel,
+            reviewsViewModel = reviewsViewModel,
+            onDone = { addTarget = null },
         )
     }
 }
@@ -400,3 +334,94 @@ private fun WorkSearchResult.toNewWork() = NewWork(
     externalId = externalId,
     imageUrl = imageUrl,
 )
+
+/** The tabs in the club's bottom bar; Awards only for clubs that have it. */
+private fun clubTabs(awardsAvailable: Boolean): List<PlatformTab> = buildList {
+    add(PlatformTab(ClubTab.REVIEWS.name, "Reviews", Icons.Outlined.StarOutline, Icons.Filled.Star, "star", "star.fill"))
+    add(
+        PlatformTab(
+            ClubTab.LISTS.name, "Lists",
+            Icons.AutoMirrored.Outlined.FormatListBulleted, Icons.AutoMirrored.Filled.FormatListBulleted,
+            "list.bullet.rectangle", "list.bullet.rectangle.fill",
+        )
+    )
+    add(PlatformTab(ClubTab.STATS.name, "Stats", Icons.Outlined.Insights, Icons.Filled.Insights, "chart.bar", "chart.bar.fill"))
+    if (awardsAvailable) {
+        add(PlatformTab(ClubTab.AWARDS.name, "Awards", Icons.Outlined.EmojiEvents, Icons.Filled.EmojiEvents, "trophy", "trophy.fill"))
+    }
+}
+
+/**
+ * The add-work sheet for Reviews (with "From your lists" picks) or for list [listId].
+ * Collects the two tabs' state itself, only while it's open, so the shell doesn't.
+ */
+@Composable
+private fun ClubAddSheet(
+    target: ClubTab,
+    listId: String?,
+    clubSlug: String,
+    listsViewModel: ListsViewModel,
+    reviewsViewModel: ReviewsViewModel,
+    onDone: () -> Unit,
+) {
+    val listsState by listsViewModel.state.collectAsStateWithLifecycle()
+    val reviewsState by reviewsViewModel.state.collectAsStateWithLifecycle()
+    val toLists = target == ClubTab.LISTS
+    val workType = (if (toLists) listsState.clubType else reviewsState.clubType).workType
+    val destinationItems = if (toLists) listId?.let { listsState.itemsOrEmpty(it) } else null
+    val existing = remember(toLists, destinationItems, reviewsState.reviews) {
+        if (toLists) destinationItems.orEmpty().mapNotNull { it.externalId }.toSet()
+        else reviewsState.reviewedExternalIds
+    }
+    LaunchedEffect(Unit) { listsViewModel.onAction(ListsAction.LoadAllItems) }
+    val statusLabels = remember(toLists, listsState.allItems, listId, reviewsState.reviews) {
+        val listed = (listsState.allItems as? AsyncResult.Success)?.data.orEmpty()
+            .mapNotNull { item -> item.work.externalId?.let { Triple(it, item.listId, item.listTitle) } }
+        workStatusLabels(
+            reviewedIds = if (toLists) reviewsState.reviewedExternalIds else emptySet(),
+            listed = listed,
+            destinationListId = if (toLists) listId else null,
+        )
+    }
+    AddWorkSheet(
+        title = if (toLists) "Add to ${listsState.list(listId)?.title ?: "list"}" else "Add a review",
+        workType = workType,
+        existingExternalIds = existing,
+        statusLabels = statusLabels,
+        clubSlug = clubSlug,
+        onPick = { result ->
+            val work = result.toNewWork()
+            if (toLists) listId?.let { listsViewModel.onAction(ListsAction.AddWork(work, it)) }
+            else reviewsViewModel.onAction(ReviewsAction.AddReview(work))
+            onDone()
+        },
+        onDismiss = { onDone() },
+        fromLists = if (toLists) null else {
+            val listed = remember(listsState.allItems, listsState.upNextWorkId) { listsState.pickableItems }
+            val picks = remember(listed, listsState.allItems) {
+                listsState.allItems.mapSuccess {
+                    listed.map { item ->
+                        ListPick(
+                            key = item.work.id,
+                            title = item.work.title,
+                            subtitle = item.work.posterSubtitle(),
+                            imageUrl = item.work.imageUrl,
+                            listTitle = item.listTitle,
+                            isUpNext = item.work.id == listsState.upNextWorkId,
+                        )
+                    }
+                }
+            }
+            ListPickSection(
+                items = picks,
+                onPick = { pick ->
+                    listed.firstOrNull { it.work.id == pick.key }?.let { item ->
+                        reviewsViewModel.onAction(ReviewsAction.ShowPending(item.work))
+                        listsViewModel.onAction(ListsAction.MoveToReviews(item.work, item.listId))
+                    }
+                    onDone()
+                },
+            )
+        },
+    )
+}
