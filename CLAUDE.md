@@ -66,4 +66,4 @@ Feature packages (`auth`, `club`, `reviews`, `lists`, ...) each have `domain/`, 
 - Deep links (`app/DeepLinks.kt`): `/join-club/<token>`, `/club/<slug>[/<section>]`, `/share/club/<slug>/review/<workId>` and `movieclub://` equivalents. `ClubNavHost` consumes invites, `ClubScreenRoot` consumes club links. Verified App Links / universal links would need `assetlinks.json` and `apple-app-site-association` on the web host
 - Material 3 Expressive APIs (`MotionScheme.expressive()`, etc.) are internal in CMP material3 1.9.0; don't use them yet
 
-Open cleanup work: the `tech-debt-backlog` skill.
+Open work is tracked in GitHub issues (`gh issue list`).
