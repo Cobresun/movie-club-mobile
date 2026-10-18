@@ -31,9 +31,9 @@ interface AwardsRepository {
     suspend fun reorderCategories(clubSlug: String, year: Int, titles: List<String>): Result<Unit, DataError.Remote>
 
     /**
-     * Renames a category in place. The server has no rename, so this adds the
-     * new title, deletes the old one (dropping any nominations it had) and
-     * moves the new one into the old one's slot.
+     * Renames a category in place. The server has no rename, so this deletes the
+     * old title (dropping any nominations it had), adds the new one and moves it
+     * into the old one's slot.
      */
     suspend fun renameCategory(
         clubSlug: String,

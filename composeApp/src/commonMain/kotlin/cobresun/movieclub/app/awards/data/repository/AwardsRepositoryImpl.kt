@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.awards.data.repository
 
+import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.awards.data.dto.AddCategoryBodyDto
 import cobresun.movieclub.app.awards.data.dto.CreateAwardsYearBodyDto
 import cobresun.movieclub.app.awards.data.dto.NominationBodyDto
@@ -51,10 +52,15 @@ class AwardsRepositoryImpl(
         to: String,
     ): Result<Unit, DataError.Remote> {
         val newTitle = to.trim()
-        // The server only reorders when sent every category exactly once, so
-        // add the new title, drop the old one, then move the new one into place.
-        return addCategory(clubSlug, year, newTitle)
-            .flatMap { deleteCategory(clubSlug, year, from) }
+        // Delete first: if the server refuses (its delete route can't match some
+        // titles), nothing has changed, instead of leaving both titles behind.
+        // Should the add then fail, put the old title back. The server only
+        // reorders when sent every category exactly once, so the new one is
+        // moved into the old one's slot last.
+        return deleteCategory(clubSlug, year, from)
+            .flatMap {
+                addCategory(clubSlug, year, newTitle).onError { addCategory(clubSlug, year, from) }
+            }
             .flatMap { reorderCategories(clubSlug, year, order.map { if (it == from) newTitle else it }) }
     }
 
