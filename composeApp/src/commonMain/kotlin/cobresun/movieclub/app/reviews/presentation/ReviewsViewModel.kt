@@ -50,6 +50,7 @@ import kotlinx.coroutines.Job
 import kotlin.time.Clock
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import cobresun.movieclub.app.core.presentation.DerivedMemo
 
 data class ReviewsState(
     val clubSlug: String? = null,
@@ -75,6 +76,8 @@ data class ReviewsState(
     val startingUpNext: ListedWork? = null,
     /** Works on their way onto the reviews list: shown as pending cards until the refetch lands. */
     val pendingWorks: List<Work> = emptyList(),
+    /** Derived values, kept across copies; see [DerivedMemo]. */
+    private val memo: DerivedMemo = DerivedMemo(),
 ) {
     /**
      * The Up Next card's work, or null when nothing is pinned or it's already
@@ -83,7 +86,8 @@ data class ReviewsState(
     val upNext: ListedWork?
         get() = startingUpNext ?: upNextWorkId?.let { id ->
             val reviews = (reviews as? AsyncResult.Success)?.data ?: return null
-            if (reviews.any { it.work.id == id }) null else listedWorks.firstOrNull { it.work.id == id }
+            val reviewed = memo.get("reviewed-ids", reviews) { reviews.mapTo(HashSet()) { it.work.id } }
+            if (id in reviewed) null else listedWorks.firstOrNull { it.work.id == id }
         }
 
     fun isRevealed(review: Review): Boolean = ScoreReveal.isRevealed(review, currentUserId, revealedWorkIds)
@@ -91,7 +95,8 @@ data class ReviewsState(
     fun canReveal(review: Review): Boolean = ScoreReveal.canReveal(review, currentUserId, revealedWorkIds)
 
     /** Filter bar state for the reviews: offered filters, facets, chips and the matches. */
-    val filters: FilterResults<Review> by lazy {
+    val filters: FilterResults<Review>
+        get() = memo.get("filters", reviews, filterQuery, clubType) {
         computeFilters(
             items = (reviews as? AsyncResult.Success)?.data.orEmpty(),
             query = filterQuery,
@@ -99,12 +104,15 @@ data class ReviewsState(
             id = { it.work.id },
             target = { FilterTarget(it.work, it.average) },
         )
-    }
+        }
 
-    val visibleReviews: List<Review> by lazy { sortReviews(filters.filtered, sortState) }
+    val visibleReviews: List<Review>
+        get() = filters.let { f -> memo.get("visible", f, sortState) { sortReviews(f.filtered, sortState) } }
 
     val reviewedExternalIds: Set<String>
-        get() = (reviews as? AsyncResult.Success)?.data.orEmpty().mapNotNull { it.work.externalId }.toSet()
+        get() = memo.get("reviewed-external", reviews) {
+            (reviews as? AsyncResult.Success)?.data.orEmpty().mapNotNull { it.work.externalId }.toSet()
+        }
 
     /**
      * Spotlight fact for [review], or null while its club scores are still hidden:

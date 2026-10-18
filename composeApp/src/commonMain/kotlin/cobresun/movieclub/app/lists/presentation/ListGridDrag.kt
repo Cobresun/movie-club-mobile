@@ -1,7 +1,6 @@
 package cobresun.movieclub.app.lists.presentation
 
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
-import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.lazy.grid.LazyGridItemInfo
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
@@ -16,7 +15,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.toOffset
 import cobresun.movieclub.app.core.platform.HapticFeedback
-import kotlinx.coroutines.delay
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.withFrameNanos
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** Grid key of a list's card: "listId/workId". */
 internal fun cardKey(listId: String, workId: String) = "$listId/$workId"
@@ -39,6 +41,10 @@ class ListGridDrag internal constructor(
     var order by mutableStateOf<List<String>>(emptyList())
         private set
     var draggedId by mutableStateOf<String?>(null)
+        private set
+
+    /** Dropped, holding [order] until the list's own items catch up with it. */
+    internal var settling by mutableStateOf(false)
         private set
 
     private var startOrder: List<String> = emptyList()
@@ -64,6 +70,7 @@ class ListGridDrag internal constructor(
         val ids = visibleIds(list)
         val upNext = upNextId()
         if (work == upNext || isPending(work)) return
+        settling = false
         listId = list
         draggedId = work
         order = ids
@@ -84,11 +91,20 @@ class ListGridDrag internal constructor(
         val list = listId ?: return
         val dropped = draggedId ?: return
         val final = order
-        reset()
-        if (final != startOrder) {
-            haptics.performConfirm()
-            onDrop(list, final, dropped)
+        if (final == startOrder) {
+            reset()
+            return
         }
+        // Keep laying the list out in the dropped order until the reordered items
+        // arrive through state; resetting now flashes the old order for a frame.
+        draggedId = null
+        settling = true
+        haptics.performConfirm()
+        onDrop(list, final, dropped)
+    }
+
+    internal fun finishSettling() {
+        if (settling) reset()
     }
 
     internal fun cancel() = reset()
@@ -126,6 +142,7 @@ class ListGridDrag internal constructor(
     }
 
     private fun reset() {
+        settling = false
         listId = null
         draggedId = null
         order = emptyList()
@@ -178,16 +195,25 @@ fun rememberListGridDrag(
     drag.onDrop = { l, o, d -> currentDrop(l, o, d) }
 
     // Scroll while a card is held near the top or bottom edge.
-    LaunchedEffect(drag, drag.listId) {
-        if (drag.listId == null) return@LaunchedEffect
+    // Once per frame, so the scroll keeps pace with the display instead of drifting.
+    LaunchedEffect(drag, drag.listId, drag.settling) {
+        if (drag.listId == null || drag.settling) return@LaunchedEffect
         while (true) {
+            withFrameNanos { }
             val delta = drag.autoScrollDelta()
             if (delta != 0f) {
-                gridState.scrollBy(delta)
+                gridState.dispatchRawDelta(delta)
                 drag.swapIfOverTarget()
             }
-            delay(16)
         }
+    }
+    // After a drop: let go of the held order once the list shows it (or soon regardless).
+    LaunchedEffect(drag, drag.settling) {
+        if (!drag.settling) return@LaunchedEffect
+        withTimeoutOrNull(1_000) {
+            snapshotFlow { drag.listId?.let { currentVisible(it) } == drag.order }.first { it }
+        }
+        drag.finishSettling()
     }
     return drag
 }

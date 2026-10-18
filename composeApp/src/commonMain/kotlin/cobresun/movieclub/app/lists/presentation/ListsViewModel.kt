@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import cobresun.movieclub.app.core.presentation.DerivedMemo
 
 data class ListsState(
     val clubType: ClubType = ClubType.MOVIE,
@@ -65,11 +66,14 @@ data class ListsState(
     val detail: ListItemDetailState? = null,
     /** Every item across the user lists, for picking a review in the Add review sheet. */
     val allItems: AsyncResult<List<ListedWork>> = AsyncResult.Loading,
+    /** Derived values, kept across copies; see [DerivedMemo]. */
+    private val memo: DerivedMemo = DerivedMemo(),
 ) {
     /** [allItems] with the Up Next work first, then list order. */
     val pickableItems: List<ListedWork>
-        get() = (allItems as? AsyncResult.Success)?.data.orEmpty()
-            .sortedByDescending { it.work.id == upNextWorkId }
+        get() = memo.get("pickable", allItems, upNextWorkId) {
+            (allItems as? AsyncResult.Success)?.data.orEmpty().sortedByDescending { it.work.id == upNextWorkId }
+        }
 
     val listsOrEmpty: List<WorkList>
         get() = (lists as? AsyncResult.Success)?.data.orEmpty()
@@ -85,7 +89,8 @@ data class ListsState(
      * once). Scores and review dates don't apply to watchlist items, so those
      * filters are left out, as on web.
      */
-    val filters: FilterResults<Work> by lazy {
+    val filters: FilterResults<Work>
+        get() = memo.get("filters", lists, itemsByList, filterQuery, clubType) {
         computeFilters(
             items = listsOrEmpty.flatMap { itemsOrEmpty(it.id) },
             query = filterQuery,
@@ -94,17 +99,17 @@ data class ListsState(
             id = { it.id },
             target = { FilterTarget(it) },
         )
-    }
+        }
 
     /** Ids of the works matching the filters, or null when nothing is filtering (show everything). */
-    private val matchingIds: Set<String>? by lazy {
-        if (filters.isActive) filters.filtered.mapTo(HashSet()) { it.id } else null
-    }
+    private val matchingIds: Set<String>?
+        get() = filters.let { f -> memo.get("matching", f) { if (f.isActive) f.filtered.mapTo(HashSet()) { it.id } else null } }
 
     /** A list's items that match the filters, in list order. */
     fun visibleItems(listId: String): List<Work> {
         val ids = matchingIds ?: return itemsOrEmpty(listId)
-        return itemsOrEmpty(listId).filter { it.id in ids }
+        val items = itemsOrEmpty(listId)
+        return memo.get("visible-$listId", items, ids) { items.filter { it.id in ids } }
     }
 
     fun isCollapsed(listId: String): Boolean = listId in collapsedListIds
@@ -280,11 +285,32 @@ class ListsViewModel(
             when (val result = listsRepository.getLists(clubSlug)) {
                 is Result.Success -> {
                     val lists = result.data
-                    _state.update { it.copy(lists = AsyncResult.Success(lists)) }
-                    // Expanded lists first so what's on screen paints quickly, then the rest.
-                    val ordered = lists.sortedBy { _state.value.isCollapsed(it.id) }
-                    ordered.map { list -> async { loadItems(list.id, showLoading = initial) } }
-                        .forEach { it.await() }
+                    _state.update { s ->
+                        s.copy(
+                            lists = AsyncResult.Success(lists),
+                            itemsByList = if (initial) lists.associate { it.id to AsyncResult.Loading } else s.itemsByList,
+                        )
+                    }
+                    // Fetch every list at once and publish them together: one state update
+                    // (one recomposition and filter pass) instead of two per list.
+                    val fetched = lists.map { list -> async { list.id to listsRepository.getItems(clubSlug, list.id) } }
+                        .map { it.await() }
+                    _state.update { s ->
+                        var byList = s.itemsByList
+                        var counts = s.lists
+                        fetched.forEach { (listId, items) ->
+                            when (items) {
+                                is Result.Success -> {
+                                    byList = byList + (listId to AsyncResult.Success(items.data))
+                                    counts = counts.mapLists { all -> all.map { if (it.id == listId) it.copy(itemCount = items.data.size) else it } }
+                                }
+                                is Result.Error -> if (byList[listId] !is AsyncResult.Success) {
+                                    byList = byList + (listId to AsyncResult.Error(dataError = items.error))
+                                }
+                            }
+                        }
+                        s.copy(itemsByList = byList, lists = counts)
+                    }
                 }
 
                 is Result.Error -> {

@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.filters.presentation
 
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
@@ -85,6 +86,16 @@ fun SearchFilterBar(
     val haptics = koinInject<HapticFeedback>()
     var sheetOpen by rememberSaveable { mutableStateOf(false) }
     val chips = results.chips
+    // The field owns its text while focused: echoing keystrokes back through the
+    // view model lands a frame late, which resets the cursor on iOS and makes typing
+    // lag. Outside changes (a cleared filter) are picked up while it isn't focused.
+    var text by rememberSaveable { mutableStateOf(query.text) }
+    var focused by remember { mutableStateOf(false) }
+    if (!focused && text != query.text) text = query.text
+    val setText = { value: String ->
+        text = value
+        onQueryChange(query.copy(text = value))
+    }
 
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
@@ -93,13 +104,13 @@ fun SearchFilterBar(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             TextField(
-                value = query.text,
-                onValueChange = { onQueryChange(query.copy(text = it)) },
+                value = text,
+                onValueChange = setText,
                 placeholder = { Text(placeholder) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
-                    if (query.text.isNotEmpty()) {
-                        IconButton(onClick = { onQueryChange(query.copy(text = "")) }) {
+                    if (text.isNotEmpty()) {
+                        IconButton(onClick = { setText("") }) {
                             Icon(Icons.Default.Close, contentDescription = "Clear search")
                         }
                     }
@@ -113,7 +124,7 @@ fun SearchFilterBar(
                     focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                 ),
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).onFocusChanged { focused = it.isFocused },
             )
             if (results.options.isNotEmpty()) {
                 FiltersButton(activeCount = chips.size, onClick = { sheetOpen = true })
