@@ -41,4 +41,16 @@ class AppConnectivityTest {
 
         assertEquals(2, reconnects)
     }
+
+    @Test
+    fun retryRunsHookAndReloadsWhileOnline() = runTest(UnconfinedTestDispatcher()) {
+        val monitor = FakeMonitor(online = true)
+        val events = mutableListOf<String>()
+        val connectivity = AppConnectivity(monitor, onReconnect = { events += "stale" }, scope = backgroundScope)
+        backgroundScope.launch { connectivity.reconnected.collect { events += "reload" } }
+
+        connectivity.retry()
+
+        assertEquals(listOf("stale", "reload"), events)
+    }
 }

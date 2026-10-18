@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
@@ -20,12 +21,20 @@ class AppConnectivity(
     private val onReconnect: suspend () -> Unit,
     /** Sends writes queued offline; true when any reached the server. */
     private val sendQueued: suspend () -> Boolean = { false },
-    scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    override val showingSavedData: StateFlow<Boolean> = MutableStateFlow(false),
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) : Connectivity {
     override val isOnline: StateFlow<Boolean> = monitor.isOnline
 
     private val _reconnected = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     override val reconnected: Flow<Unit> = _reconnected.asSharedFlow()
+
+    override fun retry() {
+        scope.launch {
+            runCatching { onReconnect() }
+            _reconnected.tryEmit(Unit)
+        }
+    }
 
     init {
         scope.launch {

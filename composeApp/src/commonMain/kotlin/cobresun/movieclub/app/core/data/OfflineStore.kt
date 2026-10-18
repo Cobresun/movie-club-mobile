@@ -4,6 +4,10 @@ import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -21,12 +25,26 @@ import okio.Path
  * Keys are paths like `club/<slug>/reviews`; [removePrefix] drops a club's entries.
  * Unreadable files (an older DTO shape, a torn write) read as absent and are deleted.
  * Cleared on sign-in and sign-out with the session caches.
+ *
+ * [staleKeys] holds the keys whose stored answer was served because the fetch failed, until
+ * a fetch for them succeeds, so the UI can say it is showing saved data even while online.
  */
 class OfflineStore(
     private val directory: Path,
     private val fileSystem: FileSystem = FileSystem.SYSTEM,
 ) {
     private val mutex = Mutex()
+
+    private val _staleKeys = MutableStateFlow<Set<String>>(emptySet())
+    val staleKeys: StateFlow<Set<String>> = _staleKeys.asStateFlow()
+
+    internal fun markStale(key: String, stale: Boolean) =
+        _staleKeys.update { if (stale) it + key else it - key }
+
+    /** Forgets which answers were stale, before screens reload (they mark them again if still failing). */
+    fun forgetStale() {
+        _staleKeys.value = emptySet()
+    }
 
     /** The stored value for [key], or null when there is none (or it no longer decodes). */
     suspend fun <T> load(key: String, serializer: KSerializer<T>): T? = io {
@@ -55,6 +73,7 @@ class OfflineStore(
 
     /** Removes every entry whose key starts with [prefix] (e.g. one club's `club/<slug>/`). */
     suspend fun removePrefix(prefix: String) = io {
+        _staleKeys.update { keys -> keys.filterTo(mutableSetOf()) { !it.startsWith(prefix) } }
         val encoded = encodeKey(prefix)
         runCatching {
             fileSystem.list(directory).filter { it.name.startsWith(encoded) }.forEach { fileSystem.delete(it) }
@@ -62,7 +81,11 @@ class OfflineStore(
         Unit
     }
 
-    suspend fun clear() = io { runCatching { fileSystem.deleteRecursively(directory) }; Unit }
+    suspend fun clear() = io {
+        _staleKeys.value = emptySet()
+        runCatching { fileSystem.deleteRecursively(directory) }
+        Unit
+    }
 
     private fun pathOf(key: String): Path = directory / (encodeKey(key) + ".json")
 
@@ -108,8 +131,15 @@ suspend fun <T> OfflineStore.readThrough(
     serializer: KSerializer<T>,
     fetch: suspend () -> Result<T, DataError.Remote>,
 ): Result<T, DataError.Remote> = when (val result = fetch()) {
-    is Result.Success -> result.also { save(key, serializer, it.data) }
-    is Result.Error ->
-        if (result.error.isConnectivityFailure) load(key, serializer)?.let { Result.Success(it) } ?: result
-        else result
+    is Result.Success -> result.also {
+        save(key, serializer, it.data)
+        markStale(key, false)
+    }
+    is Result.Error -> {
+        val saved = if (result.error.isConnectivityFailure) load(key, serializer) else null
+        if (saved != null) {
+            markStale(key, true)
+            Result.Success(saved)
+        } else result
+    }
 }

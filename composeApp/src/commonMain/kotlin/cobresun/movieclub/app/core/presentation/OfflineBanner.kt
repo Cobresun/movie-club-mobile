@@ -33,9 +33,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import org.koin.compose.viewmodel.koinViewModel
 
-class ConnectivityViewModel(connectivity: Connectivity) : ViewModel() {
+class ConnectivityViewModel(private val connectivity: Connectivity) : ViewModel() {
     val isOnline: StateFlow<Boolean> = connectivity.isOnline
+    val showingSavedData: StateFlow<Boolean> = connectivity.showingSavedData
     val reconnected: Flow<Unit> = connectivity.reconnected
+
+    fun retry() = connectivity.retry()
 }
 
 /** Runs [onReconnect] each time the connection comes back (screens reload quietly). */
@@ -45,17 +48,24 @@ fun OnReconnect(viewModel: ConnectivityViewModel = koinViewModel(), onReconnect:
     LaunchedEffect(viewModel) { viewModel.reconnected.collect { action() } }
 }
 
-/** A small pill saying the app is offline and showing saved data; hidden while online. */
+/**
+ * A small pill saying the app is showing saved data: offline, or online while the server
+ * can't be reached (then tapping it retries). Hidden while answers are fresh.
+ */
 @Composable
 fun OfflineBanner(modifier: Modifier = Modifier, viewModel: ConnectivityViewModel = koinViewModel()) {
     val online by viewModel.isOnline.collectAsStateWithLifecycle()
+    val showingSaved by viewModel.showingSavedData.collectAsStateWithLifecycle()
+    val serverUnreachable = online && showingSaved
     AnimatedVisibility(
-        visible = !online,
+        visible = !online || serverUnreachable,
         modifier = modifier,
         enter = fadeIn() + slideInVertically { it / 2 },
         exit = fadeOut() + slideOutVertically { it / 2 },
     ) {
         Surface(
+            onClick = viewModel::retry,
+            enabled = serverUnreachable,
             shape = CircleShape,
             color = MaterialTheme.colorScheme.surfaceVariant,
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -68,7 +78,13 @@ fun OfflineBanner(modifier: Modifier = Modifier, viewModel: ConnectivityViewMode
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(Icons.Outlined.CloudOff, contentDescription = null, modifier = Modifier.size(16.dp))
-                Text("Offline · showing saved data", style = MaterialTheme.typography.labelLarge)
+                Text(
+                    if (serverUnreachable) "Can't reach the server · showing saved data" else "Offline · showing saved data",
+                    style = MaterialTheme.typography.labelLarge,
+                )
+                if (serverUnreachable) {
+                    Text("Retry", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.secondary)
+                }
             }
         }
     }

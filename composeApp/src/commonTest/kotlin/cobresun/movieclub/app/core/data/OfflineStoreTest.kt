@@ -116,6 +116,28 @@ class OfflineStoreTest {
         val result = store.readThrough("k", String.serializer()) { Result.Error(DataError.Remote.UNKNOWN) }
         assertEquals(Result.Error(DataError.Remote.UNKNOWN), result)
     }
+
+    @Test
+    fun servingAStoredAnswerMarksItStaleUntilAFetchSucceeds() = runTest {
+        store.save("club/a/reviews", String.serializer(), "saved")
+        store.readThrough("club/a/reviews", String.serializer()) { Result.Error(DataError.Remote.SERVER) }
+        assertEquals(setOf("club/a/reviews"), store.staleKeys.value)
+
+        store.readThrough("club/a/reviews", String.serializer()) { Result.Success("fresh") }
+        assertEquals(emptySet(), store.staleKeys.value)
+    }
+
+    @Test
+    fun forgettingAClubOrEverythingClearsItsStaleKeys() = runTest {
+        for (key in listOf("club/a/reviews", "club/b/reviews")) {
+            store.save(key, String.serializer(), "saved")
+            store.readThrough(key, String.serializer()) { Result.Error(DataError.Remote.NO_INTERNET) }
+        }
+        store.removePrefix("club/a/")
+        assertEquals(setOf("club/b/reviews"), store.staleKeys.value)
+        store.clear()
+        assertEquals(emptySet(), store.staleKeys.value)
+    }
 }
 
 class OfflineStoreDtoTest {

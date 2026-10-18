@@ -22,6 +22,7 @@ import cobresun.movieclub.app.club.presentation.ClubViewModel
 import cobresun.movieclub.app.core.data.AppConnectivity
 import cobresun.movieclub.app.core.data.HttpClientFactory
 import cobresun.movieclub.app.core.data.LastClubStoreImpl
+import cobresun.movieclub.app.core.data.OfflineStore
 import cobresun.movieclub.app.core.data.SessionCaches
 import cobresun.movieclub.app.core.data.SessionCookieStorage
 import cobresun.movieclub.app.core.data.SessionCookieStorageImpl
@@ -67,6 +68,12 @@ import cobresun.movieclub.app.stats.data.StatsRepositoryImpl
 import cobresun.movieclub.app.stats.domain.StatsRepository
 import cobresun.movieclub.app.stats.presentation.StatsViewModel
 import cobresun.movieclub.app.stats.presentation.WrappedViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.bind
 import org.koin.core.module.dsl.singleOf
@@ -96,7 +103,20 @@ val coreModule = module {
     single<Connectivity> {
         val caches = get<SessionCaches>()
         val reviews = get<ReviewsRepositoryImpl>()
-        AppConnectivity(get(), onReconnect = { caches.invalidateAll() }, sendQueued = { reviews.sendQueuedScores() })
+        val offline = get<OfflineStore>()
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        AppConnectivity(
+            monitor = get(),
+            onReconnect = {
+                caches.invalidateAll()
+                offline.forgetStale()
+            },
+            sendQueued = { reviews.sendQueuedScores() },
+            showingSavedData = offline.staleKeys
+                .map { it.isNotEmpty() }
+                .stateIn(scope, SharingStarted.Eagerly, false),
+            scope = scope,
+        )
     }
     viewModelOf(::ConnectivityViewModel)
 }

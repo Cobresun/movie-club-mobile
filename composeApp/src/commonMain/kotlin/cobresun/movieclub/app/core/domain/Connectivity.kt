@@ -13,4 +13,13 @@ interface Connectivity {
      * storage meanwhile have been marked stale: screens reload quietly on it.
      */
     val reconnected: Flow<Unit>
+
+    /**
+     * True while screens show answers kept from earlier because the server couldn't be
+     * reached (offline, or online with the server down or too slow).
+     */
+    val showingSavedData: StateFlow<Boolean>
+
+    /** Marks in-memory answers stale and asks screens to reload, as on a reconnect. */
+    fun retry()
 }
