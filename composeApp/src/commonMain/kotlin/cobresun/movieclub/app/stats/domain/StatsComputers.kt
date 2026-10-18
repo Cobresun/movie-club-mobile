@@ -201,9 +201,6 @@ fun computeGenreStats(reviews: List<Review>, memberId: String? = null): LovedCat
     )
 }
 
-/** Most-watched genres, top five. */
-fun computeGenreCounts(reviews: List<Review>): List<CategoryCount> = categoryCounts(reviews, movieGenres).take(5)
-
 /** The five most- and five least-watched genres (least first in the latter). */
 fun computeGenreWatchCounts(reviews: List<Review>): GenreWatchCounts {
     val sorted = categoryCounts(reviews, movieGenres)

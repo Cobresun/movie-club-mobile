@@ -1,7 +1,6 @@
 package cobresun.movieclub.app.stats.presentation
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -9,12 +8,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -32,12 +29,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import cobresun.movieclub.app.core.domain.Work
 import cobresun.movieclub.app.core.presentation.components.Avatar
-import cobresun.movieclub.app.core.presentation.components.Poster
 import cobresun.movieclub.app.member.domain.Member
 
 /** A titled statistics card. [controls] sit under the title (toggles, chips). */
@@ -150,36 +143,6 @@ private fun Chip(label: String, selected: Boolean, onClick: () -> Unit, member: 
     }
 }
 
-/** A work with a small poster, a title and supporting line, and a trailing value. */
-@Composable
-fun WorkStatRow(
-    work: Work,
-    supporting: String?,
-    modifier: Modifier = Modifier,
-    trailing: @Composable () -> Unit = {},
-) {
-    Row(
-        modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Poster(work.imageUrl, work.title, Modifier.width(38.dp), shape = RoundedCornerShape(6.dp))
-        Column(Modifier.weight(1f)) {
-            Text(work.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (supporting != null) {
-                Text(
-                    supporting,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-        trailing()
-    }
-}
-
 /** Small rounded value chip, e.g. a score or a "+2.5" difference. */
 @Composable
 fun ValuePill(text: String, color: Color, modifier: Modifier = Modifier) {
@@ -190,57 +153,6 @@ fun ValuePill(text: String, color: Color, modifier: Modifier = Modifier) {
             .padding(horizontal = 10.dp, vertical = 4.dp),
     ) {
         Text(text, style = MaterialTheme.typography.labelLarge, color = color, fontWeight = FontWeight.Bold)
-    }
-}
-
-/** A labelled horizontal bar, used by leaderboards (genres, people, reviewers). */
-@Composable
-fun RankedBar(
-    label: String,
-    value: String,
-    fraction: Float,
-    color: Color,
-    modifier: Modifier = Modifier,
-    supporting: String? = null,
-    leading: (@Composable () -> Unit)? = null,
-    barHeight: Dp = 6.dp,
-    /** Row position, for the staggered grow-in. */
-    index: Int = 0,
-) {
-    val animated = animateFloatAsState(fraction.coerceIn(0.02f, 1f))
-    val growth = rememberBarGrowth(index)
-    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        leading?.invoke()
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    label,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(value, style = MaterialTheme.typography.labelLarge, color = color, fontWeight = FontWeight.Bold)
-            }
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(barHeight)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                    .growingFill(color, { animated.value }, growth),
-            )
-            if (supporting != null) {
-                Text(
-                    supporting,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
     }
 }
 

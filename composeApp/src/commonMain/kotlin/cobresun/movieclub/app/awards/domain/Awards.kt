@@ -23,8 +23,6 @@ enum class AwardsStep(val value: Int) {
             PRESENTATION, COMPLETED -> null
         }
 
-    val showsResults: Boolean get() = this == PRESENTATION || this == COMPLETED
-
     companion object {
         fun from(value: Int): AwardsStep = entries.firstOrNull { it.value == value } ?: CATEGORIES
 

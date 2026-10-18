@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,8 +28,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -58,16 +55,6 @@ fun SettingsSectionHeader(text: String, modifier: Modifier = Modifier) {
         letterSpacing = 1.sp,
         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
         modifier = modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 8.dp)
-    )
-}
-
-@Composable
-fun SettingsFooter(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp)
     )
 }
 
@@ -178,35 +165,6 @@ fun SettingsRow(
             )
         }
     }
-}
-
-@Composable
-fun SettingsSwitchRow(
-    title: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    icon: ImageVector? = null,
-    subtitle: String? = null,
-    enabled: Boolean = true,
-) {
-    SettingsRow(
-        title = title,
-        icon = icon,
-        subtitle = subtitle,
-        enabled = enabled,
-        onClick = { onCheckedChange(!checked) },
-        trailing = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                enabled = enabled,
-                colors = SwitchDefaults.colors(
-                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                )
-            )
-        }
-    )
 }
 
 /** Circular avatar: remote image when available, otherwise initials on a tinted disc. */
@@ -341,7 +299,3 @@ fun ErrorMessage(message: String, onRetry: () -> Unit, modifier: Modifier = Modi
         primaryAction = "Try again" to onRetry,
     )
 }
-
-/** Horizontal spacer helper. */
-@Composable
-fun HSpace(width: Dp) = Spacer(Modifier.width(width))

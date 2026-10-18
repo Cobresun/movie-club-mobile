@@ -26,10 +26,7 @@ data class ClubRecords(
 )
 
 /** Number of each member's scores falling in each whole-number bin 0..10. */
-data class ScoreDistribution(val binsByMember: Map<String, List<Int>>) {
-    val maxBinTotal: Int
-        get() = (0..10).maxOfOrNull { bin -> binsByMember.values.sumOf { it[bin] } } ?: 0
-}
+data class ScoreDistribution(val binsByMember: Map<String, List<Int>>)
 
 /** One point on a time-series chart, positioned by epoch milliseconds. */
 data class TimePoint(val epochMillis: Long, val value: Double, val label: String)

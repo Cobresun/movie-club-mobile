@@ -14,7 +14,7 @@ import cobresun.movieclub.app.stats.domain.computeClubRecords
 import cobresun.movieclub.app.stats.domain.computeConsensus
 import cobresun.movieclub.app.stats.domain.computeCumulativeCounts
 import cobresun.movieclub.app.stats.domain.computeCurmudgeons
-import cobresun.movieclub.app.stats.domain.computeGenreCounts
+import cobresun.movieclub.app.stats.domain.computeGenreWatchCounts
 import cobresun.movieclub.app.stats.domain.computeGenreStats
 import cobresun.movieclub.app.stats.domain.computeGuiltyPleasures
 import cobresun.movieclub.app.stats.domain.computeLeaderboard
@@ -97,7 +97,6 @@ class StatsComputersTest {
         val d = computeScoreDistribution(listOf(movie("1", mapOf("a" to 7.5, "b" to 10.0, "z" to 3.0))), listOf(ann, bob))
         assertEquals(1, d.binsByMember.getValue("a")[7])
         assertEquals(1, d.binsByMember.getValue("b")[10])
-        assertEquals(1, d.maxBinTotal)
     }
 
     @Test fun rollingWindowIsClamped() {
@@ -142,7 +141,7 @@ class StatsComputersTest {
         assertEquals(listOf("Drama"), club.mostLoved.map { it.name })
         assertEquals(5.0, club.mostLoved.single().averageScore)
         assertEquals(8.0, computeGenreStats(reviews, "a").mostLoved.single().averageScore)
-        assertEquals("Drama", computeGenreCounts(reviews).first().name)
+        assertEquals("Drama", computeGenreWatchCounts(reviews).mostWatched.first().name)
     }
 
     @Test fun subjectStatsAndCounts() {

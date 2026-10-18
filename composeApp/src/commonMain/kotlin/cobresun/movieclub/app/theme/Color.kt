@@ -27,8 +27,6 @@ val DarkGray90 = Color(0xFFE0E0E0)  // Very light gray
 // Accent Colors
 val Gold80 = Color(0xFFFFD54F)      // Star / score accent
 val Gold40 = Color(0xFF8A6D00)
-val Green80 = Color(0xFF4CAF50)     // Success
-val Green40 = Color(0xFF2E7D32)
 
 /**
  * Categorical series colors for statistics charts (one per member, by position

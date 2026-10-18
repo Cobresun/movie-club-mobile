@@ -369,10 +369,6 @@ class ListsViewModel(
         }
     }
 
-    private fun refreshList(listId: String) {
-        viewModelScope.launch { loadItems(listId, showLoading = false) }
-    }
-
     private fun toggleCollapsed(listId: String) {
         val next = _state.value.collapsedListIds.let { if (listId in it) it - listId else it + listId }
         _state.update { it.copy(collapsedListIds = next) }
