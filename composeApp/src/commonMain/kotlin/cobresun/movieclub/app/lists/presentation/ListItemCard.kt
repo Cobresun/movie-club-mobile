@@ -78,12 +78,14 @@ fun ListItemCard(
                 scaleX = scale
                 scaleY = scale
             }
-            .then(if (lifted) Modifier.shadow(16.dp, shape, clip = false) else Modifier)
-            .clip(shape)
+            .then(if (lifted) Modifier else Modifier.clip(shape))
             .clickable(enabled = !pending, onClick = onClick),
     ) {
         Box(
-            Modifier.drawBehind {
+            // Only the poster casts the lifted shadow: on the whole card it showed as a
+            // dark box behind the transparent title area. (The card drops its clip while
+            // lifted so the shadow isn't cut off.)
+            Modifier.then(if (lifted) Modifier.shadow(16.dp, shape, clip = false) else Modifier).drawBehind {
                 val glow = pulseCurve(progress.value)
                 if (glow <= 0f) return@drawBehind
                 // A gold ring spreading out from the poster's edge, like web's box-shadow.
