@@ -2,7 +2,6 @@ package cobresun.movieclub.app.stats.presentation
 
 import cobresun.movieclub.app.core.presentation.initialsOf
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -63,6 +62,8 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import cobresun.movieclub.app.core.domain.groupThousands
+import cobresun.movieclub.app.core.presentation.AppMotion
 
 /*
  * The Club Wrapped story cards, ported from the web's
@@ -75,9 +76,6 @@ internal val CARD_WIDTH = 360.dp
 internal val CARD_HEIGHT = 640.dp
 
 private val Ink = WrappedColors.Ink
-
-/** web `--ease-emphasized`. */
-internal val EmphasizedEasing = CubicBezierEasing(0.32f, 0.72f, 0f, 1f)
 
 private fun WrappedTone.gradient(): List<Color> = when (this) {
     WrappedTone.VIOLET -> WrappedColors.Violet
@@ -105,7 +103,7 @@ private fun Modifier.rise(order: Int): Modifier {
         if (reveal.instant) progress.snapTo(1f)
         else if (reveal.started && progress.value < 1f) {
             delay(80L + order * 70L)
-            progress.animateTo(1f, tween(420, easing = EmphasizedEasing))
+            progress.animateTo(1f, tween(420, easing = AppMotion.Emphasized))
         }
     }
     return graphicsLayer {
@@ -131,11 +129,7 @@ private fun CardAvatar(name: String, imageUrl: String?, size: Dp, modifier: Modi
     }
 }
 
-private fun Member.firstName(): String = name.trim().substringBefore(' ').ifBlank { name }
-
 private fun signedGap(gap: Double): String = (if (gap > 0) "+" else "−") + abs(gap).toFixed1()
-
-private fun thousands(n: Long): String = n.toString().reversed().chunked(3).joinToString(",").reversed()
 
 @Composable
 private fun CardText(
@@ -254,7 +248,7 @@ private fun VolumeCard(c: WrappedCardContent.Volume) = CenteredColumn {
     val icon = if (c.unit == VolumeUnit.HOURS) Icons.Outlined.Schedule else Icons.Outlined.Description
     Icon(icon, null, tint = Ink.copy(alpha = 0.8f), modifier = Modifier.size(44.dp).rise(0))
     CardText(
-        thousands(c.value), 72.sp, Modifier.padding(top = 16.dp).rise(1),
+        groupThousands(c.value), 72.sp, Modifier.padding(top = 16.dp).rise(1),
         weight = FontWeight.Bold, lineHeight = 1f, tracking = (-0.025).em, tabular = true, maxLines = 1,
     )
     CardText(c.unitLabel, 30.sp, Modifier.padding(top = 8.dp).rise(2), weight = FontWeight.SemiBold)

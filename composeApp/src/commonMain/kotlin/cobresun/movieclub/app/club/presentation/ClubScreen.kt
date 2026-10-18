@@ -24,12 +24,9 @@ import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -83,6 +80,7 @@ import cobresun.movieclub.app.core.presentation.OnReconnect
 import cobresun.movieclub.app.awards.presentation.AwardsAction
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import cobresun.movieclub.app.core.domain.mapSuccess
 
 /**
  * A club's home: Reviews and Lists tabs with a shared snackbar and add-work
@@ -393,14 +391,6 @@ fun ClubScreenRoot(
             },
         )
     }
-}
-
-private inline fun <T, R> cobresun.movieclub.app.core.domain.AsyncResult<T>.mapSuccess(
-    transform: (T) -> R,
-): cobresun.movieclub.app.core.domain.AsyncResult<R> = when (this) {
-    is cobresun.movieclub.app.core.domain.AsyncResult.Success -> cobresun.movieclub.app.core.domain.AsyncResult.Success(transform(data))
-    is cobresun.movieclub.app.core.domain.AsyncResult.Loading -> cobresun.movieclub.app.core.domain.AsyncResult.Loading
-    is cobresun.movieclub.app.core.domain.AsyncResult.Error -> this
 }
 
 private fun WorkSearchResult.toNewWork() = NewWork(

@@ -6,6 +6,7 @@ import cobresun.movieclub.app.core.domain.WorkType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import cobresun.movieclub.app.core.domain.groupThousands
 
 class ReviewFactsTest {
     private fun movie(
@@ -149,7 +150,7 @@ class ReviewFactsTest {
         assertEquals("11th", ReviewFacts.ordinal(11))
         assertEquals("22nd", ReviewFacts.ordinal(22))
         assertEquals("103rd", ReviewFacts.ordinal(103))
-        assertEquals("250,000", ReviewFacts.groupThousands(250000))
+        assertEquals("250,000", groupThousands(250000))
         assertEquals("7.3", ReviewFacts.formatScore(7.25 + 0.04))
     }
 }

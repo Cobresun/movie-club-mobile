@@ -55,10 +55,10 @@ import cobresun.movieclub.app.core.domain.WorkDetails
 import cobresun.movieclub.app.core.presentation.components.Avatar
 import cobresun.movieclub.app.core.presentation.components.SectionLabel
 import cobresun.movieclub.app.core.presentation.components.stripHtml
-import cobresun.movieclub.app.core.presentation.formatRuntime
 import cobresun.movieclub.app.core.presentation.formatShort
 import kotlinx.datetime.LocalDate
 import kotlin.math.round
+import cobresun.movieclub.app.core.domain.formatRuntime
 
 /** Web's hero meta line: "1979 · 1h 57m · Horror, Science Fiction" / "1965 · Frank Herbert · 412 pages". */
 internal fun Work.reviewMetaLine(): List<String> = when (val d = details) {

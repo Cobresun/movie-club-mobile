@@ -51,9 +51,9 @@ import cobresun.movieclub.app.core.presentation.components.Poster
 import cobresun.movieclub.app.core.presentation.rememberReducedMotion
 import cobresun.movieclub.app.lists.domain.RandomPick
 import cobresun.movieclub.app.lists.domain.WorkList
-import cobresun.movieclub.app.reviews.presentation.EmphasizedEasing
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import cobresun.movieclub.app.core.presentation.AppMotion
 
 /**
  * Web `RandomPickerModal` as a bottom sheet: posters flick past, slowing
@@ -98,7 +98,7 @@ fun RandomPickerSheet(
         hapticFeedback.performSuccess()
         if (!reducedMotion) launch {
             landed.snapTo(0f)
-            landed.animateTo(1f, tween(700, easing = EmphasizedEasing))
+            landed.animateTo(1f, tween(700, easing = AppMotion.Emphasized))
         }
         delay(RandomPick.REVEAL_PAUSE_MS)
         showChoices = true
@@ -123,7 +123,7 @@ fun RandomPickerSheet(
             AnimatedContent(
                 targetState = revealed,
                 transitionSpec = {
-                    (fadeIn(tween(200)) + scaleIn(tween(200, easing = EmphasizedEasing), initialScale = 0.9f)) togetherWith
+                    (fadeIn(tween(200)) + scaleIn(tween(200, easing = AppMotion.Emphasized), initialScale = 0.9f)) togetherWith
                         fadeOut(tween(150))
                 },
                 label = "picker-title",
@@ -165,7 +165,7 @@ fun RandomPickerSheet(
 
             AnimatedVisibility(
                 visible = showChoices,
-                enter = fadeIn(tween(300)) + slideInVertically(tween(300, easing = EmphasizedEasing)) { it / 4 },
+                enter = fadeIn(tween(300)) + slideInVertically(tween(300, easing = AppMotion.Emphasized)) { it / 4 },
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {

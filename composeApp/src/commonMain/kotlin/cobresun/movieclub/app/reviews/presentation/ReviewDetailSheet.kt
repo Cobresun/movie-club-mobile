@@ -107,6 +107,7 @@ import cobresun.movieclub.app.reviews.domain.ScoreReveal
 import cobresun.movieclub.app.reviews.domain.ScoreScale
 import cobresun.movieclub.app.reviews.domain.ScoreAssist
 import cobresun.movieclub.app.reviews.domain.ScoredWork
+import cobresun.movieclub.app.core.presentation.AppMotion
 
 /** Everything about one reviewed work: scores, your score, cast, comments. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -187,7 +188,7 @@ fun ReviewDetailSheet(
                 }
                 AnimatedVisibility(
                     visible = factReady && fact != null,
-                    enter = fadeIn(tween(300)) + slideInVertically(tween(300, easing = EmphasizedEasing)) { -it / 12 } + expandVertically(tween(300)),
+                    enter = fadeIn(tween(300)) + slideInVertically(tween(300, easing = AppMotion.Emphasized)) { -it / 12 } + expandVertically(tween(300)),
                 ) {
                     fact?.let { ReviewFactCard(it) }
                 }
@@ -381,7 +382,7 @@ private fun ScoreTileView(tile: ScoreTile, index: Int, hidden: Boolean, poppedAt
         if (hidden) reveal.snapTo(0f)
         else if (reveal.value < 1f) {
             delay(index * 80L)
-            reveal.animateTo(1f, tween(500, easing = EmphasizedEasing))
+            reveal.animateTo(1f, tween(500, easing = AppMotion.Emphasized))
         }
     }
 
@@ -392,7 +393,7 @@ private fun ScoreTileView(tile: ScoreTile, index: Int, hidden: Boolean, poppedAt
         delay(250) // let the score sheet slide away first
         haptics.performSuccess()
         pop.snapTo(0f)
-        pop.animateTo(1f, tween(700, easing = EmphasizedEasing))
+        pop.animateTo(1f, tween(700, easing = AppMotion.Emphasized))
     }
     // The pop is read only in the layer and draw lambdas, so the tile redraws for
     // its 700ms without recomposing every frame; only "popping or not" recomposes.

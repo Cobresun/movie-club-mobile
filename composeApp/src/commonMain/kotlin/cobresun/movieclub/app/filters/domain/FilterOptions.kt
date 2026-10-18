@@ -4,6 +4,7 @@ import cobresun.movieclub.app.core.domain.ClubType
 import cobresun.movieclub.app.core.domain.Work
 import cobresun.movieclub.app.core.domain.WorkDetails
 import kotlin.math.roundToLong
+import cobresun.movieclub.app.core.domain.formatRuntime
 
 /**
  * What a filter reads from: the work, plus its club average when it's a review
@@ -234,14 +235,3 @@ internal fun formatScore(score: Double): String {
 }
 
 internal fun formatWhole(value: Double): String = value.roundToLong().toString()
-
-/** "2h 28m" / "45m" / "2h" (web `formatRuntime`). */
-internal fun formatRuntime(minutes: Int): String {
-    val h = minutes / 60
-    val m = minutes % 60
-    return when {
-        h == 0 -> "${m}m"
-        m == 0 -> "${h}h"
-        else -> "${h}h ${m}m"
-    }
-}

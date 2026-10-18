@@ -8,7 +8,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.runtime.State
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
@@ -27,6 +26,7 @@ import cobresun.movieclub.app.core.presentation.rememberReducedMotion
 import kotlinx.coroutines.delay
 import kotlin.math.pow
 import kotlin.math.roundToInt
+import cobresun.movieclub.app.core.presentation.AppMotion
 
 /*
  * The statistics page's motion, after the web's `v-reveal`, `animate-bar-grow`
@@ -35,8 +35,6 @@ import kotlin.math.roundToInt
  * already been seen shows its final state when it scrolls back.
  */
 
-private val StandardEasing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
-private val Emphasized = CubicBezierEasing(0.32f, 0.72f, 0f, 1f)
 private val EaseOutCubic = Easing { t -> 1f - (1f - t).pow(3) }
 
 /** Whether content inside the current widget should animate in (false once it has been seen). */
@@ -56,7 +54,7 @@ internal fun rememberReveal(): Pair<Modifier, Boolean> {
     val progress = remember { Animatable(if (animateIn) 0f else 1f) }
     LaunchedEffect(Unit) {
         seen = true
-        if (progress.value < 1f) progress.animateTo(1f, tween(300, easing = StandardEasing))
+        if (progress.value < 1f) progress.animateTo(1f, tween(300, easing = AppMotion.Standard))
     }
     val modifier = Modifier.graphicsLayer {
         alpha = progress.value
@@ -77,7 +75,7 @@ internal fun rememberBarGrowth(index: Int): State<Float> {
     LaunchedEffect(Unit) {
         if (growth.value < 1f) {
             delay(index * 60L)
-            growth.animateTo(1f, tween(700, easing = Emphasized))
+            growth.animateTo(1f, tween(700, easing = AppMotion.Emphasized))
         }
     }
     return growth.asState()

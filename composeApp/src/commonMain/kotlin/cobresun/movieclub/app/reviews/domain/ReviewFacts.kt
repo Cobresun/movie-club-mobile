@@ -5,6 +5,8 @@ import cobresun.movieclub.app.core.domain.WorkType
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
+import cobresun.movieclub.app.core.domain.formatRuntime
+import cobresun.movieclub.app.core.domain.groupThousands
 
 /**
  * One spotlight fact about a scored review ("highest-rated movie in club
@@ -106,20 +108,6 @@ object ReviewFacts {
         }
     }
 
-    /** "2h 28m" / "45m" (domain-local copy of the web's formatRuntime). */
-    internal fun formatRuntime(minutes: Int): String {
-        val h = minutes / 60
-        val m = minutes % 60
-        return when {
-            h == 0 -> "${m}m"
-            m == 0 -> "${h}h"
-            else -> "${h}h ${m}m"
-        }
-    }
-
-    internal fun groupThousands(n: Int): String =
-        n.toString().reversed().chunked(3).joinToString(",").reversed()
-
     // --- generators (same order and copy as the web) ------------------------
 
     private val allTimeRecord: Generator = gen@{ ctx ->
@@ -159,7 +147,7 @@ object ReviewFacts {
     private val pagesMilestone: Generator = gen@{ ctx ->
         val pages = crossedMilestone(ctx, { it.pages()?.toDouble() }, PAGE_MILESTONES) ?: return@gen null
         val copies = (pages.toDouble() / PAGES_OF_WAR_AND_PEACE).roundToInt()
-        ReviewFact(FactKind.PAGES_MILESTONE, "Bookworms", "This one pushed your club past ${groupThousands(pages)} pages read together — about $copies copies of War and Peace.")
+        ReviewFact(FactKind.PAGES_MILESTONE, "Bookworms", "This one pushed your club past ${groupThousands(pages.toLong())} pages read together — about $copies copies of War and Peace.")
     }
 
     private val divisiveRecord: Generator = gen@{ ctx ->
@@ -266,7 +254,7 @@ object ReviewFacts {
         val pages = ctx.target.pages() ?: return@gen null
         val others = otherValues(ctx) { it.pages() }
         if (others.isEmpty() || pages <= others.max()) return@gen null
-        ReviewFact(FactKind.LONGEST_BOOK, "Doorstopper", "At ${groupThousands(pages)} pages, this is the longest book your club has ever conquered.")
+        ReviewFact(FactKind.LONGEST_BOOK, "Doorstopper", "At ${groupThousands(pages.toLong())} pages, this is the longest book your club has ever conquered.")
     }
 
     private val decadeFirst: Generator = gen@{ ctx ->

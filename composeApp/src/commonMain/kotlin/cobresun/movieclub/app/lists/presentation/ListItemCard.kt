@@ -41,7 +41,7 @@ import cobresun.movieclub.app.core.domain.Work
 import cobresun.movieclub.app.core.presentation.components.Avatar
 import cobresun.movieclub.app.core.presentation.components.Poster
 import cobresun.movieclub.app.member.domain.Member
-import cobresun.movieclub.app.reviews.presentation.EmphasizedEasing
+import cobresun.movieclub.app.core.presentation.AppMotion
 
 /**
  * A list's poster card (web `WorkPosterCard` in `ListItems`): the poster, its
@@ -65,7 +65,7 @@ fun ListItemCard(
     LaunchedEffect(pulse) {
         if (pulse == null) return@LaunchedEffect
         progress.snapTo(0f)
-        progress.animateTo(1f, tween(PULSE_MILLIS, easing = EmphasizedEasing))
+        progress.animateTo(1f, tween(PULSE_MILLIS, easing = AppMotion.Emphasized))
     }
     // Web's gold highlightBackground, which the app keeps in tertiary.
     val ring = MaterialTheme.colorScheme.tertiary

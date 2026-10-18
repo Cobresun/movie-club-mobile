@@ -18,7 +18,6 @@ import cobresun.movieclub.app.filters.domain.computeFilters
 import cobresun.movieclub.app.filters.domain.decadePresets
 import cobresun.movieclub.app.filters.domain.describe
 import cobresun.movieclub.app.filters.domain.filterItems
-import cobresun.movieclub.app.filters.domain.formatRuntime
 import cobresun.movieclub.app.filters.domain.formatScore
 import cobresun.movieclub.app.filters.domain.includes
 import kotlin.test.Test
@@ -26,6 +25,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import cobresun.movieclub.app.core.domain.formatRuntime
 
 class WorkFiltersTest {
 

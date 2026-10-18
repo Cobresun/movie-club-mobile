@@ -7,7 +7,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-
 import cobresun.movieclub.app.core.presentation.components.LocalTabBarInset
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -93,6 +92,7 @@ import cobresun.movieclub.app.reviews.domain.ReviewSortState
 import cobresun.movieclub.app.reviews.domain.ScoreScale
 import cobresun.movieclub.app.filters.presentation.SearchFilterBar
 import cobresun.movieclub.app.core.presentation.components.tabBarOverlaysContent
+import cobresun.movieclub.app.core.presentation.AppMotion
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -168,7 +168,7 @@ fun ReviewsScreen(
                                 PendingReviewCard(
                                     work,
                                     Modifier
-                                        .animateItem(fadeInSpec = tween(200), placementSpec = tween(300, easing = EmphasizedEasing))
+                                        .animateItem(fadeInSpec = tween(200), placementSpec = tween(300, easing = AppMotion.Emphasized))
                                         .scaleInOnEnter(true),
                                 )
                             }
@@ -203,7 +203,7 @@ fun ReviewsScreen(
                                     modifier = Modifier
                                         .animateItem(
                                             fadeInSpec = tween(200),
-                                            placementSpec = tween(300, easing = EmphasizedEasing),
+                                            placementSpec = tween(300, easing = AppMotion.Emphasized),
                                             fadeOutSpec = null,
                                         )
                                         .scaleInOnEnter(review.work.id in entering),

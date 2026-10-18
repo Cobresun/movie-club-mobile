@@ -36,6 +36,7 @@ import kotlinx.datetime.toLocalDateTime
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.time.Instant
+import cobresun.movieclub.app.core.presentation.MONTHS
 
 /*
  * Small hand-drawn Canvas charts. They're deliberately minimal: faint
@@ -45,7 +46,6 @@ import kotlin.time.Instant
 
 private val AXIS_GUTTER = 28.dp
 private val BOTTOM_GUTTER = 20.dp
-private val MONTHS = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
 internal fun monthLabel(month: Int, year: Int, withYear: Boolean = true): String =
     MONTHS[month - 1] + if (withYear) " '" + (year % 100).toString().padStart(2, '0') else ""

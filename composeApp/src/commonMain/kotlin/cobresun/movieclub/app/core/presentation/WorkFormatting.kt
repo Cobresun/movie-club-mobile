@@ -4,22 +4,12 @@ import cobresun.movieclub.app.core.domain.Work
 import cobresun.movieclub.app.core.domain.WorkDetails
 import cobresun.movieclub.app.core.domain.WorkType
 import kotlinx.datetime.LocalDate
+import cobresun.movieclub.app.core.domain.formatRuntime
 
-private val MONTHS = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+internal val MONTHS = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
 /** "Oct 16, 2026" */
 fun LocalDate.formatShort(): String = "${MONTHS[month.ordinal]} $day, $year"
-
-/** "2h 28m" / "45m" */
-fun formatRuntime(minutes: Int): String {
-    val h = minutes / 60
-    val m = minutes % 60
-    return when {
-        h == 0 -> "${m}m"
-        m == 0 -> "${h}h"
-        else -> "${h}h ${m}m"
-    }
-}
 
 /** Compact secondary line under a poster: "2010 · Christopher Nolan" or "1965 · Frank Herbert". */
 fun Work.posterSubtitle(): String? {

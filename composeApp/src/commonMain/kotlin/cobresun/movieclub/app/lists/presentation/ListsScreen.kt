@@ -6,7 +6,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import kotlinx.coroutines.delay
-import cobresun.movieclub.app.reviews.presentation.EmphasizedEasing
 import cobresun.movieclub.app.reviews.presentation.scaleInOnEnter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -72,6 +71,7 @@ import cobresun.movieclub.app.core.presentation.noun
 import cobresun.movieclub.app.core.presentation.toUserMessage
 import cobresun.movieclub.app.lists.domain.WorkList
 import cobresun.movieclub.app.filters.presentation.SearchFilterBar
+import cobresun.movieclub.app.core.presentation.AppMotion
 
 /**
  * The Lists tab, like web `WatchListView`: every list stacked in one scroll,
@@ -369,7 +369,7 @@ private fun LazyGridScope.listSection(
                             fadeInSpec = tween(200),
                             fadeOutSpec = tween(200),
                             // The lifted card follows the finger; the others glide aside.
-                            placementSpec = if (lifted) null else tween(200, easing = EmphasizedEasing),
+                            placementSpec = if (lifted) null else tween(200, easing = AppMotion.Emphasized),
                         )
                         .then(
                             if (lifted) {

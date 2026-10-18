@@ -106,7 +106,7 @@ private fun plural(n: Int, one: String, many: String = one + "s") = "$n ${if (n 
 @Composable private fun badColor() = MaterialTheme.colorScheme.error
 @Composable private fun scoreColor() = MaterialTheme.colorScheme.tertiary
 
-private fun Member.firstName() = name.trim().substringBefore(' ').ifBlank { name }
+internal fun Member.firstName() = name.trim().substringBefore(' ').ifBlank { name }
 
 private fun nouns(type: ClubType) = if (type == ClubType.BOOK) "book" to "Books" else "movie" to "Movies"
 
