@@ -148,7 +148,7 @@ fun SharedListScreen(state: SharedListState, onBack: () -> Unit, onRetry: () -> 
             when (val items = state.items) {
                 is AsyncResult.Loading -> GridSkeleton(Modifier.padding(horizontal = 16.dp))
                 is AsyncResult.Error -> ErrorState(
-                    message = (items.dataError as? DataError.Remote)?.toUserMessage("load this list") ?: "Failed to load list",
+                    message = (items.dataError as? DataError.Remote)?.toUserMessage("load this list") ?: "Couldn't load this list.",
                     onRetry = onRetry,
                 )
                 is AsyncResult.Success -> if (items.data.isEmpty()) {

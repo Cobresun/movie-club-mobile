@@ -469,7 +469,7 @@ class ListsViewModel(
                     _events.tryEmit(
                         ListsEvent.Message(
                             UiMessage(
-                                text = "Failed to add \"${work.title}\". Please try again.",
+                                text = error.toUserMessage("add \"${work.title}\""),
                                 actionLabel = if (error.isRetryable) "Retry" else null,
                                 onAction = if (error.isRetryable) retry else null,
                             )

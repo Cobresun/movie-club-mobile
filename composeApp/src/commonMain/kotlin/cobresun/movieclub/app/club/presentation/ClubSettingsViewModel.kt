@@ -169,7 +169,7 @@ class ClubSettingsViewModel(
                     _navigationEvents.emit(ClubSettingsNavigationEvent.ClubUpdated(slug))
                 }
                 .onError { e ->
-                    _state.update { it.copy(isSaving = false, editError = e.serverMessage?.takeIf { m -> m.isNotBlank() } ?: "Failed to update club name") }
+                    _state.update { it.copy(isSaving = false, editError = e.toUserMessage("update the club name")) }
                 }
         }
     }
@@ -187,7 +187,7 @@ class ClubSettingsViewModel(
                     _navigationEvents.emit(ClubSettingsNavigationEvent.ClubUpdated(saved))
                 }
                 .onError { e ->
-                    _state.update { it.copy(isSaving = false, editError = e.serverMessage?.takeIf { m -> m.isNotBlank() } ?: "Failed to update link") }
+                    _state.update { it.copy(isSaving = false, editError = e.toUserMessage("update the link")) }
                 }
         }
     }
@@ -204,8 +204,8 @@ class ClubSettingsViewModel(
         viewModelScope.launch {
             clubRepository.updateFeatures(slug, awards, discussion)
                 .onSuccess { f -> _state.update { it.copy(features = f, message = "Settings updated successfully") } }
-                .onError {
-                    _state.update { it.copy(features = previous, message = "Failed to update settings") }
+                .onError { e ->
+                    _state.update { it.copy(features = previous, message = e.toUserMessage("update settings")) }
                 }
         }
     }
@@ -255,7 +255,7 @@ class ClubSettingsViewModel(
                 }
                 .onError { e ->
                     _state.update {
-                        it.copy(isRemovingMember = false, memberPendingRemoval = null, message = "Failed to remove member")
+                        it.copy(isRemovingMember = false, memberPendingRemoval = null, message = e.toUserMessage("remove ${member.name}"))
                     }
                 }
         }

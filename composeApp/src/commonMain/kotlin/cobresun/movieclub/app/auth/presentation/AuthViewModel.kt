@@ -2,16 +2,17 @@ package cobresun.movieclub.app.auth.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import cobresun.movieclub.app.app.DeepLink
+import cobresun.movieclub.app.app.DeepLinks
 import cobresun.movieclub.app.auth.domain.AuthRepository
 import cobresun.movieclub.app.core.domain.AsyncResult
+import cobresun.movieclub.app.core.domain.Constants.BASE_URL
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
+import cobresun.movieclub.app.core.presentation.toUserMessage
 import kotlinx.coroutines.Job
-import cobresun.movieclub.app.app.DeepLink
-import cobresun.movieclub.app.app.DeepLinks
-import cobresun.movieclub.app.core.domain.Constants.BASE_URL
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -126,7 +127,7 @@ class AuthViewModel(
                         DataError.Remote.SERVER ->
                             "Server error. Please try again later."
                         // Better Auth's own message, e.g. "Invalid email or password" (web AuthModal).
-                        else -> apiError.serverMessage?.takeIf { m -> m.isNotBlank() } ?: "Failed to sign in"
+                        else -> apiError.toUserMessage("sign in")
                     }
                 }
             }
@@ -187,7 +188,7 @@ class AuthViewModel(
                         DataError.Remote.REQUEST_TIMEOUT ->
                             "Request timed out. Please try again."
                         // e.g. "User already exists. Use another email." (web AuthModal)
-                        else -> apiError.serverMessage?.takeIf { m -> m.isNotBlank() } ?: "Failed to sign up"
+                        else -> apiError.toUserMessage("sign up")
                     }
                 }
             }
@@ -223,8 +224,7 @@ class AuthViewModel(
                     when (error) {
                         DataError.Remote.NO_INTERNET ->
                             "No internet connection. Please check your connection and try again."
-                        else ->
-                            "Failed to send verification email. Please try again."
+                        else -> error.toUserMessage("send the verification email")
                     }
                 }
             }
