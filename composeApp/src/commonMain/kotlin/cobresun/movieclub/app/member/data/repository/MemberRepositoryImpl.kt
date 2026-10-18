@@ -1,11 +1,13 @@
 package cobresun.movieclub.app.member.data.repository
 
 import cobresun.movieclub.app.club.domain.ApiError
+import cobresun.movieclub.app.core.data.SessionCaches
 import cobresun.movieclub.app.core.domain.Club
 import cobresun.movieclub.app.core.domain.ClubType
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.map
+import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.member.data.dto.ChangePasswordRequestDto
 import cobresun.movieclub.app.member.data.dto.CreateClubRequestDto
 import cobresun.movieclub.app.member.data.mappers.toClub
@@ -16,16 +18,16 @@ import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.member.domain.MemberRepository
 
 class MemberRepositoryImpl(
-    private val memberDataSource: MemberDataSource
+    private val memberDataSource: MemberDataSource,
+    private val caches: SessionCaches,
 ) : MemberRepository, AccountRepository {
-    override suspend fun getMember(): Result<Member, DataError.Remote> {
-        return memberDataSource.getMember().map { it.toMember() }
-    }
+    override suspend fun getMember(refresh: Boolean): Result<Member, DataError.Remote> =
+        caches.me.get(Unit, refresh) { memberDataSource.getMember().map { it.toMember() } }
 
-    override suspend fun getClubs(): Result<List<Club>, DataError.Remote> {
-        return memberDataSource.getClubs()
-            .map { clubDtos -> clubDtos.map { it.toClub() } }
-    }
+    override suspend fun getClubs(refresh: Boolean): Result<List<Club>, DataError.Remote> =
+        caches.clubs.get(Unit, refresh) {
+            memberDataSource.getClubs().map { clubDtos -> clubDtos.map { it.toClub() } }
+        }
 
     override suspend fun createClub(
         name: String,
@@ -39,15 +41,23 @@ class MemberRepositoryImpl(
         )
         return memberDataSource.createClub(request)
             .map { response -> response.slug }
+            .onSuccess { caches.clubs.invalidate(Unit) }
+    }
+
+    /** Name and avatar show in the session user and in every club's member list. */
+    private suspend fun profileChanged() {
+        caches.me.invalidate(Unit)
+        caches.members.invalidateAll()
     }
 
     override suspend fun updateName(name: String): Result<Unit, ApiError> =
-        memberDataSource.updateName(name.trim())
+        memberDataSource.updateName(name.trim()).onSuccess { profileChanged() }
 
     override suspend fun uploadAvatar(bytes: ByteArray, mimeType: String): Result<Unit, ApiError> =
-        memberDataSource.uploadAvatar(bytes, mimeType)
+        memberDataSource.uploadAvatar(bytes, mimeType).onSuccess { profileChanged() }
 
-    override suspend fun removeAvatar(): Result<Unit, ApiError> = memberDataSource.removeAvatar()
+    override suspend fun removeAvatar(): Result<Unit, ApiError> =
+        memberDataSource.removeAvatar().onSuccess { profileChanged() }
 
     override suspend fun changePassword(
         currentPassword: String,

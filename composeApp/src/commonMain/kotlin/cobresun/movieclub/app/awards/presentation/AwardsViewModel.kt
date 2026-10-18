@@ -3,7 +3,6 @@ package cobresun.movieclub.app.awards.presentation
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import cobresun.movieclub.app.auth.domain.AuthRepository
 import cobresun.movieclub.app.awards.domain.AwardCategory
 import cobresun.movieclub.app.awards.domain.AwardsRepository
 import cobresun.movieclub.app.awards.domain.AwardsSeason
@@ -162,7 +161,6 @@ class AwardsViewModel(
     private val reviewsRepository: ReviewsRepository,
     private val clubRepository: ClubRepository,
     private val memberRepository: MemberRepository,
-    private val authRepository: AuthRepository,
 ) : ViewModel() {
     private val clubSlug = requireNotNull(savedStateHandle.get<String>("clubSlug"))
 
@@ -203,9 +201,9 @@ class AwardsViewModel(
         when (action) {
             AwardsAction.Refresh -> {
                 loadYears(quiet = true)
-                loadReviewed()
+                loadReviewed(refresh = true)
                 viewModelScope.launch {
-                    clubRepository.getMembers(clubSlug).onSuccess { m -> _state.update { it.copy(members = m) } }
+                    clubRepository.getMembers(clubSlug, refresh = true).onSuccess { m -> _state.update { it.copy(members = m) } }
                 }
             }
             is AwardsAction.SelectYear -> if (action.year != _state.value.selectedYear) {
@@ -233,7 +231,7 @@ class AwardsViewModel(
 
     private fun loadContext() {
         viewModelScope.launch {
-            authRepository.getUser().onSuccess { me -> _state.update { it.copy(currentUserId = me.id) } }
+            memberRepository.getMember().onSuccess { me -> _state.update { it.copy(currentUserId = me.id) } }
         }
         viewModelScope.launch {
             clubRepository.getMembers(clubSlug).onSuccess { m -> _state.update { it.copy(members = m) } }
@@ -241,9 +239,9 @@ class AwardsViewModel(
         loadReviewed()
     }
 
-    private fun loadReviewed() {
+    private fun loadReviewed(refresh: Boolean = false) {
         viewModelScope.launch {
-            reviewsRepository.getReviews(clubSlug).onSuccess { reviews ->
+            reviewsRepository.getReviews(clubSlug, refresh).onSuccess { reviews ->
                 val movies = reviews.mapNotNull { review ->
                     val work = review.work
                     val id = work.externalId?.toIntOrNull() ?: return@mapNotNull null

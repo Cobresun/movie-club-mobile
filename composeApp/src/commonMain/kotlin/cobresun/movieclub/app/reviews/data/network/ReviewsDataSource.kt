@@ -4,7 +4,6 @@ import cobresun.movieclub.app.core.data.safeCall
 import cobresun.movieclub.app.core.domain.Constants.BASE_URL
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
-import cobresun.movieclub.app.reviews.data.dto.ClubSettingsDto
 import cobresun.movieclub.app.reviews.data.dto.CommentBodyDto
 import cobresun.movieclub.app.reviews.data.dto.CommentDto
 import cobresun.movieclub.app.reviews.data.dto.DiscussionQuestionsDto
@@ -37,7 +36,6 @@ interface ReviewsDataSource {
     suspend fun deleteScore(clubSlug: String, scoreId: String): Result<Unit, DataError.Remote>
     suspend fun getSharedReview(clubSlug: String, workId: String): Result<SharedReviewDto, DataError.Remote>
     suspend fun getWorkScores(clubSlug: String, workId: String): Result<Map<String, ScoreDto>, DataError.Remote>
-    suspend fun getSettings(clubSlug: String): Result<ClubSettingsDto, DataError.Remote>
     suspend fun generateDiscussionQuestions(clubSlug: String, workId: String): Result<DiscussionQuestionsDto, DataError.Remote>
     suspend fun getComments(clubSlug: String, workId: String): Result<List<CommentDto>, DataError.Remote>
     suspend fun addComment(clubSlug: String, workId: String, body: CommentBodyDto): Result<Unit, DataError.Remote>
@@ -83,9 +81,6 @@ class KtorReviewsDataSource(
 
     override suspend fun getWorkScores(clubSlug: String, workId: String): Result<Map<String, ScoreDto>, DataError.Remote> =
         safeCall { httpClient.get("${reviews(clubSlug)}/$workId/scores") }
-
-    override suspend fun getSettings(clubSlug: String): Result<ClubSettingsDto, DataError.Remote> =
-        safeCall { httpClient.get("${club(clubSlug)}/settings") }
 
     override suspend fun generateDiscussionQuestions(
         clubSlug: String,

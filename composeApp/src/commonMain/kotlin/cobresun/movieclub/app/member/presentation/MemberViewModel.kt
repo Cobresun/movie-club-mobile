@@ -34,15 +34,15 @@ class MemberViewModel(
      */
     fun refresh() {
         val hasData = _state.value.clubs is AsyncResult.Success
-        loadClubs(showLoading = !hasData)
-        loadMe()
-        _state.value.lastClubSlug?.let(::loadMembers)
+        loadClubs(showLoading = !hasData, refresh = true)
+        loadMe(refresh = true)
+        _state.value.lastClubSlug?.let { loadMembers(it, refresh = true) }
     }
 
     /** Loads the members of [slug] for the club header (avatar stack and member count). */
-    fun loadMembers(slug: String) {
+    fun loadMembers(slug: String, refresh: Boolean = false) {
         viewModelScope.launch {
-            clubRepository.getMembers(slug).onSuccess { members ->
+            clubRepository.getMembers(slug, refresh).onSuccess { members ->
                 _state.update { it.copy(members = it.members + (slug to members)) }
             }
         }
@@ -54,17 +54,17 @@ class MemberViewModel(
         viewModelScope.launch { lastClubStore.set(slug) }
     }
 
-    private fun loadMe() {
+    private fun loadMe(refresh: Boolean = false) {
         viewModelScope.launch {
-            memberRepository.getMember().onSuccess { me -> _state.update { it.copy(me = me) } }
+            memberRepository.getMember(refresh).onSuccess { me -> _state.update { it.copy(me = me) } }
         }
     }
 
-    private fun loadClubs(showLoading: Boolean) {
+    private fun loadClubs(showLoading: Boolean, refresh: Boolean = false) {
         viewModelScope.launch {
             if (showLoading) _state.update { it.copy(clubs = AsyncResult.Loading) }
             val lastSlug = _state.value.lastClubSlug ?: lastClubStore.get()
-            when (val result = memberRepository.getClubs()) {
+            when (val result = memberRepository.getClubs(refresh)) {
                 is Result.Success -> {
                     _state.update { it.copy(clubs = AsyncResult.Success(result.data), lastClubSlug = lastSlug) }
                 }

@@ -6,19 +6,23 @@ import cobresun.movieclub.app.auth.data.network.BetterAuthDataSource
 import cobresun.movieclub.app.auth.domain.AppleCredential
 import cobresun.movieclub.app.auth.domain.AuthRepository
 import cobresun.movieclub.app.auth.domain.User
+import cobresun.movieclub.app.core.data.SessionCaches
 import cobresun.movieclub.app.core.data.SessionCookieStorage
 import cobresun.movieclub.app.club.domain.ApiError
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.map
+import cobresun.movieclub.app.core.domain.onSuccess
 
 class AuthRepositoryImpl(
     private val betterAuthDataSource: BetterAuthDataSource,
-    private val cookieStorage: SessionCookieStorage
+    private val cookieStorage: SessionCookieStorage,
+    private val caches: SessionCaches,
 ) : AuthRepository {
     override suspend fun login(email: String, password: String): Result<User, ApiError> {
         return betterAuthDataSource.signIn(email, password)
             .map { userDto -> userDto.toUser() }
+            .onSuccess { caches.clear() }
     }
 
     override suspend fun register(
@@ -34,15 +38,8 @@ class AuthRepositoryImpl(
     override suspend fun loginWithApple(credential: AppleCredential): Result<User, DataError.Remote> {
         return betterAuthDataSource.signInWithIdToken(credential.toSocialSignInRequest())
             .map { userDto -> userDto.toUser() }
+            .onSuccess { caches.clear() }
     }
-
-    override suspend fun getUser(): Result<User, DataError.Remote> =
-        when (val result = getSession()) {
-            is Result.Success -> result.data?.let { Result.Success(it) }
-                // No active session - not authenticated
-                ?: Result.Error(DataError.Remote.UNKNOWN)
-            is Result.Error -> result
-        }
 
     override suspend fun getSession(): Result<User?, DataError.Remote> =
         betterAuthDataSource.getSession().map { it?.toUser() }
@@ -53,8 +50,9 @@ class AuthRepositoryImpl(
         // Sign out on server (clears server-side session)
         val result = betterAuthDataSource.signOut()
 
-        // Clear local cookie storage
+        // Clear local cookie storage and everything read as this user
         cookieStorage.clearAll()
+        caches.clear()
 
         return result
     }

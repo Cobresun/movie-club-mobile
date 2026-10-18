@@ -21,7 +21,6 @@ interface AuthRepository {
      * on first use. The session cookie is captured like email sign-in.
      */
     suspend fun loginWithApple(credential: AppleCredential): Result<User, DataError.Remote>
-    suspend fun getUser(): Result<User, DataError.Remote>
 
     /**
      * Asks the server for the current session: a [User] when signed in, null when

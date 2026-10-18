@@ -3,7 +3,6 @@ package cobresun.movieclub.app.stats.presentation
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import cobresun.movieclub.app.auth.domain.AuthRepository
 import cobresun.movieclub.app.club.domain.ClubRepository
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.ClubType
@@ -50,7 +49,6 @@ class StatsViewModel(
     private val reviewsRepository: ReviewsRepository,
     private val clubRepository: ClubRepository,
     private val memberRepository: MemberRepository,
-    private val authRepository: AuthRepository,
     private val statsRepository: StatsRepository,
 ) : ViewModel() {
     private val clubSlug = requireNotNull(savedStateHandle.get<String>("clubSlug"))
@@ -65,13 +63,15 @@ class StatsViewModel(
             StatsAction.Refresh -> {
                 // The club context (name/type) may have failed alongside the stats; retry it too.
                 if (_state.value.clubName.isBlank()) loadContext()
-                load(initial = _state.value.data !is AsyncResult.Success)
+                load(initial = _state.value.data !is AsyncResult.Success, refresh = true)
             }
             StatsAction.Shown -> if (!started) {
                 started = true
                 loadContext()
                 load(initial = true)
             } else if (_state.value.data is AsyncResult.Success) {
+                // Reviews and members come from the shared copies: a request only when
+                // they're over a minute old or a score/review write since renewed them.
                 load(initial = false, showIndicator = false)
             }
         }
@@ -85,7 +85,7 @@ class StatsViewModel(
             club?.let { c -> _state.update { it.copy(clubType = c.type, clubName = c.name) } }
         }
         viewModelScope.launch {
-            authRepository.getUser().onSuccess { me -> _state.update { it.copy(currentUserId = me.id) } }
+            memberRepository.getMember().onSuccess { me -> _state.update { it.copy(currentUserId = me.id) } }
         }
         viewModelScope.launch {
             // Only movies have cast; book clubs get an empty map back cheaply.
@@ -93,12 +93,12 @@ class StatsViewModel(
         }
     }
 
-    private fun load(initial: Boolean, showIndicator: Boolean = true) {
+    private fun load(initial: Boolean, showIndicator: Boolean = true, refresh: Boolean = false) {
         viewModelScope.launch {
             if (initial) _state.update { it.copy(data = AsyncResult.Loading) }
             else if (showIndicator) _state.update { it.copy(isRefreshing = true) }
-            val reviews = async { reviewsRepository.getReviews(clubSlug) }
-            val members = async { clubRepository.getMembers(clubSlug) }
+            val reviews = async { reviewsRepository.getReviews(clubSlug, refresh) }
+            val members = async { clubRepository.getMembers(clubSlug, refresh) }
             val r = reviews.await()
             val m = members.await()
             _state.update { s ->

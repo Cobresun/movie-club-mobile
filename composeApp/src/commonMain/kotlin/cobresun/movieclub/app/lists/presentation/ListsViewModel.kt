@@ -281,7 +281,7 @@ class ListsViewModel(
             } else {
                 _state.update { it.copy(isRefreshing = true) }
             }
-            val upNextDeferred = async { listsRepository.getUpNext(clubSlug) }
+            val upNextDeferred = async { listsRepository.getUpNext(clubSlug, refresh = !initial) }
             when (val result = listsRepository.getLists(clubSlug)) {
                 is Result.Success -> {
                     val lists = result.data

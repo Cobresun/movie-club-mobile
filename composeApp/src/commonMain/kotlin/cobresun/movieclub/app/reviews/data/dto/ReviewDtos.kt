@@ -57,12 +57,6 @@ data class CommentDto(
 data class CommentBodyDto(val content: String, val spoiler: Boolean)
 
 @Serializable
-data class ClubSettingsDto(val features: ClubFeaturesDto = ClubFeaturesDto())
-
-@Serializable
-data class ClubFeaturesDto(val discussionQuestions: Boolean = false)
-
-@Serializable
 data class DiscussionQuestionsDto(val questions: List<String> = emptyList())
 
 @Serializable

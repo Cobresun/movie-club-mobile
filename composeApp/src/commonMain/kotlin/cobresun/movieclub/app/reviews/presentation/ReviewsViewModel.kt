@@ -3,7 +3,6 @@ package cobresun.movieclub.app.reviews.presentation
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import cobresun.movieclub.app.auth.domain.AuthRepository
 import cobresun.movieclub.app.club.domain.ClubRepository
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.ClubType
@@ -191,7 +190,6 @@ class ReviewsViewModel(
     private val reviewsRepository: ReviewsRepository,
     private val commentsRepository: ReviewCommentsRepository,
     private val memberRepository: MemberRepository,
-    private val authRepository: AuthRepository,
     private val clubRepository: ClubRepository,
     private val listsRepository: ListsRepository,
     private val workDetailsRepository: WorkDetailsRepository,
@@ -227,7 +225,7 @@ class ReviewsViewModel(
             ReviewsAction.Refresh -> {
                 if (_state.value.clubName.isBlank()) loadContext()
                 loadReviews(initial = false)
-                loadUpNext()
+                loadUpNext(refresh = true)
                 _state.value.detail?.let { loadDetail(it.workId) }
             }
 
@@ -274,15 +272,19 @@ class ReviewsViewModel(
     /** Called when a work arrives from the lists tab. */
     fun refreshQuietly() {
         loadReviews(initial = false)
-        loadUpNext()
+        loadUpNext(refresh = true)
     }
 
-    private fun loadUpNext() {
+    /**
+     * Up Next and the club's listed works. On each show this is the shared copy unless
+     * it's over a minute old or a list write since renewed it, so tab switches are free.
+     */
+    private fun loadUpNext(refresh: Boolean = false) {
         viewModelScope.launch {
-            listsRepository.getUpNext(clubSlug).onSuccess { id -> _state.update { it.copy(upNextWorkId = id) } }
+            listsRepository.getUpNext(clubSlug, refresh).onSuccess { id -> _state.update { it.copy(upNextWorkId = id) } }
         }
         viewModelScope.launch {
-            listsRepository.getAllItems(clubSlug).onSuccess { items -> _state.update { it.copy(listedWorks = items) } }
+            listsRepository.getAllItems(clubSlug, refresh).onSuccess { items -> _state.update { it.copy(listedWorks = items) } }
         }
     }
 
@@ -323,16 +325,15 @@ class ReviewsViewModel(
             }
         }
         viewModelScope.launch {
-            // `/api/member` no longer exists; the BetterAuth session identifies the signed-in user.
-            authRepository.getUser().onSuccess { me -> _state.update { it.copy(currentUserId = me.id) } }
+            memberRepository.getMember().onSuccess { me -> _state.update { it.copy(currentUserId = me.id) } }
         }
         viewModelScope.launch {
             clubRepository.getMembers(clubSlug).onSuccess { members -> _state.update { it.copy(members = members) } }
         }
         loadMyScoredWorks()
         viewModelScope.launch {
-            reviewsRepository.isDiscussionQuestionsEnabled(clubSlug)
-                .onSuccess { enabled -> _state.update { it.copy(discussionQuestionsEnabled = enabled) } }
+            clubRepository.getFeatures(clubSlug)
+                .onSuccess { features -> _state.update { it.copy(discussionQuestionsEnabled = features.discussionQuestions) } }
         }
     }
 
@@ -346,13 +347,14 @@ class ReviewsViewModel(
         viewModelScope.launch {
             if (initial) _state.update { it.copy(reviews = AsyncResult.Loading) }
             else _state.update { it.copy(isRefreshing = true) }
-            fetchReviews()
+            // The first load shares the copy the club's other tabs are fetching.
+            fetchReviews(refresh = !initial)
             _state.update { it.copy(isRefreshing = false) }
         }
     }
 
-    private suspend fun fetchReviews() {
-        when (val result = reviewsRepository.getReviews(clubSlug)) {
+    private suspend fun fetchReviews(refresh: Boolean = true) {
+        when (val result = reviewsRepository.getReviews(clubSlug, refresh)) {
             is Result.Success -> _state.update { s ->
                 val landed = result.data.mapNotNull { it.work.externalId }.toSet()
                 s.copy(

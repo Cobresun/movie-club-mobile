@@ -6,7 +6,11 @@ import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.member.domain.Member
 
 interface ClubRepository {
-    suspend fun getMembers(clubSlug: String): Result<List<Member>, DataError.Remote>
+    /**
+     * The club's members. Like [getFeatures], served from a recent answer shared by the
+     * club's screens unless [refresh] (pull-to-refresh); this repository's writes renew it.
+     */
+    suspend fun getMembers(clubSlug: String, refresh: Boolean = false): Result<List<Member>, DataError.Remote>
 
     /** The club's public name and type, also for clubs the user isn't in (shared pages). */
     suspend fun getClubPreview(clubSlug: String): Result<Club, DataError.Remote>
@@ -24,7 +28,7 @@ interface ClubRepository {
     /** Returns the new slug on success; server message on invalid/taken slugs. */
     suspend fun updateSlug(clubSlug: String, newSlug: String): Result<String, ApiError>
 
-    suspend fun getFeatures(clubSlug: String): Result<ClubFeatures, DataError.Remote>
+    suspend fun getFeatures(clubSlug: String, refresh: Boolean = false): Result<ClubFeatures, DataError.Remote>
 
     suspend fun updateFeatures(
         clubSlug: String,

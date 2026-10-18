@@ -36,8 +36,12 @@ interface ListsRepository {
     suspend fun deleteList(clubSlug: String, listId: String): Result<Unit, DataError.Remote>
     suspend fun reorderLists(clubSlug: String, listIds: List<String>): Result<Unit, DataError.Remote>
 
-    /** Items across every user list (reviews excluded), in list display order then item order. */
-    suspend fun getAllItems(clubSlug: String): Result<List<ListedWork>, DataError.Remote>
+    /**
+     * Items across every user list (reviews excluded), in list display order then item order.
+     * Like [getUpNext], tabs asking within a minute share one answer unless [refresh];
+     * writes here renew it.
+     */
+    suspend fun getAllItems(clubSlug: String, refresh: Boolean = false): Result<List<ListedWork>, DataError.Remote>
 
     /** Adds a work to a list. Fails if it's already on that list. */
     suspend fun addItem(clubSlug: String, listId: String, work: NewWork): Result<Unit, DataError.Remote>
@@ -59,6 +63,6 @@ interface ListsRepository {
     suspend fun getReviewsListId(clubSlug: String): Result<String, DataError.Remote>
 
     /** The club-wide "Up Next" work id, or null when unset. Pass null to [setUpNext] to clear it. */
-    suspend fun getUpNext(clubSlug: String): Result<String?, DataError.Remote>
+    suspend fun getUpNext(clubSlug: String, refresh: Boolean = false): Result<String?, DataError.Remote>
     suspend fun setUpNext(clubSlug: String, workId: String?): Result<Unit, DataError.Remote>
 }

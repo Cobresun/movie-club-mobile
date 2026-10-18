@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.reviews.data.repository
 
+import cobresun.movieclub.app.core.data.SessionCaches
 import cobresun.movieclub.app.core.data.mappers.toWorkDetails
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.NewWork
@@ -7,6 +8,7 @@ import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.WorkDetails
 import cobresun.movieclub.app.core.domain.flatMap
 import cobresun.movieclub.app.core.domain.map
+import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.reviews.data.dto.CommentBodyDto
 import cobresun.movieclub.app.reviews.data.dto.AddedDateBodyDto
 import kotlinx.datetime.LocalDate
@@ -34,16 +36,10 @@ import kotlinx.coroutines.withContext
 
 class ReviewsRepositoryImpl(
     private val dataSource: ReviewsDataSource,
+    private val caches: SessionCaches,
 ) : ReviewsRepository, ReviewCommentsRepository {
-    private val reviewsListIds = mutableMapOf<String, String>()
-
-    private suspend fun reviewsListId(clubSlug: String): Result<String, DataError.Remote> {
-        reviewsListIds[clubSlug]?.let { return Result.Success(it) }
-        return dataSource.getReviewsListId(clubSlug).map { dto ->
-            reviewsListIds[clubSlug] = dto.id
-            dto.id
-        }
-    }
+    private suspend fun reviewsListId(clubSlug: String): Result<String, DataError.Remote> =
+        caches.reviewsListId.get(clubSlug) { dataSource.getReviewsListId(clubSlug).map { it.id } }
 
     override suspend fun getMyScoredWorks(): Result<List<ScoredWork>, DataError.Remote> =
         dataSource.getMyScores().let { result ->
@@ -54,11 +50,13 @@ class ReviewsRepositoryImpl(
             }
         }
 
-    override suspend fun getReviews(clubSlug: String): Result<List<Review>, DataError.Remote> =
-        dataSource.getReviews(clubSlug).let { result ->
-            withContext(Dispatchers.Default) {
-                val zone = TimeZone.currentSystemDefault()
-                result.map { items -> items.map { it.toReview(zone) }.sortedByDescending { it.work.addedAt } }
+    override suspend fun getReviews(clubSlug: String, refresh: Boolean): Result<List<Review>, DataError.Remote> =
+        caches.reviews.get(clubSlug, refresh) {
+            dataSource.getReviews(clubSlug).let { result ->
+                withContext(Dispatchers.Default) {
+                    val zone = TimeZone.currentSystemDefault()
+                    result.map { items -> items.map { it.toReview(zone) }.sortedByDescending { it.work.addedAt } }
+                }
             }
         }
 
@@ -74,17 +72,18 @@ class ReviewsRepositoryImpl(
                     imageUrl = work.imageUrl,
                 ),
             )
-        }
+        }.onSuccess { caches.invalidateClubWorks(clubSlug) }
 
     override suspend fun removeReview(clubSlug: String, workId: String): Result<Unit, DataError.Remote> =
         reviewsListId(clubSlug).flatMap { listId -> dataSource.removeFromList(clubSlug, listId, workId) }
+            .onSuccess { caches.invalidateClubWorks(clubSlug) }
 
     override suspend fun updateReviewedDate(clubSlug: String, workId: String, date: LocalDate): Result<Unit, DataError.Remote> =
         reviewsListId(clubSlug).flatMap { listId ->
             // Start of the local day, like the web's date editor.
             val iso = date.atStartOfDayIn(TimeZone.currentSystemDefault()).toString()
             dataSource.updateAddedDate(clubSlug, listId, workId, AddedDateBodyDto(iso))
-        }
+        }.onSuccess { caches.reviews.invalidate(clubSlug) }
 
     override suspend fun saveScore(
         clubSlug: String,
@@ -93,11 +92,12 @@ class ReviewsRepositoryImpl(
         score: Double,
     ): Result<Unit, DataError.Remote> {
         val clamped = ScoreScale.clamp(score)
-        return if (existingScoreId == null) {
+        val result = if (existingScoreId == null) {
             dataSource.createScore(clubSlug, ScoreCreateDto(score = clamped, workId = workId))
         } else {
             dataSource.updateScore(clubSlug, existingScoreId, ScoreUpdateDto(score = clamped))
         }
+        return result.onSuccess { caches.reviews.invalidate(clubSlug) }
     }
 
     override suspend fun getSharedReview(clubSlug: String, workId: String): Result<SharedReview, DataError.Remote> =
@@ -107,10 +107,7 @@ class ReviewsRepositoryImpl(
         dataSource.getWorkScores(clubSlug, workId).map { it.toWorkScores() }
 
     override suspend fun deleteScore(clubSlug: String, scoreId: String): Result<Unit, DataError.Remote> =
-        dataSource.deleteScore(clubSlug, scoreId)
-
-    override suspend fun isDiscussionQuestionsEnabled(clubSlug: String): Result<Boolean, DataError.Remote> =
-        dataSource.getSettings(clubSlug).map { it.features.discussionQuestions }
+        dataSource.deleteScore(clubSlug, scoreId).onSuccess { caches.reviews.invalidate(clubSlug) }
 
     override suspend fun generateDiscussionQuestions(
         clubSlug: String,

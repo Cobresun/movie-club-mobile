@@ -20,6 +20,7 @@ import cobresun.movieclub.app.club.presentation.ClubSettingsViewModel
 import cobresun.movieclub.app.club.presentation.ClubInviteViewModel
 import cobresun.movieclub.app.club.presentation.ClubViewModel
 import cobresun.movieclub.app.core.data.HttpClientFactory
+import cobresun.movieclub.app.core.data.SessionCaches
 import cobresun.movieclub.app.core.data.SessionCookieStorage
 import cobresun.movieclub.app.core.data.SessionCookieStorageImpl
 import cobresun.movieclub.app.core.data.LastClubStoreImpl
@@ -67,6 +68,9 @@ import org.koin.dsl.module
 expect val platformModule: Module
 
 val sharedModule = module {
+    // Session-scoped copies of club reads, shared by the repositories below
+    single { SessionCaches() }
+
     // Cookie storage
     single { SessionCookieStorageImpl(get()) }.bind<SessionCookieStorage>()
 
@@ -75,12 +79,12 @@ val sharedModule = module {
 
     // Auth
     single { KtorBetterAuthDataSource(get()) }.bind<BetterAuthDataSource>()
-    single { AuthRepositoryImpl(get(), get()) }.bind<AuthRepository>()
+    single { AuthRepositoryImpl(get(), get(), get()) }.bind<AuthRepository>()
     viewModel<AuthViewModel> { AuthViewModel(get()) }
 
     // Member
     single { KtorMemberDataSource(get()) }.bind<MemberDataSource>()
-    single { MemberRepositoryImpl(get()) } binds arrayOf(MemberRepository::class, AccountRepository::class)
+    single { MemberRepositoryImpl(get(), get()) } binds arrayOf(MemberRepository::class, AccountRepository::class)
     single { LastClubStoreImpl(get()) }.bind<LastClubStore>()
     single { cobresun.movieclub.app.core.data.WorkDetailsRepositoryImpl(get()) }
         .bind<cobresun.movieclub.app.core.domain.WorkDetailsRepository>()
@@ -92,21 +96,21 @@ val sharedModule = module {
 
     // Club
     single { KtorClubDataSource(get()) }.bind<ClubDataSource>()
-    single { ClubRepositoryImpl(get()) }.bind<ClubRepository>()
+    single { ClubRepositoryImpl(get(), get()) }.bind<ClubRepository>()
     viewModelOf(::ClubViewModel)
     viewModelOf(::ClubSettingsViewModel)
     viewModelOf(::ClubInviteViewModel)
 
     // Reviews (one implementation serves scores and comments)
     single { KtorReviewsDataSource(get()) }.bind<ReviewsDataSource>()
-    single { ReviewsRepositoryImpl(get()) }.binds(arrayOf(ReviewsRepository::class, ReviewCommentsRepository::class))
+    single { ReviewsRepositoryImpl(get(), get()) }.binds(arrayOf(ReviewsRepository::class, ReviewCommentsRepository::class))
     viewModelOf(::ReviewsViewModel)
     viewModelOf(::SharedReviewViewModel)
     viewModelOf(::SharedListViewModel)
 
     // Lists
     single { KtorListsDataSource(get()) }.bind<ListsDataSource>()
-    single { ListsRepositoryImpl(get()) }.bind<ListsRepository>()
+    single { ListsRepositoryImpl(get(), get()) }.bind<ListsRepository>()
     single { CollapsedListsStoreImpl(get()) }.bind<CollapsedListsStore>()
     viewModelOf(::ListsViewModel)
 

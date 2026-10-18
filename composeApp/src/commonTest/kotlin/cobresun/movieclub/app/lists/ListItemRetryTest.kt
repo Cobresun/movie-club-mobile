@@ -64,7 +64,7 @@ class ListItemRetryTest {
         override suspend fun renameList(clubSlug: String, listId: String, title: String) = ok(Unit)
         override suspend fun deleteList(clubSlug: String, listId: String) = ok(Unit)
         override suspend fun reorderLists(clubSlug: String, listIds: List<String>) = ok(Unit)
-        override suspend fun getAllItems(clubSlug: String) = ok(emptyList<ListedWork>())
+        override suspend fun getAllItems(clubSlug: String, refresh: Boolean) = ok(emptyList<ListedWork>())
         override suspend fun addItem(clubSlug: String, listId: String, work: NewWork): Result<Unit, DataError.Remote> {
             items.getValue(listId) += Work("w-${work.externalId}", work.type, work.title, "", null, null, work.externalId, null, null)
             return ok(Unit)
@@ -85,27 +85,27 @@ class ListItemRetryTest {
             return if (fail) Result.Error(DataError.Remote.NO_INTERNET) else ok(Unit)
         }
         override suspend fun getReviewsListId(clubSlug: String) = ok("reviews")
-        override suspend fun getUpNext(clubSlug: String) = ok<String?>(null)
+        override suspend fun getUpNext(clubSlug: String, refresh: Boolean) = ok<String?>(null)
         override suspend fun setUpNext(clubSlug: String, workId: String?) = ok(Unit)
     }
 
     private object Members : MemberRepository {
-        override suspend fun getMember(): Result<Member, DataError.Remote> = Result.Error(DataError.Remote.UNKNOWN)
-        override suspend fun getClubs(): Result<List<Club>, DataError.Remote> = Result.Success(emptyList())
+        override suspend fun getMember(refresh: Boolean): Result<Member, DataError.Remote> = Result.Error(DataError.Remote.UNKNOWN)
+        override suspend fun getClubs(refresh: Boolean): Result<List<Club>, DataError.Remote> = Result.Success(emptyList())
         override suspend fun createClub(name: String, memberEmail: String, type: ClubType): Result<String, DataError.Remote> =
             Result.Error(DataError.Remote.UNKNOWN)
     }
 
     private object Clubs : ClubRepository {
         private val no = Result.Error(DataError.Remote.UNKNOWN)
-        override suspend fun getMembers(clubSlug: String): Result<List<Member>, DataError.Remote> = Result.Success(emptyList())
+        override suspend fun getMembers(clubSlug: String, refresh: Boolean): Result<List<Member>, DataError.Remote> = Result.Success(emptyList())
         override suspend fun getClubPreview(clubSlug: String): Result<Club, DataError.Remote> = no
         override suspend fun generateInviteToken(clubSlug: String): Result<String, DataError.Remote> = no
         override suspend fun leaveClub(clubSlug: String): Result<Unit, DataError.Remote> = no
         override suspend fun removeMember(clubSlug: String, memberId: String): Result<Unit, DataError.Remote> = no
         override suspend fun updateName(clubSlug: String, name: String): Result<Unit, ApiError> = throw NotImplementedError()
         override suspend fun updateSlug(clubSlug: String, newSlug: String): Result<String, ApiError> = throw NotImplementedError()
-        override suspend fun getFeatures(clubSlug: String): Result<ClubFeatures, DataError.Remote> = no
+        override suspend fun getFeatures(clubSlug: String, refresh: Boolean): Result<ClubFeatures, DataError.Remote> = no
         override suspend fun updateFeatures(clubSlug: String, awards: Boolean?, discussionQuestions: Boolean?): Result<ClubFeatures, DataError.Remote> = no
         override suspend fun getInviteInfo(token: String): Result<InviteInfo, ApiError> = throw NotImplementedError()
         override suspend fun joinClub(token: String): Result<Unit, ApiError> = throw NotImplementedError()

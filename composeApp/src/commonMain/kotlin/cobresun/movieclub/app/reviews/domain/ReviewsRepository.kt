@@ -11,8 +11,11 @@ import kotlinx.datetime.LocalDate
  * All operations address the club by slug.
  */
 interface ReviewsRepository {
-    /** Reviewed works, newest first, with every current member's score. */
-    suspend fun getReviews(clubSlug: String): Result<List<Review>, DataError.Remote>
+    /**
+     * Reviewed works, newest first, with every current member's score. Tabs asking within
+     * a minute share one answer; [refresh] asks the server again. Writes here renew it.
+     */
+    suspend fun getReviews(clubSlug: String, refresh: Boolean = false): Result<List<Review>, DataError.Remote>
 
     /** Adds a work (from search) to the club's reviews. */
     suspend fun addReview(clubSlug: String, work: NewWork): Result<Unit, DataError.Remote>
@@ -39,9 +42,6 @@ interface ReviewsRepository {
 
     /** Deletes one of the signed-in member's own scores. */
     suspend fun deleteScore(clubSlug: String, scoreId: String): Result<Unit, DataError.Remote>
-
-    /** Whether the club has AI discussion questions switched on. */
-    suspend fun isDiscussionQuestionsEnabled(clubSlug: String): Result<Boolean, DataError.Remote>
 
     /** Every work the signed-in member has scored, across all their clubs (for Score Assist). */
     suspend fun getMyScoredWorks(): Result<List<ScoredWork>, DataError.Remote>

@@ -6,8 +6,12 @@ import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 
 interface MemberRepository {
-    suspend fun getMember(): Result<Member, DataError.Remote>
-    suspend fun getClubs(): Result<List<Club>, DataError.Remote>
+    /**
+     * The signed-in member and their clubs. Screens opening together share one request
+     * and a recent answer; [refresh] asks the server again (pull-to-refresh).
+     */
+    suspend fun getMember(refresh: Boolean = false): Result<Member, DataError.Remote>
+    suspend fun getClubs(refresh: Boolean = false): Result<List<Club>, DataError.Remote>
 
     /**
      * Creates a new club; [memberEmail] (the current user) becomes its admin.
