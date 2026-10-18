@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.member.presentation.components
 
+import cobresun.movieclub.app.core.presentation.initialsOf
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -216,8 +217,7 @@ fun MemberAvatar(
     size: Dp = 40.dp,
     modifier: Modifier = Modifier,
 ) {
-    val initials = name.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
-        .take(2).joinToString("") { it.first().uppercase() }.ifEmpty { "?" }
+    val initials = initialsOf(name)
     val fallback: @Composable () -> Unit = {
         Box(
             modifier = Modifier

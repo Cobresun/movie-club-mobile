@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.stats.presentation
 
+import cobresun.movieclub.app.core.presentation.initialsOf
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
@@ -116,8 +117,7 @@ private fun Modifier.rise(order: Int): Modifier {
 /** Circular avatar with initials sized to the circle (web `v-avatar`). */
 @Composable
 private fun CardAvatar(name: String, imageUrl: String?, size: Dp, modifier: Modifier = Modifier) {
-    val initials = name.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
-        .take(2).joinToString("") { it.first().uppercase() }.ifEmpty { "?" }
+    val initials = initialsOf(name)
     Box(modifier.size(size).clip(CircleShape).background(Ink.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
         Text(initials, style = TextStyle(color = Ink, fontSize = (size.value * 0.38f).sp, fontWeight = FontWeight.SemiBold))
         if (!imageUrl.isNullOrBlank()) {
