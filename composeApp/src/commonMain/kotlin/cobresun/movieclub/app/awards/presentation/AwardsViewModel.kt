@@ -23,7 +23,7 @@ import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.core.presentation.UiMessage
-import cobresun.movieclub.app.core.presentation.toUserMessage
+import cobresun.movieclub.app.core.presentation.toUiMessage
 import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.member.domain.MemberRepository
 import cobresun.movieclub.app.reviews.domain.ReviewsRepository
@@ -557,15 +557,6 @@ class AwardsViewModel(
     }
 
     private fun emitError(error: DataError.Remote, action: String, retry: (() -> Unit)? = null) {
-        val canRetry = retry != null && error.isRetryable
-        _events.tryEmit(
-            AwardsEvent.Message(
-                UiMessage(
-                    text = error.toUserMessage(action),
-                    actionLabel = if (canRetry) "Retry" else null,
-                    onAction = if (canRetry) retry else null,
-                )
-            )
-        )
+        _events.tryEmit(AwardsEvent.Message(error.toUiMessage(action, retry)))
     }
 }

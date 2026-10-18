@@ -30,3 +30,13 @@ data class UiMessage(
     val actionLabel: String? = null,
     val onAction: (() -> Unit)? = null,
 )
+
+/** The snackbar message for a failed [action], offering [retry] when retrying might help. */
+fun DataError.Remote.toUiMessage(action: String, retry: (() -> Unit)? = null): UiMessage {
+    val canRetry = retry != null && isRetryable
+    return UiMessage(
+        text = toUserMessage(action),
+        actionLabel = if (canRetry) "Retry" else null,
+        onAction = if (canRetry) retry else null,
+    )
+}

@@ -17,7 +17,7 @@ import cobresun.movieclub.app.filters.domain.computeFilters
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.core.presentation.UiMessage
-import cobresun.movieclub.app.core.presentation.toUserMessage
+import cobresun.movieclub.app.core.presentation.toUiMessage
 import cobresun.movieclub.app.lists.domain.ListsRepository
 import cobresun.movieclub.app.lists.domain.WorkList
 import cobresun.movieclub.app.lists.domain.ListedWork
@@ -467,18 +467,7 @@ class ListsViewModel(
         viewModelScope.launch {
             listsRepository.addItem(clubSlug, listId, work)
                 .onSuccess { message("Added \"${work.title}\" to the list") }
-                .onError { error ->
-                    val retry = { addWork(work, listId) }
-                    _events.tryEmit(
-                        ListsEvent.Message(
-                            UiMessage(
-                                text = error.toUserMessage("add \"${work.title}\""),
-                                actionLabel = if (error.isRetryable) "Retry" else null,
-                                onAction = if (error.isRetryable) retry else null,
-                            )
-                        )
-                    )
-                }
+                .onError { error -> emitError(error, "add \"${work.title}\"") { addWork(work, listId) } }
             // Settled either way: reload so the pending card becomes the real one (or goes).
             when (val reloaded = listsRepository.getItems(clubSlug, listId)) {
                 is Result.Success -> setItems(listId, reloaded.data)
@@ -688,16 +677,7 @@ class ListsViewModel(
     }
 
     private fun emitError(error: DataError.Remote, action: String, retry: (() -> Unit)? = null) {
-        val canRetry = retry != null && error.isRetryable
-        _events.tryEmit(
-            ListsEvent.Message(
-                UiMessage(
-                    text = error.toUserMessage(action),
-                    actionLabel = if (canRetry) "Retry" else null,
-                    onAction = if (canRetry) retry else null,
-                )
-            )
-        )
+        _events.tryEmit(ListsEvent.Message(error.toUiMessage(action, retry)))
     }
 }
 
