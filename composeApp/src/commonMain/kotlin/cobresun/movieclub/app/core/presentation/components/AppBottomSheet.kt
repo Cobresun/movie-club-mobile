@@ -61,7 +61,7 @@ fun AppBottomSheet(
     val maxHeight = with(LocalDensity.current) { (LocalWindowInfo.current.containerSize.height * 0.9f).toDp() }
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
-        modifier = modifier.heightIn(max = maxHeight),
+        modifier = modifier,
         sheetState = sheetState,
         sheetGesturesEnabled = sheetGesturesEnabled,
         shape = RoundedCornerShape(topStart = chrome.cornerRadius, topEnd = chrome.cornerRadius),
@@ -71,13 +71,14 @@ fun AppBottomSheet(
             WindowInsets.navigationBars.union(WindowInsets.ime).only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)
         },
     ) {
+        // The cap goes on the content: the sheet's own modifier also sizes its full-screen scrim.
         if (transparentHandle) {
             Box {
-                Column(content = content)
+                Column(Modifier.heightIn(max = maxHeight), content = content)
                 SheetGrabber(chrome, Modifier.align(Alignment.TopCenter), overlay = true)
             }
         } else {
-            content()
+            Column(Modifier.heightIn(max = maxHeight - chrome.grabberAreaHeight), content = content)
         }
     }
 }
