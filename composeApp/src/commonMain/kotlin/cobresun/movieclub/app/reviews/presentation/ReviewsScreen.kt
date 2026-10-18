@@ -92,6 +92,7 @@ import cobresun.movieclub.app.reviews.domain.ReviewSortOption
 import cobresun.movieclub.app.reviews.domain.ReviewSortState
 import cobresun.movieclub.app.reviews.domain.ScoreScale
 import cobresun.movieclub.app.filters.presentation.SearchFilterBar
+import cobresun.movieclub.app.core.presentation.components.tabBarOverlaysContent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,7 +119,6 @@ fun ReviewsScreen(
                 )
 
                 is AsyncResult.Success -> {
-                    SearchAndSort(state = state, onAction = onAction)
                     PullToRefreshBox(
                         isRefreshing = state.isRefreshing,
                         onRefresh = { onAction(ReviewsAction.Refresh) },
@@ -150,6 +150,10 @@ fun ReviewsScreen(
                             verticalArrangement = Arrangement.spacedBy(20.dp),
                             modifier = Modifier.fillMaxSize(),
                         ) {
+                            // Scrolls away with the cards rather than pinning above them.
+                            item(key = "search-sort", span = { GridItemSpan(maxLineSpan) }) {
+                                SearchAndSort(state = state, onAction = onAction)
+                            }
                             state.upNext?.let { upNext ->
                                 item(key = "up-next", span = { GridItemSpan(maxLineSpan) }) {
                                     UpNextReviewCard(
@@ -215,7 +219,12 @@ fun ReviewsScreen(
             visible = state.reviews is AsyncResult.Success,
             enter = fadeIn(),
             exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomEnd).padding(bottom = LocalTabBarInset.current).padding(20.dp),
+            // iOS: the glass tab bar's frame already includes its own margin, so the
+            // button sits just above it like a native floating action, not 20pt up.
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(bottom = LocalTabBarInset.current)
+                .padding(if (tabBarOverlaysContent) PaddingValues(end = 16.dp, bottom = 8.dp) else PaddingValues(20.dp)),
         ) {
             ExtendedFloatingActionButton(
                 onClick = onAddClick,
@@ -255,6 +264,7 @@ private fun SearchAndSort(state: ReviewsState, onAction: (ReviewsAction) -> Unit
             results = state.filters,
             onQueryChange = { onAction(ReviewsAction.Filter(it)) },
             placeholder = "Search reviews",
+            horizontalPadding = 0.dp,
         )
         SortBar(
             sortState = state.sortState,
@@ -286,7 +296,7 @@ private fun SortBar(
     val pillBorder = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
 
     Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
