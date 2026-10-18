@@ -170,9 +170,9 @@ fun ListItemDetailSheet(
                     Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 24.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         CommentsSection(
-                            comments = detail.comments,
+                            comments = detail.thread.comments,
                             currentUserId = currentUserId,
-                            isPosting = detail.isPostingComment,
+                            isPosting = detail.thread.isPosting,
                             onAdd = { text, spoiler -> onAction(ListsAction.AddComment(text, spoiler)) },
                             onEdit = { id, text, spoiler -> onAction(ListsAction.EditComment(id, text, spoiler)) },
                             onDelete = { onAction(ListsAction.DeleteComment(it)) },

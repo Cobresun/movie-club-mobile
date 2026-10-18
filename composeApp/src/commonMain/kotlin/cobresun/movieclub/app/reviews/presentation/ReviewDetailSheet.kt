@@ -225,9 +225,9 @@ fun ReviewDetailSheet(
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                 CommentsSection(
-                    comments = detail.comments,
+                    comments = detail.thread.comments,
                     currentUserId = currentUserId,
-                    isPosting = detail.isPostingComment,
+                    isPosting = detail.thread.isPosting,
                     onAdd = { text, spoiler -> onAction(ReviewsAction.AddComment(text, spoiler)) },
                     onEdit = { id, text, spoiler -> onAction(ReviewsAction.EditComment(id, text, spoiler)) },
                     onDelete = { onAction(ReviewsAction.DeleteComment(it)) },
