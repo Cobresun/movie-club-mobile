@@ -16,14 +16,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -49,7 +46,6 @@ import org.koin.compose.koinInject
  * the sheet slides away before [onConfirm] runs; otherwise the caller closes it,
  * e.g. once a [loading] request finishes. While loading it can't be dismissed.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FormSheet(
     title: String,
@@ -67,10 +63,7 @@ fun FormSheet(
 ) {
     val haptics = koinInject<HapticFeedback>()
     val busy by rememberUpdatedState(loading)
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true,
-        confirmValueChange = { it != SheetValue.Hidden || !busy },
-    )
+    val sheetState = rememberAppSheetState(confirmHide = { !busy })
     val scope = rememberCoroutineScope()
     fun hide(then: () -> Unit) {
         scope.launch { sheetState.hide() }.invokeOnCompletion { then() }
