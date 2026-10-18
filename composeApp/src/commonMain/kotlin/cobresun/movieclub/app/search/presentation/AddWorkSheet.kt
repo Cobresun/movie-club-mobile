@@ -123,7 +123,6 @@ fun AddWorkSheet(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val sheetState = rememberAppSheetState()
-    val focusManager = LocalFocusManager.current
     val gridState = rememberLazyGridState()
     // The field owns its text: echoing it back through the view model's flow lands a
     // frame late, and iOS then resets the cursor to the start mid-word.
@@ -146,50 +145,13 @@ fun AddWorkSheet(
                 modifier = Modifier.padding(horizontal = 20.dp),
             )
             Spacer(Modifier.height(12.dp))
-            TextField(
-                value = queryText,
-                onValueChange = onQueryChange,
-                placeholder = { Text(if (fromLists != null) "Filter your lists or search" else "Type to filter or search") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                trailingIcon = {
-                    if (queryText.isNotEmpty()) {
-                        IconButton(onClick = { onQueryChange("") }) {
-                            Icon(Icons.Default.Close, contentDescription = "Clear search")
-                        }
-                    }
-                },
-                singleLine = true,
-                shape = MaterialTheme.shapes.medium,
-                colors = TextFieldDefaults.colors(
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                ),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            SearchField(
+                text = queryText,
+                onTextChange = onQueryChange,
+                placeholder = if (fromLists != null) "Filter your lists or search" else "Type to filter or search",
             )
-
             if (state.tabs.isNotEmpty()) {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.padding(top = 12.dp),
-                ) {
-                    if (state.offersRecommendations) {
-                        item(key = "recommended") {
-                            TabPill(label = "Recommended", selected = state.showingRecommendations, onClick = viewModel::selectRecommended)
-                        }
-                    }
-                    items(state.tabs, key = { it.key }) { tab ->
-                        TabPill(
-                            label = tab.label,
-                            selected = !state.showingRecommendations && tab.key == state.selectedTab,
-                            onClick = { viewModel.selectTab(tab.key) },
-                        )
-                    }
-                }
+                BrowseTabs(state, onSelectRecommended = viewModel::selectRecommended, onSelectTab = viewModel::selectTab)
             }
             Spacer(Modifier.height(12.dp))
 
@@ -236,61 +198,23 @@ fun AddWorkSheet(
                 modifier = Modifier.weight(1f),
             ) {
                 if (lists != null) {
-                    when (lists.items) {
-                        is AsyncResult.Loading -> fullSpan("lists-loading") {
-                            Column {
-                                SectionLabel(FROM_LISTS, Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
-                                SearchSkeleton(rows = 2)
-                            }
-                        }
-                        is AsyncResult.Error -> Unit // Search still works; lists are a shortcut.
-                        is AsyncResult.Success -> if (matchingPicks.isNotEmpty() || (listFilter != null && query.isEmpty())) {
-                            fullSpan("lists-header") {
-                                Column(Modifier.animateItem()) {
-                                    SectionLabel(FROM_LISTS, Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
-                                    if (listTitles.size > 1) {
-                                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            item {
-                                                FilterChip(selected = listFilter == null, onClick = { listFilter = null }, label = { Text("All") })
-                                            }
-                                            items(listTitles) { title ->
-                                                FilterChip(
-                                                    selected = listFilter == title,
-                                                    onClick = { listFilter = if (listFilter == title) null else title },
-                                                    label = { Text(title) },
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            visiblePicks.forEach { pick ->
-                                fullSpan("pick-" + pick.key) { ListPickRow(pick, Modifier.animateItem()) { lists.onPick(pick) } }
-                            }
-                            if (visiblePicks.size < matchingPicks.size) {
-                                fullSpan("lists-more") {
-                                    TextButton(onClick = { showAllPicks = true }, modifier = Modifier.animateItem()) {
-                                        Text("Show all ${matchingPicks.size}")
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    fromListsSection(
+                        lists = lists,
+                        listTitles = listTitles,
+                        listFilter = listFilter,
+                        onListFilter = { listFilter = it },
+                        matchingPicks = matchingPicks,
+                        visiblePicks = visiblePicks,
+                        showHeaderWhenEmpty = listFilter != null && query.isEmpty(),
+                        onShowAll = { showAllPicks = true },
+                    )
                 }
 
                 // Recommended for the club, filtered by what's typed.
                 if (recommendations is AsyncResult.Loading) fullSpan("recommended-loading") { CardSkeleton() }
                 if (recommendedItems.isNotEmpty()) {
                     fullSpan("recommended-header") { SectionLabel("Recommended for your club", Modifier.padding(horizontal = 4.dp)) }
-                    itemsIndexed(recommendedItems, key = { _, it -> "recommended-" + it.externalId }) { index, item ->
-                        SearchCard(
-                            result = item,
-                            alreadyAdded = item.externalId in existingExternalIds,
-                            status = statusLabels[item.externalId],
-                            onClick = { onPick(item) },
-                            modifier = stagger.modifier("recommended-${item.externalId}", index, 0),
-                        )
-                    }
+                    resultCards(recommendedItems, "recommended", existingExternalIds, statusLabels, stagger, onPick)
                 }
 
                 // The selected browse tab, filtered by what's typed.
@@ -307,15 +231,10 @@ fun AddWorkSheet(
                             fullSpan("browse-header-${state.selectedTab}") {
                                 SectionLabel(state.selectedTabLabel.orEmpty(), Modifier.padding(horizontal = 4.dp))
                             }
-                            itemsIndexed(browseItems, key = { _, it -> "browse-${state.selectedTab}-${it.externalId}" }) { index, item ->
-                                SearchCard(
-                                    result = item,
-                                    alreadyAdded = item.externalId in existingExternalIds,
-                                    status = statusLabels[item.externalId],
-                                    onClick = { onPick(item) },
-                                    modifier = stagger.modifier("browse-${state.selectedTab}-${item.externalId}", index, browse.pageStart(index)),
-                                )
-                            }
+                            resultCards(
+                                browseItems, "browse-${state.selectedTab}", existingExternalIds, statusLabels, stagger, onPick,
+                                staggerFrom = browse::pageStart,
+                            )
                             if (query.isEmpty() && browse.isLoadingMore) fullSpan("browse-more") {
                                 Box(Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
                                     CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
@@ -337,15 +256,7 @@ fun AddWorkSheet(
                         }
                         is AsyncResult.Success -> if (results.data.isNotEmpty()) {
                             fullSpan("search-header") { SectionLabel("Search", Modifier.padding(horizontal = 4.dp)) }
-                            itemsIndexed(searchItems, key = { _, it -> "search-" + it.externalId }) { index, item ->
-                                SearchCard(
-                                    result = item,
-                                    alreadyAdded = item.externalId in existingExternalIds,
-                                    status = statusLabels[item.externalId],
-                                    onClick = { onPick(item) },
-                                    modifier = stagger.modifier("search-$query-${item.externalId}", index, 0),
-                                )
-                            }
+                            resultCards(searchItems, "search", existingExternalIds, statusLabels, stagger, onPick, staggerKey = "search-$query")
                         }
                         null -> Unit
                     }
@@ -382,6 +293,84 @@ private fun LazyGridScope.fullSpan(key: String, content: @Composable LazyGridIte
     item(key = key, span = { GridItemSpan(maxLineSpan) }) { content() }
 }
 
+/**
+ * One grid cell per result, keyed under [keyPrefix]. Cards stagger in once per [staggerKey]
+ * (so a new search re-animates), counting from [staggerFrom] (a browse page's first index).
+ */
+private fun LazyGridScope.resultCards(
+    results: List<WorkSearchResult>,
+    keyPrefix: String,
+    existingExternalIds: Set<String>,
+    statusLabels: Map<String, String>,
+    stagger: Stagger,
+    onPick: (WorkSearchResult) -> Unit,
+    staggerKey: String = keyPrefix,
+    staggerFrom: (index: Int) -> Int = { 0 },
+) {
+    itemsIndexed(results, key = { _, it -> "$keyPrefix-${it.externalId}" }) { index, item ->
+        SearchCard(
+            result = item,
+            alreadyAdded = item.externalId in existingExternalIds,
+            status = statusLabels[item.externalId],
+            onClick = { onPick(item) },
+            modifier = stagger.modifier("$staggerKey-${item.externalId}", index, staggerFrom(index)),
+        )
+    }
+}
+
+/** "From your lists": a list filter, the matching picks (collapsed to a few) and Show all. */
+private fun LazyGridScope.fromListsSection(
+    lists: ListPickSection,
+    listTitles: List<String>,
+    listFilter: String?,
+    onListFilter: (String?) -> Unit,
+    matchingPicks: List<ListPick>,
+    visiblePicks: List<ListPick>,
+    showHeaderWhenEmpty: Boolean,
+    onShowAll: () -> Unit,
+) {
+    when (lists.items) {
+        is AsyncResult.Loading -> fullSpan("lists-loading") {
+            Column {
+                SectionLabel(FROM_LISTS, Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
+                SearchSkeleton(rows = 2)
+            }
+        }
+        is AsyncResult.Error -> Unit // Search still works; lists are a shortcut.
+        is AsyncResult.Success -> if (matchingPicks.isNotEmpty() || showHeaderWhenEmpty) {
+            fullSpan("lists-header") {
+                Column(Modifier.animateItem()) {
+                    SectionLabel(FROM_LISTS, Modifier.padding(horizontal = 4.dp, vertical = 4.dp))
+                    if (listTitles.size > 1) {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            item {
+                                FilterChip(selected = listFilter == null, onClick = { onListFilter(null) }, label = { Text("All") })
+                            }
+                            items(listTitles) { title ->
+                                FilterChip(
+                                    selected = listFilter == title,
+                                    onClick = { onListFilter(if (listFilter == title) null else title) },
+                                    label = { Text(title) },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            visiblePicks.forEach { pick ->
+                fullSpan("pick-" + pick.key) { ListPickRow(pick, Modifier.animateItem()) { lists.onPick(pick) } }
+            }
+            if (visiblePicks.size < matchingPicks.size) {
+                fullSpan("lists-more") {
+                    TextButton(onClick = onShowAll, modifier = Modifier.animateItem()) {
+                        Text("Show all ${matchingPicks.size}")
+                    }
+                }
+            }
+        }
+    }
+}
+
 /** Index of the first result on [index]'s page, so a new page staggers from its own start. */
 private fun BrowseState.pageStart(index: Int): Int = (index / PAGE_SIZE) * PAGE_SIZE
 
@@ -410,6 +399,59 @@ private fun Modifier.riseIn(delayMillis: Int): Modifier = composed {
     graphicsLayer {
         alpha = progress.value
         translationY = (1f - progress.value) * 8.dp.toPx()
+    }
+}
+
+/** The sheet's search box; Search on the keyboard just puts it away (results update as you type). */
+@Composable
+private fun SearchField(text: String, onTextChange: (String) -> Unit, placeholder: String) {
+    val focusManager = LocalFocusManager.current
+    TextField(
+        value = text,
+        onValueChange = onTextChange,
+        placeholder = { Text(placeholder) },
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+        trailingIcon = {
+            if (text.isNotEmpty()) {
+                IconButton(onClick = { onTextChange("") }) {
+                    Icon(Icons.Default.Close, contentDescription = "Clear search")
+                }
+            }
+        },
+        singleLine = true,
+        shape = MaterialTheme.shapes.medium,
+        colors = TextFieldDefaults.colors(
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+        ),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+    )
+}
+
+/** Browse tabs (Popular, Top rated, …), led by Recommended when the club offers it. */
+@Composable
+private fun BrowseTabs(state: WorkSearchState, onSelectRecommended: () -> Unit, onSelectTab: (String) -> Unit) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier.padding(top = 12.dp),
+    ) {
+        if (state.offersRecommendations) {
+            item(key = "recommended") {
+                TabPill(label = "Recommended", selected = state.showingRecommendations, onClick = onSelectRecommended)
+            }
+        }
+        items(state.tabs, key = { it.key }) { tab ->
+            TabPill(
+                label = tab.label,
+                selected = !state.showingRecommendations && tab.key == state.selectedTab,
+                onClick = { onSelectTab(tab.key) },
+            )
+        }
     }
 }
 
