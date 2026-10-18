@@ -3,6 +3,7 @@ package cobresun.movieclub.app.core.presentation.platform
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.useContents
@@ -72,7 +73,7 @@ actual fun ImageBitmap.encodeToJpeg(quality: Int): ByteArray =
     Image.makeFromBitmap(asSkiaBitmap()).encodeToData(EncodedImageFormat.JPEG, quality)?.bytes
         ?: error("The image could not be encoded as JPEG")
 
-@OptIn(ExperimentalForeignApi::class)
+@OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 private fun ByteArray.toNSData(): NSData = usePinned {
     NSData.create(bytes = it.addressOf(0), length = size.toULong())
 }

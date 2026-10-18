@@ -24,7 +24,7 @@ import androidx.compose.material.icons.outlined.MilitaryTech
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material.icons.outlined.ThumbDown
-import androidx.compose.material.icons.outlined.TrendingDown
+import androidx.compose.material.icons.automirrored.outlined.TrendingDown
 import androidx.compose.material.icons.outlined.Weekend
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.WorkspacePremium
@@ -74,7 +74,7 @@ fun ReviewFactCard(fact: ReviewFact, modifier: Modifier = Modifier) {
 
 private fun FactKind.icon(): ImageVector = when (this) {
     FactKind.ALL_TIME_HIGH -> Icons.Outlined.EmojiEvents
-    FactKind.ALL_TIME_LOW -> Icons.Outlined.TrendingDown
+    FactKind.ALL_TIME_LOW -> Icons.AutoMirrored.Outlined.TrendingDown
     FactKind.CLUB_MILESTONE -> Icons.Outlined.Cake
     FactKind.WATCH_TIME_MILESTONE -> Icons.Outlined.Weekend
     FactKind.PAGES_MILESTONE -> Icons.Outlined.LocalLibrary
