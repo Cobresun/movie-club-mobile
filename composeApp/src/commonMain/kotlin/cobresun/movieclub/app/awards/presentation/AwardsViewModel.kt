@@ -35,6 +35,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 data class AwardsState(
@@ -183,8 +184,10 @@ class AwardsViewModel(
      */
     fun refreshAvailability() {
         viewModelScope.launch {
-            val club = (memberRepository.getClubs() as? Result.Success)?.data?.firstOrNull { it.slug == clubSlug }
-            val features = clubRepository.getFeatures(clubSlug)
+            val clubs = async { memberRepository.getClubs() }
+            val featuresCall = async { clubRepository.getFeatures(clubSlug) }
+            val club = (clubs.await() as? Result.Success)?.data?.firstOrNull { it.slug == clubSlug }
+            val features = featuresCall.await()
             if (club == null || features !is Result.Success) return@launch
             val available = club.type == ClubType.MOVIE && features.data.awards
             _state.update { it.copy(clubName = club.name, isAvailable = available) }

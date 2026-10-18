@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.app
 
+import cobresun.movieclub.app.core.presentation.NavMotion
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -88,6 +89,10 @@ private fun AppNavigation(
     NavHost(
         navController = navController,
         startDestination = if (isAuthenticated) Route.ClubGraph else Route.LandingPage,
+        enterTransition = { NavMotion.enter },
+        exitTransition = { NavMotion.exit },
+        popEnterTransition = { NavMotion.enter },
+        popExitTransition = { NavMotion.exit },
     ) {
         composable<Route.LandingPage> {
             LandingPageScreen(

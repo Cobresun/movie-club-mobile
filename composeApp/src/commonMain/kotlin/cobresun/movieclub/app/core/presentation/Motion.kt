@@ -34,3 +34,13 @@ fun Modifier.fadeUpOnAppear(durationMillis: Int = AppMotion.SLOW, delayMillis: I
         translationY = (1f - progress.value) * 16.dp.toPx()
     }
 }
+
+/**
+ * Screen-to-screen transitions for NavHosts. navigation-compose defaults to a
+ * 700ms crossfade, which keeps two full screens composed and drawing long
+ * enough to read as lag.
+ */
+object NavMotion {
+    val enter: androidx.compose.animation.EnterTransition = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220))
+    val exit: androidx.compose.animation.ExitTransition = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(150))
+}

@@ -77,6 +77,8 @@ import cobresun.movieclub.app.stats.presentation.StatsAction
 import cobresun.movieclub.app.stats.presentation.StatsScreen
 import cobresun.movieclub.app.stats.presentation.StatsViewModel
 import org.koin.compose.viewmodel.koinViewModel
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 /**
  * A club's home: Reviews and Lists tabs with a shared snackbar and add-work
@@ -97,9 +99,12 @@ fun ClubScreenRoot(
     val tabResolved by clubViewModel.tabResolved.collectAsStateWithLifecycle()
     val reportTab = LocalClubTabShown.current
     LaunchedEffect(selectedTab, tabResolved) { if (tabResolved) reportTab(selectedTab) }
-    val listsState by listsViewModel.state.collectAsStateWithLifecycle()
-    val reviewsState by reviewsViewModel.state.collectAsStateWithLifecycle()
-    val awardsState by awardsViewModel.state.collectAsStateWithLifecycle()
+    // Each tab collects its own state below, so one tab's updates don't recompose
+    // the shell (and every other tab). The shell only needs Awards' availability.
+    val awardsAvailability by remember(awardsViewModel) {
+        awardsViewModel.state.map { it.clubName.isNotEmpty() to it.isAvailable }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(false to false)
+    val (awardsKnown, awardsAvailable) = awardsAvailability
     val hapticFeedback = koinInject<HapticFeedback>()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -166,8 +171,11 @@ fun ClubScreenRoot(
 
     // Awards: movie clubs with the setting on (web clubSections.ts). Re-check on
     // resume since the setting can change in Club settings.
+    // The view model checks once on creation; skip the first resume so club open
+    // doesn't fetch clubs and features twice.
+    var resumedOnce by remember { mutableStateOf(false) }
     LifecycleResumeEffect(awardsViewModel) {
-        awardsViewModel.refreshAvailability()
+        if (resumedOnce) awardsViewModel.refreshAvailability() else resumedOnce = true
         onPauseOrDispose {}
     }
     LaunchedEffect(awardsViewModel) {
@@ -179,9 +187,8 @@ fun ClubScreenRoot(
     }
     // The club name arrives with the availability check, so an empty name means "not known yet":
     // don't bounce a remembered (or linked) Awards tab before the check lands.
-    val awardsKnown = awardsState.clubName.isNotEmpty()
-    LaunchedEffect(awardsKnown, awardsState.isAvailable, selectedTab) {
-        if (awardsKnown && !awardsState.isAvailable && selectedTab == ClubTab.AWARDS) clubViewModel.selectTab(ClubTab.REVIEWS)
+    LaunchedEffect(awardsKnown, awardsAvailable, selectedTab) {
+        if (awardsKnown && !awardsAvailable && selectedTab == ClubTab.AWARDS) clubViewModel.selectTab(ClubTab.REVIEWS)
     }
 
     val stateHolder = rememberSaveableStateHolder()
@@ -191,7 +198,7 @@ fun ClubScreenRoot(
         bottomBar = {
             // Wait for the restored tab, so the bar doesn't flick (or pop) from Reviews to it.
             if (!tabResolved) return@Scaffold
-            val tabs = buildList {
+            val tabs = remember(awardsAvailable) { buildList {
                 add(PlatformTab(ClubTab.REVIEWS.name, "Reviews", Icons.Outlined.StarOutline, Icons.Filled.Star, "star", "star.fill"))
                 add(
                     PlatformTab(
@@ -201,10 +208,10 @@ fun ClubScreenRoot(
                     )
                 )
                 add(PlatformTab(ClubTab.STATS.name, "Stats", Icons.Outlined.Insights, Icons.Filled.Insights, "chart.bar", "chart.bar.fill"))
-                if (awardsState.isAvailable) {
+                if (awardsAvailable) {
                     add(PlatformTab(ClubTab.AWARDS.name, "Awards", Icons.Outlined.EmojiEvents, Icons.Filled.EmojiEvents, "trophy", "trophy.fill"))
                 }
-            }
+            } }
             PlatformTabBar(
                 tabs = tabs,
                 selectedKey = selectedTab.name,
@@ -232,13 +239,18 @@ fun ClubScreenRoot(
                 LocalTabBarInset provides if (tabBarOverlaysContent) padding.calculateBottomPadding() else 0.dp,
               ) {
                 when (tab) {
-                    ClubTab.REVIEWS -> ReviewsScreen(
+                    ClubTab.REVIEWS -> {
+                      val reviewsState by reviewsViewModel.state.collectAsStateWithLifecycle()
+                      ReviewsScreen(
                         state = reviewsState,
                         onAction = reviewsViewModel::onAction,
                         onAddClick = { addTarget = ClubTab.REVIEWS },
-                    )
+                      )
+                    }
 
-                    ClubTab.LISTS -> ListsScreen(
+                    ClubTab.LISTS -> {
+                      val listsState by listsViewModel.state.collectAsStateWithLifecycle()
+                      ListsScreen(
                         state = listsState,
                         onAction = listsViewModel::onAction,
                         onAddClick = { listId ->
@@ -252,7 +264,8 @@ fun ClubScreenRoot(
                             listsViewModel.onAction(ListsAction.MoveToReviews(work, fromListId))
                             clubViewModel.selectTab(ClubTab.REVIEWS)
                         },
-                    )
+                      )
+                    }
 
                     ClubTab.STATS -> {
                         val statsState by statsViewModel.state.collectAsStateWithLifecycle()
@@ -267,10 +280,13 @@ fun ClubScreenRoot(
                             },
                         )
                     }
-                    ClubTab.AWARDS -> AwardsScreen(
-                        state = awardsState,
-                        onAction = awardsViewModel::onAction,
-                    )
+                    ClubTab.AWARDS -> {
+                        val awardsState by awardsViewModel.state.collectAsStateWithLifecycle()
+                        AwardsScreen(
+                            state = awardsState,
+                            onAction = awardsViewModel::onAction,
+                        )
+                    }
                 }
               }
             }
@@ -285,12 +301,15 @@ fun ClubScreenRoot(
     }
 
     addTarget?.let { target ->
+        // Collected here, only while the sheet is open (see the tabs above).
+        val listsState by listsViewModel.state.collectAsStateWithLifecycle()
+        val reviewsState by reviewsViewModel.state.collectAsStateWithLifecycle()
         val toLists = target == ClubTab.LISTS
         val workType = (if (toLists) listsState.clubType else reviewsState.clubType).workType
-        val existing = if (toLists) {
-            addListId?.let { id -> listsState.itemsOrEmpty(id).mapNotNull { it.externalId }.toSet() }.orEmpty()
-        } else {
-            reviewsState.reviewedExternalIds
+        val destinationItems = if (toLists) addListId?.let { listsState.itemsOrEmpty(it) } else null
+        val existing = remember(toLists, destinationItems, reviewsState.reviews) {
+            if (toLists) destinationItems.orEmpty().mapNotNull { it.externalId }.toSet()
+            else reviewsState.reviewedExternalIds
         }
         LaunchedEffect(Unit) { listsViewModel.onAction(ListsAction.LoadAllItems) }
         val statusLabels = remember(toLists, listsState.allItems, addListId, reviewsState.reviews) {
@@ -316,9 +335,9 @@ fun ClubScreenRoot(
             },
             onDismiss = { addTarget = null },
             fromLists = if (toLists) null else {
-                val listed = listsState.pickableItems
-                ListPickSection(
-                    items = listsState.allItems.mapSuccess {
+                val listed = remember(listsState.allItems, listsState.upNextWorkId) { listsState.pickableItems }
+                val picks = remember(listed, listsState.allItems) {
+                    listsState.allItems.mapSuccess {
                         listed.map { item ->
                             ListPick(
                                 key = item.work.id,
@@ -329,7 +348,10 @@ fun ClubScreenRoot(
                                 isUpNext = item.work.id == listsState.upNextWorkId,
                             )
                         }
-                    },
+                    }
+                }
+                ListPickSection(
+                    items = picks,
                     onPick = { pick ->
                         listed.firstOrNull { it.work.id == pick.key }?.let { item ->
                             reviewsViewModel.onAction(ReviewsAction.ShowPending(item.work))

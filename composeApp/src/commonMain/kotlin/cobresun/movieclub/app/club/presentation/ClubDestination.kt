@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.club.presentation
 
+import cobresun.movieclub.app.core.presentation.NavMotion
 import cobresun.movieclub.app.stats.presentation.SharedStatisticsScreenRoot
 import cobresun.movieclub.app.lists.presentation.SharedListScreenRoot
 import androidx.compose.foundation.background
@@ -314,7 +315,14 @@ private fun ClubNavHost(
             null -> Unit
         }
     }
-    NavHost(navController = navController, startDestination = startDestination) {
+    NavHost(
+        navController = navController,
+        startDestination = startDestination,
+        enterTransition = { NavMotion.enter },
+        exitTransition = { NavMotion.exit },
+        popEnterTransition = { NavMotion.enter },
+        popExitTransition = { NavMotion.exit },
+    ) {
         composable<Route.Club> { entry ->
             val slug = entry.toRoute<Route.Club>().clubSlug
             ClubScreenRoot(onOpenWrapped = { year -> navController.navigate(Route.Wrapped(slug, year)) })

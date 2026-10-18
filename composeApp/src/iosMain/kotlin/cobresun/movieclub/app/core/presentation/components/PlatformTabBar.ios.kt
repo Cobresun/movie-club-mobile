@@ -43,7 +43,8 @@ actual fun PlatformTabBar(
 ) {
     val currentOnSelect = rememberUpdatedState(onSelect)
     val delegate = remember { TabBarDelegate { key -> currentOnSelect.value(key) } }
-    val tint = MaterialTheme.colorScheme.secondary.toUIColor()
+    val tintColor = MaterialTheme.colorScheme.secondary
+    val tint = remember(tintColor) { tintColor.toUIColor() }
     val barHeight = remember {
         UITabBar().sizeThatFits(CGSizeMake(390.0, 0.0)).useContents { height }.dp
     }
@@ -58,8 +59,10 @@ actual fun PlatformTabBar(
                         overrideUserInterfaceStyle = UIUserInterfaceStyle.UIUserInterfaceStyleDark
                     }
                 },
+                // Runs on every recomposition of the shell; touch UIKit only on real changes,
+                // since interop updates are synced with Compose's frame.
                 update = { bar ->
-                    bar.tintColor = tint
+                    if (bar.tintColor != tint) bar.tintColor = tint
                     val current = bar.items?.map { (it as UITabBarItem).title }
                     if (current != tabs.map { it.title }) {
                         bar.setItems(
@@ -75,7 +78,8 @@ actual fun PlatformTabBar(
                     }
                     delegate.keys = tabs.map { it.key }
                     val index = tabs.indexOfFirst { it.key == selectedKey }
-                    bar.selectedItem = bar.items?.getOrNull(index) as? UITabBarItem
+                    val selected = bar.items?.getOrNull(index) as? UITabBarItem
+                    if (bar.selectedItem != selected) bar.selectedItem = selected
                 },
                 modifier = Modifier.fillMaxWidth().height(barHeight + bottomInset),
                 properties = UIKitInteropProperties(
