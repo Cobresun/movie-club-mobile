@@ -182,7 +182,8 @@ private fun SectionHeader(
     active: Boolean,
     onClear: () -> Unit,
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    // Tall enough for the Clear button, so the sheet doesn't jump when it appears.
+    Row(Modifier.heightIn(min = 32.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(8.dp))
         Text(
