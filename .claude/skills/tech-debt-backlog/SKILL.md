@@ -35,14 +35,6 @@ Known issues to address over time. They don't block development but should be fi
 - **Fix:** When localizing, move strings to compose resources and return `UiText` from view models and `toUserMessage`
 - **Impact:** Low (matters only when adding localization)
 
-#### Done (for reference)
-- One `User` model (`auth/domain/User`); the unused core one was removed
-- Error text: `toUserMessage(action)` everywhere, no bare "Failed to…" strings
-- No cross-feature data dependencies: `ApiError`/`apiCall` and the shared settings kit and pickers live in core
-- Repositories return `Result` errors, not empty lists; `AsyncResult.Error` carries the `DataError`
-- `ApiError` carries the HTTP status; `isRetryable` / `isConnectivityFailure` live on `DataError.Remote`
-- Cached vs fresh: `Connectivity.showingSavedData` + the club shell banner with Retry
-
 #### When Addressing These Issues
 
 **Before fixing:**
