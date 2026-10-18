@@ -32,7 +32,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import coil3.compose.SubcomposeAsyncImage
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.drawBehind
+import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
 
 const val POSTER_ASPECT = 2f / 3f
 
@@ -58,13 +63,20 @@ fun Poster(
         if (imageUrl.isNullOrBlank()) {
             PosterPlaceholder(title)
         } else {
-            SubcomposeAsyncImage(
+            // AsyncImage, not SubcomposeAsyncImage: a subcomposition per grid cell is
+            // costly while scrolling. The shimmer/placeholder sit beside it by state.
+            var state by remember(imageUrl) { mutableStateOf<AsyncImagePainter.State>(AsyncImagePainter.State.Empty) }
+            when (state) {
+                is AsyncImagePainter.State.Error -> PosterPlaceholder(title)
+                is AsyncImagePainter.State.Success -> Unit
+                else -> ShimmerBox(Modifier.fillMaxSize())
+            }
+            AsyncImage(
                 model = imageUrl,
                 contentDescription = title,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
-                loading = { ShimmerBox(Modifier.fillMaxSize()) },
-                error = { PosterPlaceholder(title) },
+                onState = { state = it },
             )
         }
         if (highlighted) {
@@ -115,15 +127,17 @@ private fun PosterPlaceholder(title: String) {
 @Composable
 fun ShimmerBox(modifier: Modifier = Modifier, shape: Shape = MaterialTheme.shapes.small) {
     val transition = rememberInfiniteTransition()
-    val alpha by transition.animateFloat(
+    val alpha = transition.animateFloat(
         initialValue = 0.35f,
         targetValue = 0.75f,
         animationSpec = infiniteRepeatable(tween(850), RepeatMode.Reverse),
     )
+    val color = MaterialTheme.colorScheme.surfaceVariant
+    // The pulse is read in the draw phase only, so it redraws without recomposing.
     Box(
         modifier = modifier
             .clip(shape)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha))
+            .drawBehind { drawRect(color, alpha = alpha.value) }
     )
 }
 
@@ -148,13 +162,11 @@ fun Avatar(
             color = MaterialTheme.colorScheme.onPrimaryContainer,
         )
         if (!imageUrl.isNullOrBlank()) {
-            SubcomposeAsyncImage(
+            AsyncImage(
                 model = imageUrl,
                 contentDescription = name,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
-                error = {},
-                loading = {},
             )
         }
     }

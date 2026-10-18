@@ -47,7 +47,7 @@ import androidx.compose.ui.unit.dp
 import cobresun.movieclub.app.core.presentation.fadeUpOnAppear
 import androidx.compose.ui.unit.sp
 import cobresun.movieclub.app.core.domain.ClubType
-import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.AsyncImage
 
 /** Uppercase caption above a [SettingsGroup], like iOS grouped lists. */
 @Composable
@@ -234,16 +234,14 @@ fun MemberAvatar(
         }
     }
     Box(modifier = modifier.size(size).clip(CircleShape)) {
-        if (imageUrl.isNullOrBlank()) {
-            fallback()
-        } else {
-            SubcomposeAsyncImage(
+        // Initials underneath; the photo covers them once it loads.
+        fallback()
+        if (!imageUrl.isNullOrBlank()) {
+            AsyncImage(
                 model = imageUrl,
                 contentDescription = name,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
-                loading = { fallback() },
-                error = { fallback() },
             )
         }
     }

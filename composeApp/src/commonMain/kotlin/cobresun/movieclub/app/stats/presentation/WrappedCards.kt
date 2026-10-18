@@ -59,7 +59,7 @@ import cobresun.movieclub.app.stats.domain.WrappedCardContent
 import cobresun.movieclub.app.stats.domain.WrappedTone
 import cobresun.movieclub.app.stats.domain.toFixed1
 import cobresun.movieclub.app.theme.WrappedColors
-import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -121,13 +121,11 @@ private fun CardAvatar(name: String, imageUrl: String?, size: Dp, modifier: Modi
     Box(modifier.size(size).clip(CircleShape).background(Ink.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
         Text(initials, style = TextStyle(color = Ink, fontSize = (size.value * 0.38f).sp, fontWeight = FontWeight.SemiBold))
         if (!imageUrl.isNullOrBlank()) {
-            SubcomposeAsyncImage(
+            AsyncImage(
                 model = imageUrl,
                 contentDescription = name,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
-                error = {},
-                loading = {},
             )
         }
     }
