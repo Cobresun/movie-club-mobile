@@ -73,7 +73,7 @@ class ProfileViewModel(
             when (val r = memberRepository.getMember()) {
                 is Result.Success -> _state.update { it.copy(member = AsyncResult.Success(r.data)) }
                 is Result.Error -> if (showLoading) _state.update {
-                    it.copy(member = AsyncResult.Error(IllegalStateException(r.error.toUserMessage("load your profile")), r.error))
+                    it.copy(member = AsyncResult.Error(r.error))
                 }
             }
         }

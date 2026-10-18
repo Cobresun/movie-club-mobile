@@ -108,21 +108,17 @@ class ClubSettingsViewModel(
                     _state.update {
                         it.copy(
                             club = if (club != null) AsyncResult.Success(club)
-                            else AsyncResult.Error(IllegalStateException("You're no longer a member of this club."))
+                            else AsyncResult.Error() // no longer a member
                         )
                     }
                 }
                 is Result.Error -> _state.update {
-                    it.copy(club = AsyncResult.Error(
-                        IllegalStateException(r.error.toUserMessage("load club settings")), r.error
-                    ))
+                    it.copy(club = AsyncResult.Error(r.error))
                 }
             }
             when (val r = members.await()) {
                 is Result.Success -> _state.update { it.copy(members = AsyncResult.Success(r.data)) }
-                is Result.Error -> _state.update {
-                    it.copy(members = AsyncResult.Error(IllegalStateException(r.error.toUserMessage("load members")), r.error))
-                }
+                is Result.Error -> _state.update { it.copy(members = AsyncResult.Error(r.error)) }
             }
             me.await().onSuccess { m -> _state.update { it.copy(currentUserId = m.id) } }
             features.await().onSuccess { f -> _state.update { it.copy(features = f) } }

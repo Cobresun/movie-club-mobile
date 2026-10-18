@@ -77,6 +77,8 @@ import cobresun.movieclub.app.core.presentation.components.label
 import cobresun.movieclub.app.core.presentation.platform.rememberShareSheet
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+import cobresun.movieclub.app.core.domain.DataError
+import cobresun.movieclub.app.core.presentation.toUserMessage
 
 private const val SLUG_PREFIX = "movie-club.app/club/"
 
@@ -133,7 +135,8 @@ fun ClubSettingsScreen(
         when (club) {
             is AsyncResult.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
             is AsyncResult.Error -> ErrorMessage(
-                message = club.exception?.message ?: "Couldn't load club settings.",
+                message = (club.dataError as? DataError.Remote)?.toUserMessage("load club settings")
+                    ?: "You're no longer a member of this club.",
                 onRetry = { onAction(ClubSettingsAction.Retry) },
                 modifier = Modifier.align(Alignment.Center),
             )
