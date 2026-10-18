@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cobresun.movieclub.app.club.domain.ClubRepository
 import cobresun.movieclub.app.core.domain.AsyncResult
+import cobresun.movieclub.app.core.domain.mapSuccess
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.NewWork
 import cobresun.movieclub.app.core.domain.Result
@@ -179,7 +180,7 @@ class ListsViewModel(
                             when (items) {
                                 is Result.Success -> {
                                     byList = byList + (listId to AsyncResult.Success(items.data))
-                                    counts = counts.mapLists { all -> all.map { if (it.id == listId) it.copy(itemCount = items.data.size) else it } }
+                                    counts = counts.mapSuccess { all -> all.map { if (it.id == listId) it.copy(itemCount = items.data.size) else it } }
                                 }
                                 is Result.Error -> if (byList[listId] !is AsyncResult.Success) {
                                     byList = byList + (listId to AsyncResult.Error(dataError = items.error))
@@ -223,7 +224,7 @@ class ListsViewModel(
         _state.update { s ->
             s.copy(
                 itemsByList = s.itemsByList + (listId to AsyncResult.Success(items)),
-                lists = s.lists.mapLists { lists ->
+                lists = s.lists.mapSuccess { lists ->
                     lists.map { if (it.id == listId) it.copy(itemCount = items.size) else it }
                 },
             )
@@ -246,7 +247,7 @@ class ListsViewModel(
                 .onSuccess { created ->
                     _state.update { s ->
                         s.copy(
-                            lists = s.lists.mapLists { it + created },
+                            lists = s.lists.mapSuccess { it + created },
                             itemsByList = s.itemsByList + (created.id to AsyncResult.Success(emptyList())),
                         )
                     }
@@ -258,7 +259,7 @@ class ListsViewModel(
 
     private fun renameList(listId: String, title: String) {
         val before = _state.value.lists
-        _state.update { s -> s.copy(lists = s.lists.mapLists { l -> l.map { if (it.id == listId) it.copy(title = title) else it } }) }
+        _state.update { s -> s.copy(lists = s.lists.mapSuccess { l -> l.map { if (it.id == listId) it.copy(title = title) else it } }) }
         viewModelScope.launch {
             listsRepository.renameList(clubSlug, listId, title).onError { error ->
                 _state.update { it.copy(lists = before) }
@@ -449,7 +450,7 @@ class ListsViewModel(
                     if (before == null) {
                         // Not loaded locally; keep the list's item count honest.
                         _state.update { s ->
-                            s.copy(lists = s.lists.mapLists { lists ->
+                            s.copy(lists = s.lists.mapSuccess { lists ->
                                 lists.map { if (it.id == listId) it.copy(itemCount = (it.itemCount - 1).coerceAtLeast(0)) else it }
                             })
                         }
@@ -531,6 +532,3 @@ class ListsViewModel(
         _events.tryEmit(ListsEvent.Message(error.toUiMessage(action, retry)))
     }
 }
-
-private fun AsyncResult<List<WorkList>>.mapLists(transform: (List<WorkList>) -> List<WorkList>): AsyncResult<List<WorkList>> =
-    if (this is AsyncResult.Success) AsyncResult.Success(transform(data)) else this
