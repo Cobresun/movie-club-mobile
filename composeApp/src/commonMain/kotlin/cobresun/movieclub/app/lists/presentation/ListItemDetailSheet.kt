@@ -77,6 +77,8 @@ import cobresun.movieclub.app.reviews.presentation.SynopsisSection
 import cobresun.movieclub.app.reviews.presentation.overview
 import cobresun.movieclub.app.reviews.presentation.reviewMetaLine
 import kotlinx.coroutines.launch
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.runtime.CompositionLocalProvider
 
 /**
  * A list item's details (web `ListItemDetailsDrawer`): hero with who added it,
@@ -280,7 +282,7 @@ private fun Pill(onClick: () -> Unit, background: Color, content: Color, body: @
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides content) {
+        CompositionLocalProvider(LocalContentColor provides content) {
             body()
         }
     }

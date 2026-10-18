@@ -5,6 +5,7 @@ import platform.UIKit.UIImpactFeedbackStyle
 import platform.UIKit.UINotificationFeedbackGenerator
 import platform.UIKit.UINotificationFeedbackType
 import platform.UIKit.UISelectionFeedbackGenerator
+import androidx.compose.runtime.Composable
 
 actual open class HapticFeedback() {
     private val light = UIImpactFeedbackGenerator(UIImpactFeedbackStyle.UIImpactFeedbackStyleLight)
@@ -44,7 +45,7 @@ actual open class HapticFeedback() {
 }
 
 // No-op implementation for previews
-@androidx.compose.runtime.Composable
+@Composable
 actual fun createNoOpHapticFeedback(): HapticFeedback {
     return object : HapticFeedback() {
         override fun performLightPulse() = Unit

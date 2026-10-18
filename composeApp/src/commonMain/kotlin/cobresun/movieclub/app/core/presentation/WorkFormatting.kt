@@ -5,6 +5,7 @@ import cobresun.movieclub.app.core.domain.WorkDetails
 import cobresun.movieclub.app.core.domain.WorkType
 import kotlinx.datetime.LocalDate
 import cobresun.movieclub.app.core.domain.formatRuntime
+import kotlin.math.round
 
 internal val MONTHS = listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 
@@ -26,7 +27,7 @@ fun Work.metaFacts(includeTmdbRating: Boolean = true): List<String> = when (val 
     is WorkDetails.Movie -> listOfNotNull(
         year?.toString(),
         d.runtimeMinutes?.let(::formatRuntime),
-        d.voteAverage?.takeIf { it > 0 && includeTmdbRating }?.let { "TMDB " + (kotlin.math.round(it * 10) / 10).toString() },
+        d.voteAverage?.takeIf { it > 0 && includeTmdbRating }?.let { "TMDB " + (round(it * 10) / 10).toString() },
     )
 
     is WorkDetails.Book -> listOfNotNull(

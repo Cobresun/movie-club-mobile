@@ -92,6 +92,8 @@ import cobresun.movieclub.app.core.presentation.components.ShimmerBox
 import cobresun.movieclub.app.core.presentation.noun
 import cobresun.movieclub.app.search.domain.WorkSearchResult
 import org.koin.compose.viewmodel.koinViewModel
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
  * Full-height sheet to find a movie/book and add it somewhere (web
@@ -159,8 +161,8 @@ fun AddWorkSheet(
                 singleLine = true,
                 shape = MaterialTheme.shapes.medium,
                 colors = TextFieldDefaults.colors(
-                    focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                    unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
                     focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                 ),
@@ -413,7 +415,7 @@ private fun Modifier.riseIn(delayMillis: Int): Modifier = composed {
 
 /** Web's empty hint: a faded club-type icon over a line of grey text. */
 @Composable
-private fun SearchHint(icon: androidx.compose.ui.graphics.vector.ImageVector, message: String) {
+private fun SearchHint(icon: ImageVector, message: String) {
     Column(
         Modifier.fillMaxWidth().padding(top = 40.dp, start = 24.dp, end = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

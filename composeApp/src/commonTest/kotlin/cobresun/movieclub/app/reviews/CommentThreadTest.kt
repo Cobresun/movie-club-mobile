@@ -13,6 +13,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlinx.coroutines.CoroutineScope
 
 class CommentThreadTest {
     private fun comment(id: String) = ReviewComment(id, "w", "u", "Ann", null, "hi", null, spoiler = false)
@@ -32,7 +33,7 @@ class CommentThreadTest {
         override suspend fun deleteComment(clubSlug: String, workId: String, commentId: String) = deleteResult
     }
 
-    private class Harness(val repo: FakeRepo, scope: kotlinx.coroutines.CoroutineScope) {
+    private class Harness(val repo: FakeRepo, scope: CoroutineScope) {
         var state = CommentsState()
         val errors = mutableListOf<String>()
         val thread = CommentThread(

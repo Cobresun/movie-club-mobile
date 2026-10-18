@@ -73,6 +73,7 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
+import androidx.compose.ui.geometry.Size
 
 /** Web `clubTypeInvite(type).shareText`. */
 internal fun ClubType.inviteShareText() = when (this) {
@@ -260,7 +261,7 @@ private fun DrawInCheck(modifier: Modifier = Modifier) {
             sweepAngle = 360f * circle.value,
             useCenter = false,
             topLeft = Offset(2f * unit, 2f * unit),
-            size = androidx.compose.ui.geometry.Size(48f * unit, 48f * unit),
+            size = Size(48f * unit, 48f * unit),
             style = Stroke(width = 3f * unit),
         )
         val full = Path().apply {

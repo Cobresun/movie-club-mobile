@@ -91,6 +91,9 @@ import cobresun.movieclub.app.stats.domain.computeTopAuthors
 import cobresun.movieclub.app.stats.domain.computeTopDirectors
 import cobresun.movieclub.app.stats.domain.toFixed1
 import cobresun.movieclub.app.theme.chartSeriesColor
+import androidx.compose.foundation.layout.RowScope
+import kotlin.math.floor
+import kotlin.math.round
 
 /*
  * The statistics widgets, in the web's `statisticsWidgets.ts` order and with
@@ -131,7 +134,7 @@ fun SummaryTiles(summary: StatsSummary, clubType: ClubType) {
             if (isMovie) {
                 val minutes = rememberCountUp(summary.runtimeMinutes)
                 val totalHours = summary.runtimeMinutes / 60
-                val days = if (totalHours > 24) (totalHours / 24.0).let { kotlin.math.round(it).toInt() } else 0
+                val days = if (totalHours > 24) (totalHours / 24.0).let { round(it).toInt() } else 0
                 SummaryTile(
                     icon = Icons.Outlined.Schedule,
                     value = "${minutes / 60}h ${minutes % 60}m",
@@ -231,7 +234,7 @@ internal fun ScoresCard(model: StatsModel, members: List<Member>) {
                     )
                     ScoreMode.TREND -> {
                         val series = members.mapIndexedNotNull { i, mem -> trend[mem.id]?.let { chartSeriesColor(i) to it } }
-                        val lo = series.flatMap { it.second }.minOfOrNull { it.value }?.let { maxOf(0.0, kotlin.math.floor(it) - 1) } ?: 0.0
+                        val lo = series.flatMap { it.second }.minOfOrNull { it.value }?.let { maxOf(0.0, floor(it) - 1) } ?: 0.0
                         TimeLines(series, yMin = lo, yMax = 10.0)
                     }
                     ScoreMode.AGREEMENT -> TimeLines(listOf(MaterialTheme.colorScheme.secondary to spread))
@@ -827,7 +830,7 @@ internal fun TmdbDeviationCard(model: StatsModel) {
 
 /** A bordered row inside a widget (web `rounded-lg border bg-background/50`). */
 @Composable
-private fun StatRow(content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit) {
+private fun StatRow(content: @Composable RowScope.() -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()

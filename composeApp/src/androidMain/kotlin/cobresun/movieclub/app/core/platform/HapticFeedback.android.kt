@@ -5,6 +5,8 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 
 actual open class HapticFeedback(private val context: Context) {
     private val vibrator: Vibrator by lazy {
@@ -53,9 +55,9 @@ actual open class HapticFeedback(private val context: Context) {
 }
 
 // No-op implementation for previews
-@androidx.compose.runtime.Composable
+@Composable
 actual fun createNoOpHapticFeedback(): HapticFeedback {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     return object : HapticFeedback(context) {
         override fun performLightPulse() = Unit
         override fun performTick() = Unit

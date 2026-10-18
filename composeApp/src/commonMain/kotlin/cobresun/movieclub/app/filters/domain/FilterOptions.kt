@@ -5,6 +5,7 @@ import cobresun.movieclub.app.core.domain.Work
 import cobresun.movieclub.app.core.domain.WorkDetails
 import kotlin.math.roundToLong
 import cobresun.movieclub.app.core.domain.formatRuntime
+import kotlin.math.abs
 
 /**
  * What a filter reads from: the work, plus its club average when it's a review
@@ -226,7 +227,7 @@ internal fun decadePresets(years: List<Double>): List<RangePreset> =
 internal fun formatScore(score: Double): String {
     val hundredths = (score * 100).roundToLong()
     val whole = hundredths / 100
-    val frac = kotlin.math.abs(hundredths % 100)
+    val frac = abs(hundredths % 100)
     return when {
         frac == 0L -> whole.toString()
         frac % 10 == 0L -> "$whole.${frac / 10}"

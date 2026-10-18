@@ -42,6 +42,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CompletableDeferred
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ListItemRetryTest {
@@ -215,5 +216,5 @@ class ListItemRetryTest {
     }
 
     private fun <T> TestScope.async(block: suspend () -> T) =
-        kotlinx.coroutines.CompletableDeferred<T>().also { d -> launch { d.complete(block()) } }
+        CompletableDeferred<T>().also { d -> launch { d.complete(block()) } }
 }

@@ -2,6 +2,7 @@ package cobresun.movieclub.app.stats.domain
 
 import cobresun.movieclub.app.core.domain.Work
 import cobresun.movieclub.app.member.domain.Member
+import kotlin.math.abs
 
 /** Headline numbers for the top of the statistics page. */
 data class StatsSummary(
@@ -60,7 +61,7 @@ data class LeaderboardEntry(
 )
 
 data class Agreement(val work: Work, val scoreA: Double, val scoreB: Double) {
-    val difference: Double get() = kotlin.math.abs(scoreA - scoreB)
+    val difference: Double get() = abs(scoreA - scoreB)
 }
 
 data class PairSimilarity(

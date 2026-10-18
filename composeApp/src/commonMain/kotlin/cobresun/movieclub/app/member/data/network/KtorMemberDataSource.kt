@@ -23,6 +23,7 @@ import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
+import kotlinx.serialization.Serializable
 
 class KtorMemberDataSource(
     private val httpClient: HttpClient
@@ -106,5 +107,5 @@ class KtorMemberDataSource(
         }
 }
 
-@kotlinx.serialization.Serializable
+@Serializable
 private data class SessionUserDto(val user: MemberDto? = null)

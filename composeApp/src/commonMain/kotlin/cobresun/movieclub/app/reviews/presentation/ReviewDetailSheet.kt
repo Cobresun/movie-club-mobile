@@ -109,6 +109,10 @@ import cobresun.movieclub.app.reviews.domain.ScoreAssist
 import cobresun.movieclub.app.reviews.domain.ScoredWork
 import cobresun.movieclub.app.core.presentation.AppMotion
 import cobresun.movieclub.app.core.domain.WorkType
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import kotlin.time.Instant
 
 /** Everything about one reviewed work: scores, your score, cast, comments. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -419,9 +423,9 @@ private fun ScoreTileView(tile: ScoreTile, index: Int, hidden: Boolean, poppedAt
                     val w = ringWidth.dp.toPx()
                     drawRoundRect(
                         primary.copy(alpha = ringAlpha),
-                        topLeft = androidx.compose.ui.geometry.Offset(-w, -w),
-                        size = androidx.compose.ui.geometry.Size(size.width + 2 * w, size.height + 2 * w),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(16.dp.toPx() + w),
+                        topLeft = Offset(-w, -w),
+                        size = Size(size.width + 2 * w, size.height + 2 * w),
+                        cornerRadius = CornerRadius(16.dp.toPx() + w),
                     )
                 }
             }
@@ -660,7 +664,7 @@ private fun ReviewedDate(date: LocalDate, onChange: (LocalDate) -> Unit) {
                 TextButton(onClick = {
                     picking = false
                     pickerState.selectedDateMillis?.let { ms ->
-                        onChange(kotlin.time.Instant.fromEpochMilliseconds(ms).toLocalDateTime(TimeZone.UTC).date)
+                        onChange(Instant.fromEpochMilliseconds(ms).toLocalDateTime(TimeZone.UTC).date)
                     }
                 }) { Text("Save") }
             },

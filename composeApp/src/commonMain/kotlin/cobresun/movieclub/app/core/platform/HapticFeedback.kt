@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.core.platform
 
+import androidx.compose.runtime.Composable
 /**
  * Platform-agnostic haptic feedback.
  *
@@ -26,5 +27,5 @@ expect open class HapticFeedback {
 /**
  * Creates a no-op HapticFeedback instance for previews and testing.
  */
-@androidx.compose.runtime.Composable
+@Composable
 expect fun createNoOpHapticFeedback(): HapticFeedback

@@ -11,6 +11,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 
 /** Web motion tokens (`--ease-emphasized`, `--duration-*`). */
 object AppMotion {
@@ -42,8 +46,8 @@ fun Modifier.fadeUpOnAppear(durationMillis: Int = AppMotion.SLOW, delayMillis: I
  * slides keep two full screens composed and drawing long enough to read as lag.
  */
 object NavMotion {
-    val enter: androidx.compose.animation.EnterTransition = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220))
-    val exit: androidx.compose.animation.ExitTransition = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(150))
+    val enter: EnterTransition = fadeIn(tween(220))
+    val exit: ExitTransition = fadeOut(tween(150))
 
     /** A fresh transform each time: [ContentTransform] holds per-transition state. */
     fun transition(): ContentTransform = enter togetherWith exit

@@ -55,6 +55,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import cobresun.movieclub.app.core.presentation.components.SettingsTopBar
 import cobresun.movieclub.app.core.presentation.components.icon
 import org.koin.compose.viewmodel.koinViewModel
+import androidx.compose.foundation.layout.ColumnScope
 
 @Composable
 fun CreateClubScreenRoot(
@@ -242,7 +243,7 @@ fun CreateClubScreen(
 }
 
 @Composable
-private fun FormCard(content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+private fun FormCard(content: @Composable ColumnScope.() -> Unit) {
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLow,

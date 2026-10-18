@@ -69,6 +69,8 @@ import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sign
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.ui.graphics.vector.ImageVector
 
 /*
  * The Wrapped story player, after the web's WrappedStory.vue. Cards sit on the
@@ -87,7 +89,7 @@ private const val EDGE_RESISTANCE = 0.2f
 /** Side faces darken as they turn away, the way light falls on a real cube. */
 private const val MAX_SHADE = 0.6f
 
-private val SettleEasing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)
+private val SettleEasing = CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)
 
 /**
  * Overscroll that keeps turning the cube a little past the first or last card
@@ -278,7 +280,7 @@ internal fun WrappedStory(
 }
 
 @Composable
-private fun StoryChevron(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, enabled: Boolean, onClick: () -> Unit) {
+private fun StoryChevron(icon: ImageVector, label: String, enabled: Boolean, onClick: () -> Unit) {
     IconButton(
         onClick = onClick,
         enabled = enabled,

@@ -15,6 +15,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import cobresun.movieclub.app.reviews.data.dto.ReviewItemDto
+import kotlinx.serialization.json.Json
 
 class OfflineStoreTest {
     @Serializable
@@ -158,7 +159,7 @@ class OfflineStoreDtoTest {
               "externalData":{"kind":"movie","runtime":124,"genres":["Horror"]}}]
         """.trimIndent()
         val serializer = ListSerializer(ReviewItemDto.serializer())
-        val decoded = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }.decodeFromString(serializer, serverJson)
+        val decoded = Json { ignoreUnknownKeys = true }.decodeFromString(serializer, serverJson)
 
         val store = OfflineStore(directory)
         store.save("club/c/reviews", serializer, decoded)
