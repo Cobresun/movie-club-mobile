@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.awards.presentation
 
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import cobresun.movieclub.app.core.presentation.components.LocalTabBarInset
@@ -210,7 +211,8 @@ private fun SeasonContent(
         LazyColumn(
             contentPadding = PaddingValues(top = 4.dp, bottom = (if (season.step.manualNext != null) 168.dp else 32.dp) + LocalTabBarInset.current),
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxSize(),
+            // Keeps the add-category field reachable above the keyboard.
+            modifier = Modifier.fillMaxSize().imePadding(),
         ) {
             item(key = "stepper") {
                 StepIndicator(season.step, Modifier.padding(horizontal = 12.dp, vertical = 8.dp))

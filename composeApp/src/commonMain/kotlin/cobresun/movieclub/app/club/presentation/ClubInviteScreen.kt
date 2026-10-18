@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.club.presentation
 
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -114,6 +115,7 @@ fun ClubInviteScreenRoot(
             Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .imePadding()
                 .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)

@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.core.presentation.components
 
+import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,7 +14,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -25,8 +25,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -59,11 +57,7 @@ fun AppBottomSheet(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val chrome = platformSheetChrome
-    // 90% of the window (web 90dvh), but never pushed under the status bar by the keyboard.
-    val density = LocalDensity.current
-    val windowHeight = LocalWindowInfo.current.containerSize.height
-    val roomAboveKeyboard = windowHeight - WindowInsets.ime.getBottom(density) - WindowInsets.statusBars.getTop(density)
-    val maxHeight = with(density) { minOf(windowHeight * 0.9f, roomAboveKeyboard.toFloat()).toDp() }
+    val maxFraction = 0.9f
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         modifier = modifier,
@@ -76,16 +70,29 @@ fun AppBottomSheet(
             WindowInsets.navigationBars.union(WindowInsets.ime).only(WindowInsetsSides.Bottom + WindowInsetsSides.Horizontal)
         },
     ) {
-        // The cap goes on the content: the sheet's own modifier also sizes its full-screen scrim.
+        // The cap goes on the content (the sheet's own modifier also sizes its full-screen
+        // scrim) and is taken from the room the sheet is given, which already excludes the
+        // keyboard: on iOS the sheet's layer shrinks above it rather than reporting ime insets.
         if (transparentHandle) {
             Box {
-                Column(Modifier.heightIn(max = maxHeight), content = content)
+                Column(Modifier.capHeight(maxFraction, 0.dp), content = content)
                 SheetGrabber(chrome, Modifier.align(Alignment.TopCenter), overlay = true)
             }
         } else {
-            Column(Modifier.heightIn(max = maxHeight - chrome.grabberAreaHeight), content = content)
+            Column(Modifier.capHeight(maxFraction, chrome.grabberAreaHeight), content = content)
         }
     }
+}
+
+/** Caps the height at [fraction] of the incoming max height, less [reserved] (the grabber strip). */
+private fun Modifier.capHeight(fraction: Float, reserved: Dp) = layout { measurable, constraints ->
+    val cap = if (constraints.hasBoundedHeight) {
+        ((constraints.maxHeight * fraction) - reserved.roundToPx()).toInt().coerceAtLeast(constraints.minHeight)
+    } else {
+        constraints.maxHeight
+    }
+    val placeable = measurable.measure(constraints.copy(maxHeight = cap))
+    layout(placeable.width, placeable.height) { placeable.place(0, 0) }
 }
 
 @Composable

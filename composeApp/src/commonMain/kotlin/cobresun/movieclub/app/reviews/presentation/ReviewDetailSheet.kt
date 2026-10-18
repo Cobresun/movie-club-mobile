@@ -1,8 +1,6 @@
 package cobresun.movieclub.app.reviews.presentation
 
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import cobresun.movieclub.app.core.presentation.components.AppBottomSheet
@@ -130,6 +128,8 @@ fun ReviewDetailSheet(
 ) {
     val sheetState = rememberAppSheetState()
     var confirmRemove by remember { mutableStateOf(false) }
+    // A comment field has focus (the only text fields in the sheet).
+    var typing by remember { mutableStateOf(false) }
     var scoring by remember(review.work.id) { mutableStateOf(false) }
     var poppedAt by remember(review.work.id) { mutableIntStateOf(0) }
     val fullDetails = (detail.details as? AsyncResult.Success)?.data
@@ -148,6 +148,7 @@ fun ReviewDetailSheet(
             Modifier
                 .fillMaxWidth()
                 .weight(1f)
+                .onFocusChanged { typing = it.hasFocus }
                 .verticalScroll(rememberScrollState())
                 .then(if (currentUserId == null) Modifier.navigationBarsPadding() else Modifier)
                 .padding(bottom = 24.dp),
@@ -245,8 +246,8 @@ fun ReviewDetailSheet(
                 }
             }
         }
-        // While typing a comment the keyboard needs the room; the footer returns with it closed.
-        if (currentUserId != null && WindowInsets.ime.getBottom(LocalDensity.current) == 0) {
+        // While typing a comment the keyboard needs the room; the footer returns after.
+        if (currentUserId != null && !typing) {
             ScoreFooter(
                 noun = noun,
                 hasScore = myScore != null,

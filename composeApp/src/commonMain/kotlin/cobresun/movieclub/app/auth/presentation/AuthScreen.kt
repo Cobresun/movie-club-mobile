@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.auth.presentation
 
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.animation.AnimatedContent
@@ -92,6 +93,7 @@ private fun AuthLandingScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .imePadding()
             .verticalScroll(rememberScrollState())
             .statusBarsPadding()
             .navigationBarsPadding()
