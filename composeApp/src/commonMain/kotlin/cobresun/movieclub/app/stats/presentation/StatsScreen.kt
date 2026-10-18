@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.stats.presentation
 
+import androidx.compose.ui.unit.Dp
 import cobresun.movieclub.app.core.presentation.components.LocalTabBarInset
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -79,8 +80,18 @@ fun StatsScreen(
     }
 }
 
+/**
+ * The statistics widgets (web `InsightsView`). Shared pages pass null callbacks:
+ * no Wrapped entry and no "Go to Reviews" for a club the user isn't in.
+ */
 @Composable
-private fun StatsContent(state: StatsState, data: StatsData, onGoToReviews: () -> Unit, onOpenWrapped: (Int) -> Unit) {
+internal fun StatsContent(
+    state: StatsState,
+    data: StatsData,
+    onGoToReviews: (() -> Unit)?,
+    onOpenWrapped: ((Int) -> Unit)?,
+    bottomInset: Dp = LocalTabBarInset.current,
+) {
     val reviews = data.reviews
     val members = data.members
     val type = state.clubType
@@ -88,23 +99,31 @@ private fun StatsContent(state: StatsState, data: StatsData, onGoToReviews: () -
     if (reviews.isEmpty()) {
         // Scrollable so pull-to-refresh still works on the empty state.
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            EmptyState(
-                icon = Icons.Outlined.Insights,
-                title = "No statistics yet",
-                message = "Statistics appear once your club has scored a $noun. Score your first one to get started.",
-                actionLabel = "Go to Reviews",
-                onAction = onGoToReviews,
-            )
+            if (onGoToReviews != null) {
+                EmptyState(
+                    icon = Icons.Outlined.Insights,
+                    title = "No statistics yet",
+                    message = "Statistics appear once your club has scored a $noun. Score your first one to get started.",
+                    actionLabel = "Go to Reviews",
+                    onAction = onGoToReviews,
+                )
+            } else {
+                EmptyState(
+                    icon = Icons.Outlined.Insights,
+                    title = "No statistics yet",
+                    message = "Statistics will appear once this club has reviewed some ${noun}s.",
+                )
+            }
         }
         return
     }
     val summary = remember(reviews) { computeSummary(reviews) }
     val wrappedYears = remember(reviews) { wrappedYears(reviews) }
     LazyColumn(
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 32.dp + LocalTabBarInset.current),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 32.dp + bottomInset),
         modifier = Modifier.fillMaxSize(),
     ) {
-        if (wrappedYears.isNotEmpty()) item("wrapped") {
+        if (onOpenWrapped != null && wrappedYears.isNotEmpty()) item("wrapped") {
             WrappedEntryCard(wrappedYears, onOpenWrapped, Modifier.padding(bottom = 14.dp))
         }
         if (reviews.size < FEW_REVIEWS) item("hint") { Box(Modifier.padding(bottom = 14.dp)) { FewReviewsHint(reviews.size, type) } }
@@ -123,7 +142,7 @@ private fun StatsContent(state: StatsState, data: StatsData, onGoToReviews: () -
 }
 
 @Composable
-private fun StatsSkeleton() {
+internal fun StatsSkeleton() {
     Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         ShimmerBox(Modifier.fillMaxWidth().height(96.dp), MaterialTheme.shapes.large)
         ShimmerBox(Modifier.fillMaxWidth().height(220.dp), MaterialTheme.shapes.large)

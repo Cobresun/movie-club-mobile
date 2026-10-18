@@ -1,5 +1,7 @@
 package cobresun.movieclub.app.club.presentation
 
+import cobresun.movieclub.app.stats.presentation.SharedStatisticsScreenRoot
+import cobresun.movieclub.app.lists.presentation.SharedListScreenRoot
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -288,8 +290,12 @@ private fun ClubNavHost(
                 when {
                     link.slug !in memberSlugs -> {
                         DeepLinks.consume(link)
-                        // Not in that club: a shared review still opens as its public page.
-                        link.reviewWorkId?.let { navController.navigate(Route.SharedReview(link.slug, it)) }
+                        // Not in that club: shared reviews, lists and statistics open as their public pages.
+                        when {
+                            link.reviewWorkId != null -> navController.navigate(Route.SharedReview(link.slug, link.reviewWorkId))
+                            link.listId != null -> navController.navigate(Route.SharedList(link.slug, link.listId))
+                            link.section == ClubSection.STATISTICS -> navController.navigate(Route.SharedStatistics(link.slug))
+                        }
                     }
                     link.section == ClubSection.SETTINGS -> {
                         DeepLinks.consume(link)
@@ -367,6 +373,12 @@ private fun ClubNavHost(
             )
         }
 
+        composable<Route.SharedList> {
+            SharedListScreenRoot(onBack = { navController.popBackStack() })
+        }
+        composable<Route.SharedStatistics> {
+            SharedStatisticsScreenRoot(onBack = { navController.popBackStack() })
+        }
         composable<Route.SharedReview> {
             SharedReviewScreenRoot(onBack = { navController.popBackStack() })
         }

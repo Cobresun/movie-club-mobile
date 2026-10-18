@@ -79,11 +79,10 @@ class StatsViewModel(
 
     private fun loadContext() {
         viewModelScope.launch {
-            memberRepository.getClubs().onSuccess { clubs ->
-                clubs.firstOrNull { it.slug == clubSlug }?.let { club ->
-                    _state.update { it.copy(clubType = club.type, clubName = club.name) }
-                }
-            }
+            val mine = (memberRepository.getClubs() as? Result.Success)?.data?.firstOrNull { it.slug == clubSlug }
+            // Not a member (a shared statistics link): the club's public preview names it.
+            val club = mine ?: (clubRepository.getClubPreview(clubSlug) as? Result.Success)?.data
+            club?.let { c -> _state.update { it.copy(clubType = c.type, clubName = c.name) } }
         }
         viewModelScope.launch {
             authRepository.getUser().onSuccess { me -> _state.update { it.copy(currentUserId = me.id) } }

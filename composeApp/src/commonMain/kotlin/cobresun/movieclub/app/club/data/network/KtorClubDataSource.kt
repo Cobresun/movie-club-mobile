@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.club.data.network
 
+import cobresun.movieclub.app.club.data.dto.ClubPreviewDto
 import cobresun.movieclub.app.club.data.dto.ClubSettingsDto
 import cobresun.movieclub.app.club.data.dto.ClubSettingsPatchDto
 import cobresun.movieclub.app.club.data.dto.InviteInfoDto
@@ -28,6 +29,9 @@ class KtorClubDataSource(
 
     override suspend fun getMembers(clubSlug: String): Result<List<MemberDto>, DataError.Remote> =
         apiCall<List<MemberDto>> { httpClient.get("${club(clubSlug)}/members") }.toRemote()
+
+    override suspend fun getClubPreview(clubSlug: String): Result<ClubPreviewDto, DataError.Remote> =
+        apiCall<ClubPreviewDto> { httpClient.get(club(clubSlug)) }.toRemote()
 
     override suspend fun generateInviteToken(clubSlug: String): Result<InviteTokenDto, ApiError> =
         apiCall { httpClient.post("${club(clubSlug)}/invite") }

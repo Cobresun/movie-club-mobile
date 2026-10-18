@@ -19,6 +19,8 @@ sealed interface DeepLink {
         val section: ClubSection? = null,
         val reviewWorkId: String? = null,
         val wrappedYear: Int = 0,
+        /** The list of a `/share/club/<slug>/list/<listId>` link. */
+        val listId: String? = null,
     ) : DeepLink
 }
 
@@ -71,7 +73,7 @@ object DeepLinks {
             val slug = path[2]
             return when (path.getOrNull(3)) {
                 "review" -> path.getOrNull(4)?.let { DeepLink.Club(slug, ClubSection.REVIEWS, reviewWorkId = it) }
-                "list" -> DeepLink.Club(slug, ClubSection.LISTS)
+                "list" -> DeepLink.Club(slug, ClubSection.LISTS, listId = path.getOrNull(4))
                 "statistics" -> DeepLink.Club(slug, ClubSection.STATISTICS)
                 else -> null
             }

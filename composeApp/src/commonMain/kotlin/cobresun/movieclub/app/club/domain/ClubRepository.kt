@@ -1,11 +1,15 @@
 package cobresun.movieclub.app.club.domain
 
+import cobresun.movieclub.app.core.domain.Club
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.member.domain.Member
 
 interface ClubRepository {
     suspend fun getMembers(clubSlug: String): Result<List<Member>, DataError.Remote>
+
+    /** The club's public name and type, also for clubs the user isn't in (shared pages). */
+    suspend fun getClubPreview(clubSlug: String): Result<Club, DataError.Remote>
 
     /** Generates an invite token; see [ClubValidation.inviteLink]. */
     suspend fun generateInviteToken(clubSlug: String): Result<String, DataError.Remote>

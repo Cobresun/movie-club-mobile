@@ -36,7 +36,7 @@ class DeepLinksTest {
         assertEquals(expected, DeepLinks.parse("https://movie-club.app/share/club/mobile-test-club/review/w1"))
         assertEquals(expected, DeepLinks.parse("movieclub://share/club/mobile-test-club/review/w1"))
         assertEquals(DeepLink.Club("c", ClubSection.STATISTICS), DeepLinks.parse("https://movie-club.app/share/club/c/statistics"))
-        assertEquals(DeepLink.Club("c", ClubSection.LISTS), DeepLinks.parse("https://movie-club.app/share/club/c/list/l1"))
+        assertEquals(DeepLink.Club("c", ClubSection.LISTS, listId = "l1"), DeepLinks.parse("https://movie-club.app/share/club/c/list/l1"))
     }
 
     @Test

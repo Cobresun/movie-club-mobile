@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.di
 
+import cobresun.movieclub.app.lists.presentation.SharedListViewModel
 import cobresun.movieclub.app.auth.data.network.BetterAuthDataSource
 import cobresun.movieclub.app.auth.data.network.KtorBetterAuthDataSource
 import cobresun.movieclub.app.auth.data.repository.AuthRepositoryImpl
@@ -101,6 +102,7 @@ val sharedModule = module {
     single { ReviewsRepositoryImpl(get()) }.binds(arrayOf(ReviewsRepository::class, ReviewCommentsRepository::class))
     viewModelOf(::ReviewsViewModel)
     viewModelOf(::SharedReviewViewModel)
+    viewModelOf(::SharedListViewModel)
 
     // Lists
     single { KtorListsDataSource(get()) }.bind<ListsDataSource>()

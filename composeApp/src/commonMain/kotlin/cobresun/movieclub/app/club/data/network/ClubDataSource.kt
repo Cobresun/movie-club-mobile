@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.club.data.network
 
+import cobresun.movieclub.app.club.data.dto.ClubPreviewDto
 import cobresun.movieclub.app.club.data.dto.ClubSettingsDto
 import cobresun.movieclub.app.club.data.dto.ClubSettingsPatchDto
 import cobresun.movieclub.app.club.data.dto.InviteInfoDto
@@ -13,6 +14,7 @@ import cobresun.movieclub.app.core.domain.Result
 interface ClubDataSource {
     /** Kept on DataError.Remote: also used by ReviewsRepositoryImpl. */
     suspend fun getMembers(clubSlug: String): Result<List<MemberDto>, DataError.Remote>
+    suspend fun getClubPreview(clubSlug: String): Result<ClubPreviewDto, DataError.Remote>
     suspend fun generateInviteToken(clubSlug: String): Result<InviteTokenDto, ApiError>
     suspend fun leaveClub(clubSlug: String): Result<Unit, ApiError>
     suspend fun removeMember(clubSlug: String, memberId: String): Result<Unit, ApiError>

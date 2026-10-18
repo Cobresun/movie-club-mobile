@@ -99,6 +99,7 @@ class ListItemRetryTest {
     private object Clubs : ClubRepository {
         private val no = Result.Error(DataError.Remote.UNKNOWN)
         override suspend fun getMembers(clubSlug: String): Result<List<Member>, DataError.Remote> = Result.Success(emptyList())
+        override suspend fun getClubPreview(clubSlug: String): Result<Club, DataError.Remote> = no
         override suspend fun generateInviteToken(clubSlug: String): Result<String, DataError.Remote> = no
         override suspend fun leaveClub(clubSlug: String): Result<Unit, DataError.Remote> = no
         override suspend fun removeMember(clubSlug: String, memberId: String): Result<Unit, DataError.Remote> = no

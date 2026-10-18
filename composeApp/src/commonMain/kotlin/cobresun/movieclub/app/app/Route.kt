@@ -48,6 +48,17 @@ sealed interface Route {
         val workId: String,
     ) : Route
 
+    /** A shared list of a club the user isn't in (web `SharedListView`). */
+    @Serializable
+    data class SharedList(
+        val clubSlug: String,
+        val listId: String,
+    ) : Route
+
+    /** Shared statistics of a club the user isn't in (web `SharedStatisticsView`). */
+    @Serializable
+    data class SharedStatistics(val clubSlug: String) : Route
+
     /** A club's year-in-review story. [year] 0 opens the latest released year. */
     @Serializable
     data class Wrapped(

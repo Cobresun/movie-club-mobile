@@ -1,5 +1,7 @@
 package cobresun.movieclub.app.club.data.repository
 
+import cobresun.movieclub.app.core.domain.ClubType
+import cobresun.movieclub.app.core.domain.Club
 import cobresun.movieclub.app.club.data.dto.ClubFeaturesPatchDto
 import cobresun.movieclub.app.club.data.dto.ClubSettingsPatchDto
 import cobresun.movieclub.app.club.data.mappers.toDomain
@@ -19,6 +21,9 @@ class ClubRepositoryImpl(
 ) : ClubRepository {
     override suspend fun getMembers(clubSlug: String): Result<List<Member>, DataError.Remote> =
         clubDataSource.getMembers(clubSlug).map { dtos -> dtos.map { it.toDomain() } }
+
+    override suspend fun getClubPreview(clubSlug: String): Result<Club, DataError.Remote> =
+        clubDataSource.getClubPreview(clubSlug).map { Club(id = it.clubId, slug = it.slug, name = it.clubName, type = ClubType.from(it.type)) }
 
     override suspend fun generateInviteToken(clubSlug: String): Result<String, DataError.Remote> =
         clubDataSource.generateInviteToken(clubSlug).toRemote().map { it.token }
