@@ -1,6 +1,6 @@
 package cobresun.movieclub.app.lists
 
-import cobresun.movieclub.app.club.domain.ApiError
+import cobresun.movieclub.app.core.domain.ApiError
 import cobresun.movieclub.app.club.domain.ClubFeatures
 import cobresun.movieclub.app.club.domain.ClubRepository
 import cobresun.movieclub.app.club.domain.InviteInfo

@@ -18,7 +18,10 @@ kotlin {
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
         androidResources { enable = true }
-        withHostTest {}
+        withHostTest {
+            // android.util.Log (AppLog) returns defaults instead of throwing in JVM tests.
+            isReturnDefaultValues = true
+        }
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_17)
         }

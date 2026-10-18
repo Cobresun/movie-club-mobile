@@ -1,7 +1,6 @@
 package cobresun.movieclub.app.reviews.data
 
 import cobresun.movieclub.app.core.data.OfflineStore
-import cobresun.movieclub.app.core.data.isConnectivityFailure
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.reviews.domain.MemberScore
@@ -57,7 +56,7 @@ class ScoreOutbox(private val store: OfflineStore) {
         val sent = mutableListOf<PendingScore>()
         for (score in pending()) {
             val result = send(score)
-            if (result is Result.Error && result.error.isConnectivityFailure()) continue
+            if (result is Result.Error && result.error.isConnectivityFailure) continue
             if (result is Result.Success) sent += score
             mutex.withLock { write(read().filterNot { it == score }) }
         }

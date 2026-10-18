@@ -1,5 +1,6 @@
 package cobresun.movieclub.app.core.presentation
 
+import cobresun.movieclub.app.core.domain.ApiError
 import cobresun.movieclub.app.core.domain.DataError
 
 /**
@@ -12,25 +13,16 @@ fun DataError.Remote.toUserMessage(action: String): String {
         DataError.Remote.REQUEST_TIMEOUT -> "The server took too long to respond. Try again."
         DataError.Remote.TOO_MANY_REQUESTS -> "Too many requests right now. Wait a moment and try again."
         DataError.Remote.SERVER -> "The server had a problem. Try again in a bit."
-        DataError.Remote.SERIALIZATION -> "Got an unexpected response. Pull to refresh and try again."
+        DataError.Remote.SERIALIZATION -> "Got an unexpected response. Try again."
         DataError.Remote.EMAIL_NOT_CONFIRMED -> "You don't have permission to do that. Try signing in again."
-        DataError.Remote.UNKNOWN -> "Pull to refresh and try again."
+        DataError.Remote.UNKNOWN -> "Try again."
     }
     return "Couldn't $action. $hint"
 }
 
-/** Whether retrying the same request might succeed. */
-val DataError.Remote.isRetryable: Boolean
-    get() = when (this) {
-        DataError.Remote.NO_INTERNET,
-        DataError.Remote.REQUEST_TIMEOUT,
-        DataError.Remote.TOO_MANY_REQUESTS,
-        DataError.Remote.SERVER,
-        DataError.Remote.UNKNOWN -> true
-
-        DataError.Remote.SERIALIZATION,
-        DataError.Remote.EMAIL_NOT_CONFIRMED -> false
-    }
+/** Prefer the server's own message (e.g. "This url is already in use"), else [DataError.Remote.toUserMessage]. */
+fun ApiError.toUserMessage(action: String): String =
+    serverMessage?.takeIf { it.isNotBlank() } ?: remote.toUserMessage(action)
 
 /** A one-off message for the snackbar, optionally with a retry action. */
 data class UiMessage(

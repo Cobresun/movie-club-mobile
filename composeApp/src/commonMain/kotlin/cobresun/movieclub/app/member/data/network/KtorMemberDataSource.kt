@@ -2,8 +2,8 @@ package cobresun.movieclub.app.member.data.network
 
 import cobresun.movieclub.app.club.data.dto.MemberDto
 import cobresun.movieclub.app.club.data.dto.NameRequestDto
-import cobresun.movieclub.app.club.data.network.apiCall
-import cobresun.movieclub.app.club.domain.ApiError
+import cobresun.movieclub.app.core.data.apiCall
+import cobresun.movieclub.app.core.domain.ApiError
 import cobresun.movieclub.app.core.data.safeCall
 import cobresun.movieclub.app.core.domain.Constants.BASE_URL
 import cobresun.movieclub.app.core.domain.DataError

@@ -18,7 +18,7 @@ import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.presentation.components.FormSheet
 import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.member.domain.AccountRepository
-import cobresun.movieclub.app.member.presentation.components.toUserMessage
+import cobresun.movieclub.app.core.presentation.toUserMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update

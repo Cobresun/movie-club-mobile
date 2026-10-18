@@ -1,6 +1,6 @@
 package cobresun.movieclub.app.member.data.repository
 
-import cobresun.movieclub.app.club.domain.ApiError
+import cobresun.movieclub.app.core.domain.ApiError
 import cobresun.movieclub.app.core.data.OfflineKeys
 import cobresun.movieclub.app.core.data.SessionCaches
 import cobresun.movieclub.app.core.data.readThrough

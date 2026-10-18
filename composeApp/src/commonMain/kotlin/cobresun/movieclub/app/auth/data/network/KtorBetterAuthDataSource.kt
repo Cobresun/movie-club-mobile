@@ -10,8 +10,8 @@ import cobresun.movieclub.app.auth.data.dto.SignUpResponseDto
 import cobresun.movieclub.app.auth.data.dto.SocialSignInRequestDto
 import cobresun.movieclub.app.auth.data.dto.SocialSignInResponseDto
 import cobresun.movieclub.app.core.data.classifyNetworkException
-import cobresun.movieclub.app.club.data.network.apiCall
-import cobresun.movieclub.app.club.domain.ApiError
+import cobresun.movieclub.app.core.data.apiCall
+import cobresun.movieclub.app.core.domain.ApiError
 import cobresun.movieclub.app.core.data.safeCall
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive

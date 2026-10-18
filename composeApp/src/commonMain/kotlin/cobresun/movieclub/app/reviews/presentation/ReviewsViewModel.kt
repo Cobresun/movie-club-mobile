@@ -22,7 +22,6 @@ import cobresun.movieclub.app.filters.domain.computeFilters
 import cobresun.movieclub.app.reviews.domain.ScoredWork
 import kotlinx.datetime.LocalDate
 import cobresun.movieclub.app.core.presentation.UiMessage
-import cobresun.movieclub.app.core.presentation.isRetryable
 import cobresun.movieclub.app.core.presentation.toUserMessage
 import cobresun.movieclub.app.lists.domain.ListedWork
 import cobresun.movieclub.app.lists.domain.ListsRepository

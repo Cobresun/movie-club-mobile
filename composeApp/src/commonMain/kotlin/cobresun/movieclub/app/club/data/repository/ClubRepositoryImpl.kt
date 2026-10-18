@@ -6,8 +6,8 @@ import cobresun.movieclub.app.club.data.dto.ClubFeaturesPatchDto
 import cobresun.movieclub.app.club.data.dto.ClubSettingsPatchDto
 import cobresun.movieclub.app.club.data.mappers.toDomain
 import cobresun.movieclub.app.club.data.network.ClubDataSource
-import cobresun.movieclub.app.club.data.network.toRemote
-import cobresun.movieclub.app.club.domain.ApiError
+import cobresun.movieclub.app.core.data.toRemote
+import cobresun.movieclub.app.core.domain.ApiError
 import cobresun.movieclub.app.club.domain.ClubFeatures
 import cobresun.movieclub.app.club.domain.ClubRepository
 import cobresun.movieclub.app.club.domain.InviteInfo

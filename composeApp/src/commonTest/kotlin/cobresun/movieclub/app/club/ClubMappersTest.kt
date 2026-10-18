@@ -4,7 +4,7 @@ import cobresun.movieclub.app.club.data.dto.ClubFeaturesDto
 import cobresun.movieclub.app.club.data.dto.ClubSettingsDto
 import cobresun.movieclub.app.club.data.dto.MemberDto
 import cobresun.movieclub.app.club.data.mappers.toDomain
-import cobresun.movieclub.app.club.data.network.parseServerMessage
+import cobresun.movieclub.app.core.data.parseServerMessage
 import cobresun.movieclub.app.club.domain.ClubFeatures
 import cobresun.movieclub.app.club.domain.MemberRole
 import cobresun.movieclub.app.core.domain.ClubType

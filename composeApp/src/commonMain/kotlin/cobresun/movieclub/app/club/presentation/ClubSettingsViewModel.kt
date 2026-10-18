@@ -13,7 +13,7 @@ import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.core.platform.ClipboardManager
 import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.member.domain.MemberRepository
-import cobresun.movieclub.app.member.presentation.components.toUserMessage
+import cobresun.movieclub.app.core.presentation.toUserMessage
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow

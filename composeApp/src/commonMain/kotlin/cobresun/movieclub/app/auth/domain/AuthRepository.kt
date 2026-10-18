@@ -1,6 +1,6 @@
 package cobresun.movieclub.app.auth.domain
 
-import cobresun.movieclub.app.club.domain.ApiError
+import cobresun.movieclub.app.core.domain.ApiError
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.EmptyResult
 import cobresun.movieclub.app.core.domain.Result

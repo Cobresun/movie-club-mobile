@@ -8,7 +8,7 @@ import cobresun.movieclub.app.auth.domain.AuthRepository
 import cobresun.movieclub.app.auth.domain.User
 import cobresun.movieclub.app.core.data.SessionCaches
 import cobresun.movieclub.app.core.data.SessionCookieStorage
-import cobresun.movieclub.app.club.domain.ApiError
+import cobresun.movieclub.app.core.domain.ApiError
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.map

@@ -7,7 +7,7 @@ import cobresun.movieclub.app.club.data.dto.InviteInfoDto
 import cobresun.movieclub.app.club.data.dto.InviteTokenDto
 import cobresun.movieclub.app.club.data.dto.MemberDto
 import cobresun.movieclub.app.club.data.dto.SlugResponseDto
-import cobresun.movieclub.app.club.domain.ApiError
+import cobresun.movieclub.app.core.domain.ApiError
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 

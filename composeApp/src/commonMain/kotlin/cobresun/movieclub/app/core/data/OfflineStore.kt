@@ -100,20 +100,6 @@ private val storeJson = Json {
 }
 
 /**
- * Failures where the server's last answer beats an error screen: no connection, a timeout,
- * rate limiting or the server being down. Not "not found" or "forbidden" (those are answers).
- */
-fun DataError.Remote.isConnectivityFailure(): Boolean = when (this) {
-    DataError.Remote.NO_INTERNET,
-    DataError.Remote.REQUEST_TIMEOUT,
-    DataError.Remote.TOO_MANY_REQUESTS,
-    DataError.Remote.SERVER -> true
-    DataError.Remote.SERIALIZATION,
-    DataError.Remote.EMAIL_NOT_CONFIRMED,
-    DataError.Remote.UNKNOWN -> false
-}
-
-/**
  * Network first: a successful [fetch] is stored under [key] and returned; when it fails for
  * connectivity reasons, the stored answer is returned instead (if there is one).
  */
@@ -124,6 +110,6 @@ suspend fun <T> OfflineStore.readThrough(
 ): Result<T, DataError.Remote> = when (val result = fetch()) {
     is Result.Success -> result.also { save(key, serializer, it.data) }
     is Result.Error ->
-        if (result.error.isConnectivityFailure()) load(key, serializer)?.let { Result.Success(it) } ?: result
+        if (result.error.isConnectivityFailure) load(key, serializer)?.let { Result.Success(it) } ?: result
         else result
 }

@@ -8,7 +8,7 @@ import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.member.domain.MemberRepository
-import cobresun.movieclub.app.member.presentation.components.toUserMessage
+import cobresun.movieclub.app.core.presentation.toUserMessage
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow

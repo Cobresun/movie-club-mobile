@@ -40,6 +40,3 @@ data class InviteInfoDto(
     val slug: String,
     val expiresAt: String? = null,
 )
-
-@Serializable
-data class ServerErrorDto(val error: String? = null, val message: String? = null)

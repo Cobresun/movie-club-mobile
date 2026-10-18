@@ -8,7 +8,7 @@ import cobresun.movieclub.app.club.domain.InviteInfo
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
-import cobresun.movieclub.app.member.presentation.components.toUserMessage
+import cobresun.movieclub.app.core.presentation.toUserMessage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow

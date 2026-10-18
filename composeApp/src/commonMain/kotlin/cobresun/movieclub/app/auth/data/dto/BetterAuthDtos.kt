@@ -58,9 +58,3 @@ data class SendVerificationEmailRequestDto(
     val email: String,
     val callbackURL: String
 )
-
-@Serializable
-data class BetterAuthErrorDto(
-    val message: String? = null,
-    val code: String? = null
-)

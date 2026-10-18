@@ -2,7 +2,7 @@ package cobresun.movieclub.app.auth.data.network
 
 import cobresun.movieclub.app.auth.data.dto.BetterAuthUserDto
 import cobresun.movieclub.app.auth.data.dto.SocialSignInRequestDto
-import cobresun.movieclub.app.club.domain.ApiError
+import cobresun.movieclub.app.core.domain.ApiError
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 

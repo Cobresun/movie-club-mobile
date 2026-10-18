@@ -1,6 +1,7 @@
 package cobresun.movieclub.app.core.data
 
 import cobresun.movieclub.app.core.domain.Constants.BASE_URL
+import cobresun.movieclub.app.core.platform.AppLog
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.HttpRequestRetry
@@ -72,7 +73,7 @@ object HttpClientFactory {
             install(Logging) {
                 logger = object : Logger {
                     override fun log(message: String) {
-                        println(message)
+                        AppLog.d(NETWORK_TAG) { message }
                     }
                 }
                 // Method, URL and status only: bodies carry passwords and headers carry the

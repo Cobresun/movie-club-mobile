@@ -10,7 +10,9 @@ import cobresun.movieclub.app.club.data.dto.NameRequestDto
 import cobresun.movieclub.app.club.data.dto.SlugRequestDto
 import cobresun.movieclub.app.club.data.dto.SlugResponseDto
 import cobresun.movieclub.app.club.data.dto.TokenRequestDto
-import cobresun.movieclub.app.club.domain.ApiError
+import cobresun.movieclub.app.core.data.apiCall
+import cobresun.movieclub.app.core.data.toRemote
+import cobresun.movieclub.app.core.domain.ApiError
 import cobresun.movieclub.app.core.domain.Constants.BASE_URL
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result

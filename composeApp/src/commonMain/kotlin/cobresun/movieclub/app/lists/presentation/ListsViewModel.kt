@@ -17,7 +17,6 @@ import cobresun.movieclub.app.filters.domain.computeFilters
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.core.presentation.UiMessage
-import cobresun.movieclub.app.core.presentation.isRetryable
 import cobresun.movieclub.app.core.presentation.toUserMessage
 import cobresun.movieclub.app.lists.domain.ListsRepository
 import cobresun.movieclub.app.lists.domain.WorkList
