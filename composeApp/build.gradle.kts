@@ -74,6 +74,10 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
         }
 
+        getByName("androidHostTest").dependencies {
+            implementation(libs.koin.test)
+        }
+
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
         }

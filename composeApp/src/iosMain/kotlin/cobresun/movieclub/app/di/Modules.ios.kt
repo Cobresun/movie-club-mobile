@@ -12,14 +12,15 @@ import cobresun.movieclub.app.core.data.offlineStoreDirectory
 import cobresun.movieclub.app.core.data.NetworkMonitor
 import io.ktor.client.engine.darwin.Darwin
 import org.koin.core.module.Module
+import org.koin.core.module.dsl.bind
+import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 
-actual val platformModule: Module
-    get() = module {
-        single<HttpClientEngine> { Darwin.create() }
-        single<DataStore<Preferences>> { createSessionCookieDataStore(null) }
-        single<NetworkMonitor> { IosNetworkMonitor() }
-        single { OfflineStore(offlineStoreDirectory()) }
-        single { ClipboardManager() }
-        single { HapticFeedback() }
-    }
+actual val platformModule: Module = module {
+    single<HttpClientEngine> { Darwin.create() }
+    single<DataStore<Preferences>> { createSessionCookieDataStore(null) }
+    singleOf(::IosNetworkMonitor) { bind<NetworkMonitor>() }
+    single { OfflineStore(offlineStoreDirectory()) }
+    singleOf(::ClipboardManager)
+    singleOf(::HapticFeedback)
+}

@@ -13,14 +13,15 @@ import cobresun.movieclub.app.core.data.offlineStoreDirectory
 import cobresun.movieclub.app.core.data.NetworkMonitor
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.Module
+import org.koin.core.module.dsl.bind
+import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 
-actual val platformModule: Module
-    get() = module {
-        single<HttpClientEngine> { createResilientOkHttpEngine(androidContext()) }
-        single<DataStore<Preferences>> { createSessionCookieDataStore(androidContext()) }
-        single<NetworkMonitor> { AndroidNetworkMonitor(androidContext()) }
-        single { OfflineStore(offlineStoreDirectory(androidContext())) }
-        single { ClipboardManager(androidContext()) }
-        single { HapticFeedback(androidContext()) }
-    }
+actual val platformModule: Module = module {
+    single<HttpClientEngine> { createResilientOkHttpEngine(androidContext()) }
+    single<DataStore<Preferences>> { createSessionCookieDataStore(androidContext()) }
+    singleOf(::AndroidNetworkMonitor) { bind<NetworkMonitor>() }
+    single { OfflineStore(offlineStoreDirectory(androidContext())) }
+    singleOf(::ClipboardManager)
+    singleOf(::HapticFeedback)
+}

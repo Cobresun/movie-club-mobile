@@ -61,10 +61,11 @@ Presentation cannot access Data, and Data cannot access Presentation.
 See the "Design Philosophy" section below for detailed guidance on maintaining these boundaries.
 
 ### Dependency Injection
-Uses **Koin** for DI:
-- Platform-specific modules defined in `Modules.android.kt` and `Modules.ios.kt`
-- Shared module defined in `Modules.kt`
-- Initialized via `initKoin()` in platform entry points
+Uses **Koin** (4.2) for DI:
+- `di/Modules.kt` holds one module per feature (`coreModule`, `authModule`, `reviewsModule`, ...), gathered by `appModule` with `includes(...)`; `platformModule` (`Modules.android.kt` / `Modules.ios.kt`) adds platform implementations
+- Constructor DSL by default: `singleOf(::Impl) { bind<Interface>() }`, `viewModelOf(::SomeViewModel)`; a `single { }` lambda only when a parameter isn't a plain `get()` (defaults, callbacks, factory functions)
+- `initKoin()` runs once per process: Android `MainApplication.onCreate`, iOS `iOSApp.init` (via `setUpKoin()`). Compose uses that instance (no `KoinApplication`/`KoinContext`)
+- `KoinModulesTest` (androidHostTest) runs `verify()` over the whole graph, so a missing binding fails the tests
 
 ### Networking
 - **Ktor** client with platform-specific engines (OkHttp for Android, Darwin for iOS)

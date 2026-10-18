@@ -40,9 +40,10 @@ Presentation layer:
 - [ ] Use `viewModelScope.launch` for operations, proper error handling
 
 Dependency injection:
-- [ ] Register in `Modules.kt` following existing patterns
-- [ ] Use `.bind<Interface>()` to bind implementations to interfaces
-- [ ] Register ViewModel with `viewModel { }` delegate
+- [ ] Add a `{feature}Module` in `di/Modules.kt` and list it in `appModule`'s `includes(...)`
+- [ ] Register implementations with `singleOf(::Impl) { bind<Interface>() }`
+- [ ] Register ViewModels with `viewModelOf(::FeatureViewModel)`
+- [ ] Run `KoinModulesTest` (`./gradlew -q :composeApp:testAndroidHostTest`) to check the graph
 
 Testing:
 - [ ] Add unit tests for mappers (DTO → domain)
