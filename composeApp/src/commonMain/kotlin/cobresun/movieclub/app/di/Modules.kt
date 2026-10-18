@@ -97,7 +97,7 @@ expect val platformModule: Module
 val coreModule = module {
     // Session-scoped copies of club reads, shared by the repositories below
     singleOf(::SessionCaches)
-    singleOf(::SessionCookieStorageImpl) { bind<SessionCookieStorage>() }
+    single<SessionCookieStorage> { SessionCookieStorageImpl(get()) } // lambda: keeps the default clock
     single { HttpClientFactory.create(get(), get(), get()) }
     singleOf(::LastClubStoreImpl) { bind<LastClubStore>() }
     singleOf(::AppearanceSettingsImpl) { bind<AppearanceSettings>() }
