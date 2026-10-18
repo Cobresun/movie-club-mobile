@@ -266,16 +266,14 @@ private fun ListsSkeleton() {
 
 @Composable
 private fun ListsHeader(clubName: String, onManage: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            ClubNameLabel(clubName)
-            Text("Lists", style = MaterialTheme.typography.headlineMedium)
-        }
-        IconButton(onClick = onManage) {
-            Icon(Icons.Outlined.Settings, contentDescription = "Manage lists")
+    // The gear sits on the title row: the eyebrow row is shared with the shell's account avatar.
+    Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 4.dp)) {
+        ClubNameLabel(clubName)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Lists", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
+            IconButton(onClick = onManage) {
+                Icon(Icons.Outlined.Settings, contentDescription = "Manage lists")
+            }
         }
     }
 }
