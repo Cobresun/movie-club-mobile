@@ -10,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.State
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -54,11 +55,17 @@ private fun epochLabel(millis: Long): String {
     return monthLabel(d.month.ordinal + 1, d.year)
 }
 
+/**
+ * The chart's grow-in progress, read only inside the Canvas draw block: the
+ * chart redraws for 600ms instead of recomposing every frame. Skipped when the
+ * widget isn't animating in (scrolled back into view, reduced motion).
+ */
 @Composable
-private fun rememberGrow(key: Any?): Float {
-    val anim = remember(key) { Animatable(0f) }
-    LaunchedEffect(key) { anim.animateTo(1f, tween(600, easing = FastOutSlowInEasing)) }
-    return anim.value
+private fun rememberGrow(key: Any?): State<Float> {
+    val animateIn = LocalAnimateIn.current
+    val anim = remember(key) { Animatable(if (animateIn) 0f else 1f) }
+    LaunchedEffect(key) { if (anim.value < 1f) anim.animateTo(1f, tween(600, easing = FastOutSlowInEasing)) }
+    return anim.asState()
 }
 
 private class ChartColors(val grid: Color, val label: Color)
@@ -106,12 +113,15 @@ fun StackedScoreBars(
     modifier: Modifier = Modifier,
     height: Dp = 180.dp,
 ) {
-    val measurer = rememberTextMeasurer()
+    // Room for every axis label, so they aren't re-laid out on each draw.
+    val measurer = rememberTextMeasurer(cacheSize = 32)
     val colors = chartColors()
     val surface = MaterialTheme.colorScheme.surfaceContainerLow
     val grow = rememberGrow(binsBySeries)
-    val totals = (0..10).map { b -> binsBySeries.sumOf { it.second[b] } }
-    val yMax = niceMax(max(1, totals.max()).toDouble())
+    val yMax = remember(binsBySeries) {
+        val totals = (0..10).map { b -> binsBySeries.sumOf { it.second[b] } }
+        niceMax(max(1, totals.max()).toDouble())
+    }
     Canvas(modifier.fillMaxWidth().height(height)) {
         val left = AXIS_GUTTER.toPx()
         val bottom = size.height - BOTTOM_GUTTER.toPx()
@@ -126,7 +136,7 @@ fun StackedScoreBars(
             binsBySeries.forEachIndexed { i, (color, bins) ->
                 val count = bins[bin]
                 if (count == 0) return@forEachIndexed
-                val h = ((bottom - top) * count / yMax * grow).toFloat()
+                val h = ((bottom - top) * count / yMax * grow.value).toFloat()
                 val isTop = binsBySeries.drop(i + 1).none { it.second[bin] > 0 }
                 drawRoundRect(
                     color, Offset(x, y - h), Size(barW, h),
@@ -151,7 +161,8 @@ fun MonthlyBars(
     modifier: Modifier = Modifier,
     height: Dp = 170.dp,
 ) {
-    val measurer = rememberTextMeasurer()
+    // Room for every axis label, so they aren't re-laid out on each draw.
+    val measurer = rememberTextMeasurer(cacheSize = 32)
     val colors = chartColors()
     val grow = rememberGrow(counts)
     val yMax = niceMax(max(1, counts.maxOrNull() ?: 1).toDouble())
@@ -165,7 +176,7 @@ fun MonthlyBars(
         val barW = (slot * 0.7f).coerceAtMost(22.dp.toPx())
         counts.forEachIndexed { i, c ->
             if (c == 0) return@forEachIndexed
-            val h = ((bottom - top) * c / yMax * grow).toFloat()
+            val h = ((bottom - top) * c / yMax * grow.value).toFloat()
             drawRoundRect(
                 Brush.verticalGradient(listOf(color, color.copy(alpha = 0.55f)), startY = bottom - h, endY = bottom),
                 Offset(left + slot * i + (slot - barW) / 2, bottom - h), Size(barW, h),
@@ -192,7 +203,8 @@ fun TimeLines(
     height: Dp = 190.dp,
     format: (Double) -> String = { if (it % 1.0 == 0.0) it.toInt().toString() else ((it * 10).toInt() / 10.0).toString() },
 ) {
-    val measurer = rememberTextMeasurer()
+    // Room for every axis label, so they aren't re-laid out on each draw.
+    val measurer = rememberTextMeasurer(cacheSize = 32)
     val colors = chartColors()
     val grow = rememberGrow(series)
     val all = series.flatMap { it.second }
@@ -211,7 +223,7 @@ fun TimeLines(
             left + (right - left) * ((p.epochMillis - minX).toFloat() / (maxX - minX)),
             (bottom - (bottom - top) * ((p.value - lo) / (hi - lo)).coerceIn(0.0, 1.0)).toFloat(),
         )
-        clipRectRevealing(left, right, grow) {
+        clipRectRevealing(left, right, grow.value) {
             series.forEach { (color, points) ->
                 if (points.isEmpty()) return@forEach
                 val offsets = points.map(::px)

@@ -1,5 +1,11 @@
 package cobresun.movieclub.app.stats.presentation
 
+import cobresun.movieclub.app.stats.domain.computeTopActors
+import cobresun.movieclub.app.stats.domain.PersonStat
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.unit.Dp
 import cobresun.movieclub.app.core.presentation.components.LocalTabBarInset
 import androidx.compose.foundation.layout.Arrangement
@@ -117,8 +123,22 @@ internal fun StatsContent(
         }
         return
     }
-    val summary = remember(reviews) { computeSummary(reviews) }
-    val wrappedYears = remember(reviews) { wrappedYears(reviews) }
+    // Computed once per data change, off the main thread; the cards only render it.
+    // Until the first model lands, show the skeleton.
+    val currentUserId = state.currentUserId
+    val model by produceState<StatsModel?>(null, reviews, members, type, currentUserId) {
+        value = withContext(Dispatchers.Default) { computeStatsModel(reviews, members, type, currentUserId) }
+    }
+    val actors by produceState(emptyList<PersonStat>(), reviews, state.cast) {
+        val cast = state.cast
+        value = if (cast == null) emptyList() else withContext(Dispatchers.Default) { computeTopActors(reviews, cast) }
+    }
+    val m = model ?: run {
+        StatsSkeleton()
+        return
+    }
+    val summary = m.summary
+    val wrappedYears = m.wrappedYears
     LazyColumn(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 32.dp + bottomInset),
         modifier = Modifier.fillMaxSize(),
@@ -128,16 +148,16 @@ internal fun StatsContent(
         }
         if (reviews.size < FEW_REVIEWS) item("hint") { Box(Modifier.padding(bottom = 14.dp)) { FewReviewsHint(reviews.size, type) } }
         item("summary") { Box(Modifier.padding(bottom = 14.dp)) { SummaryTiles(summary, type) } }
-        item("records") { ClubRecordsCard(reviews) }
-        item("scores") { ScoresCard(reviews, members) }
-        item("activity") { ActivityCard(reviews, type) }
-        item("categories") { GenresCard(reviews, members, type) }
-        item("people") { PeopleCard(reviews, type, state.cast) }
-        if (members.size > 1) item("reviewers") { ReviewerLeaderboardCard(reviews, members) }
-        if (members.size > 2) item("taste") { TasteSimilarityCard(reviews, members, state.currentUserId) }
-        if (members.size > 1) item("outliers") { MemberOutliersCard(reviews, members, type) }
-        item("consensus") { ConsensusCard(reviews, members) }
-        if (type == ClubType.MOVIE) item("tmdb") { TmdbDeviationCard(reviews) }
+        item("records") { ClubRecordsCard(m) }
+        item("scores") { ScoresCard(m, members) }
+        item("activity") { ActivityCard(m, type) }
+        item("categories") { GenresCard(m, reviews, members, type) }
+        item("people") { PeopleCard(m, type, actors) }
+        if (members.size > 1) item("reviewers") { ReviewerLeaderboardCard(m, members) }
+        if (members.size > 2) item("taste") { TasteSimilarityCard(m, members, currentUserId) }
+        if (members.size > 1) item("outliers") { MemberOutliersCard(m, members, type) }
+        item("consensus") { ConsensusCard(m, members) }
+        if (type == ClubType.MOVIE) item("tmdb") { TmdbDeviationCard(m) }
     }
 }
 

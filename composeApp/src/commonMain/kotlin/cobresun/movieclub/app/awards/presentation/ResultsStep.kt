@@ -130,7 +130,7 @@ private fun Envelope(onReveal: () -> Unit) {
 
 @Composable
 private fun Revealed(state: AwardsState, category: AwardCategory, celebrate: Boolean, onCelebrate: () -> Unit) {
-    val scored = scoreAward(category.nominations)
+    val scored = remember(category.nominations) { scoreAward(category.nominations) }
     val standings = scored.results
     if (standings.isEmpty()) {
         Text(

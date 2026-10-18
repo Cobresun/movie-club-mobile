@@ -1,5 +1,12 @@
 package cobresun.movieclub.app.stats.presentation
 
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.runtime.State
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
@@ -58,9 +65,13 @@ internal fun rememberReveal(): Pair<Modifier, Boolean> {
     return modifier to animateIn
 }
 
-/** A bar's growth from 0 to 1, staggered 60ms per [index] (web `animate-bar-grow`). */
+/**
+ * A bar's growth from 0 to 1, staggered 60ms per [index] (web `animate-bar-grow`).
+ * Read it in the draw phase ([growingFill]) so bars don't recompose and re-measure
+ * every frame while they grow.
+ */
 @Composable
-internal fun rememberBarGrowth(index: Int): Float {
+internal fun rememberBarGrowth(index: Int): State<Float> {
     val animateIn = LocalAnimateIn.current
     val growth = remember { Animatable(if (animateIn) 0f else 1f) }
     LaunchedEffect(Unit) {
@@ -69,7 +80,17 @@ internal fun rememberBarGrowth(index: Int): Float {
             growth.animateTo(1f, tween(700, easing = Emphasized))
         }
     }
-    return growth.value
+    return growth.asState()
+}
+
+/** Draws a rounded fill [fraction] × [growth] of the width, from the start edge. */
+internal fun Modifier.growingFill(color: Color, fraction: () -> Float, growth: State<Float>): Modifier = drawBehind {
+    val w = size.width * (fraction() * growth.value).coerceIn(0f, 1f)
+    if (w > 0f) {
+        val r = size.height / 2
+        val x = if (layoutDirection == LayoutDirection.Rtl) size.width - w else 0f
+        drawRoundRect(color, topLeft = Offset(x, 0f), size = Size(w, size.height), cornerRadius = CornerRadius(r, r))
+    }
 }
 
 /**

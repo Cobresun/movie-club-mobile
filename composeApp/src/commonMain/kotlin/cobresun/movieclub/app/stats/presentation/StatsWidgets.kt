@@ -175,8 +175,8 @@ private fun SummaryTile(
 // --- Records -----------------------------------------------------------------
 
 @Composable
-fun ClubRecordsCard(reviews: List<Review>) {
-    val records = remember(reviews) { computeClubRecords(reviews) } ?: return
+internal fun ClubRecordsCard(model: StatsModel) {
+    val records = model.records ?: return
     StatCard("Club Records") {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             RecordTile("Highest Rated", records.highest, records.highest.value.toFixed1(), goodColor(), Modifier.weight(1f))
@@ -204,10 +204,10 @@ private enum class ScoreMode { DISTRIBUTION, TREND, AGREEMENT }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ScoresCard(reviews: List<Review>, members: List<Member>) {
-    val distribution = remember(reviews, members) { computeScoreDistribution(reviews, members) }
-    val trend = remember(reviews, members) { computeScoreTrend(reviews, members) }
-    val spread = remember(reviews) { computeScoreSpreadTrend(reviews) }
+internal fun ScoresCard(model: StatsModel, members: List<Member>) {
+    val distribution = model.distribution
+    val trend = model.trend
+    val spread = model.spread
     val options = buildList {
         add(ScoreMode.DISTRIBUTION to "Distribution")
         if (trend.isNotEmpty()) add(ScoreMode.TREND to "Trend")
@@ -253,10 +253,10 @@ fun ScoresCard(reviews: List<Review>, members: List<Member>) {
 private enum class ActivityMode { MONTHLY, TOTAL, YEARS }
 
 @Composable
-fun ActivityCard(reviews: List<Review>, clubType: ClubType) {
-    val monthly = remember(reviews) { computeMonthlyActivity(reviews) }
-    val cumulative = remember(reviews) { computeCumulativeCounts(reviews) }
-    val yearlyBest = remember(reviews) { computeHighestRatedByYear(reviews) }
+internal fun ActivityCard(model: StatsModel, clubType: ClubType) {
+    val monthly = model.monthly
+    val cumulative = model.cumulative
+    val yearlyBest = model.yearlyBest
     if (monthly.isEmpty()) return
     var mode by rememberSaveable { mutableStateOf(ActivityMode.MONTHLY) }
     val (noun, pluralNoun) = nouns(clubType)
@@ -307,17 +307,18 @@ fun ActivityCard(reviews: List<Review>, clubType: ClubType) {
 private enum class CategoryMode { RATED, COUNTED }
 
 @Composable
-fun GenresCard(reviews: List<Review>, members: List<Member>, clubType: ClubType) {
-    if (clubType == ClubType.BOOK) SubjectsCard(reviews) else MovieGenresCard(reviews, members)
+internal fun GenresCard(model: StatsModel, reviews: List<Review>, members: List<Member>, clubType: ClubType) {
+    if (clubType == ClubType.BOOK) SubjectsCard(model) else MovieGenresCard(model, reviews, members)
 }
 
 @Composable
-private fun MovieGenresCard(reviews: List<Review>, members: List<Member>) {
+private fun MovieGenresCard(model: StatsModel, reviews: List<Review>, members: List<Member>) {
     var mode by rememberSaveable { mutableStateOf(CategoryMode.RATED) }
     var memberId by rememberSaveable { mutableStateOf<String?>(null) }
-    val stats = remember(reviews, memberId) { computeGenreStats(reviews, memberId) }
-    val counts = remember(reviews) { computeGenreWatchCounts(reviews) }
-    val clubStats = remember(reviews) { computeGenreStats(reviews) }
+    val clubStats = model.genreStats ?: return
+    val counts = model.genreWatchCounts ?: return
+    // One member's picks are computed on demand; the club's come precomputed.
+    val stats = memberId?.let { id -> remember(reviews, id) { computeGenreStats(reviews, id) } } ?: clubStats
     if (clubStats.mostLoved.isEmpty() && clubStats.leastLoved.isEmpty() && counts.mostWatched.isEmpty()) return
     StatCard("Genres", controls = {
         SegmentedToggle(listOf(CategoryMode.RATED to "Top Rated", CategoryMode.COUNTED to "Most Watched"), mode, { mode = it }, Modifier.fillMaxWidth())
@@ -351,9 +352,9 @@ private fun MovieGenresCard(reviews: List<Review>, members: List<Member>) {
 }
 
 @Composable
-private fun SubjectsCard(reviews: List<Review>) {
-    val scores = remember(reviews) { computeSubjectStats(reviews) }
-    val counts = remember(reviews) { computeSubjectCounts(reviews) }
+private fun SubjectsCard(model: StatsModel) {
+    val scores = model.subjectStats
+    val counts = model.subjectCounts
     val options = buildList {
         if (scores.isNotEmpty()) add(CategoryMode.RATED to "Top Rated")
         if (counts.isNotEmpty()) add(CategoryMode.COUNTED to "Most Read")
@@ -421,9 +422,10 @@ private fun RankNumber(index: Int, color: Color) {
 @Composable
 private fun GrowingBar(fraction: Float, color: Color, index: Int, modifier: Modifier = Modifier) {
     val growth = rememberBarGrowth(index)
-    Box(modifier.height(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
-        Box(Modifier.fillMaxWidth(fraction.coerceIn(0f, 1f) * growth).fillMaxHeight().clip(CircleShape).background(color))
-    }
+    Box(
+        modifier.height(6.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .growingFill(color, { fraction.coerceIn(0f, 1f) }, growth)
+    )
 }
 
 // --- People ------------------------------------------------------------------
@@ -431,17 +433,16 @@ private fun GrowingBar(fraction: Float, color: Color, index: Int, modifier: Modi
 private enum class PeopleMode { DIRECTORS, ACTORS }
 
 @Composable
-fun PeopleCard(reviews: List<Review>, clubType: ClubType, cast: Map<String, List<CreditedPerson>>?) {
+internal fun PeopleCard(model: StatsModel, clubType: ClubType, actors: List<PersonStat>) {
     if (clubType == ClubType.BOOK) {
-        val authors = remember(reviews) { computeTopAuthors(reviews) }
+        val authors = model.authors
         if (authors.isEmpty()) return
         StatCard("Most Read Authors", subtitle = "Ranked by appearances in your club's reviews") {
             PersonLeaderboard(authors, itemNoun = "book")
         }
         return
     }
-    val directors = remember(reviews) { computeTopDirectors(reviews) }
-    val actors = remember(reviews, cast) { cast?.let { computeTopActors(reviews, it) }.orEmpty() }
+    val directors = model.directors
     val options = buildList {
         if (directors.isNotEmpty()) add(PeopleMode.DIRECTORS to "Directors")
         if (actors.isNotEmpty()) add(PeopleMode.ACTORS to "Actors")
@@ -562,8 +563,8 @@ private fun RankedAvatar(entry: PersonStat, index: Int) {
 // --- Reviewers ---------------------------------------------------------------
 
 @Composable
-fun ReviewerLeaderboardCard(reviews: List<Review>, members: List<Member>) {
-    val entries = remember(reviews, members) { computeLeaderboard(reviews, members) }
+internal fun ReviewerLeaderboardCard(model: StatsModel, members: List<Member>) {
+    val entries = model.leaderboard
     if (entries.isEmpty()) return
     StatCard("Reviewer Stats", subtitle = "Average score per member — chart colors match") {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -618,11 +619,9 @@ private enum class TasteScope { CLUB, YOU }
 private enum class TasteMode { MOST, LEAST }
 
 @Composable
-fun TasteSimilarityCard(reviews: List<Review>, members: List<Member>, currentUserId: String?) {
-    val club = remember(reviews, members) { computeTasteSimilarity(reviews, members) }
-    val yours = remember(reviews, members, currentUserId) {
-        currentUserId?.let { computeTasteSimilarity(reviews, members, it) }
-    }
+internal fun TasteSimilarityCard(model: StatsModel, members: List<Member>, currentUserId: String?) {
+    val club = model.tasteClub ?: return
+    val yours = model.tasteYours
     val scopes = buildList {
         add(TasteScope.CLUB to "Club")
         if (yours?.mostSimilar != null) add(TasteScope.YOU to "You")
@@ -707,9 +706,9 @@ private fun PairMember(member: Member, label: String) {
 private enum class OutlierMode { GUILTY, CURMUDGEON }
 
 @Composable
-fun MemberOutliersCard(reviews: List<Review>, members: List<Member>, clubType: ClubType) {
-    val guilty = remember(reviews, members) { computeGuiltyPleasures(reviews, members) }
-    val curmudgeons = remember(reviews, members) { computeCurmudgeons(reviews, members) }
+internal fun MemberOutliersCard(model: StatsModel, members: List<Member>, clubType: ClubType) {
+    val guilty = model.guiltyPleasures
+    val curmudgeons = model.curmudgeons
     val options = buildList {
         if (guilty.isNotEmpty()) add(OutlierMode.GUILTY to "Guilty Pleasures")
         if (curmudgeons.isNotEmpty()) add(OutlierMode.CURMUDGEON to "Curmudgeons")
@@ -754,8 +753,8 @@ private enum class ConsensusMode { AGREED, DIVISIVE }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ConsensusCard(reviews: List<Review>, members: List<Member>) {
-    val consensus = remember(reviews, members) { computeConsensus(reviews, members) }
+internal fun ConsensusCard(model: StatsModel, members: List<Member>) {
+    val consensus = model.consensus
     if (consensus.mostAgreed.isEmpty()) return
     var mode by rememberSaveable { mutableStateOf(ConsensusMode.AGREED) }
     StatCard(
@@ -796,8 +795,8 @@ fun ConsensusCard(reviews: List<Review>, members: List<Member>) {
 private enum class DeviationMode { HIGHER, LOWER }
 
 @Composable
-fun TmdbDeviationCard(reviews: List<Review>) {
-    val deviation = remember(reviews) { computeTmdbDeviation(reviews) }
+internal fun TmdbDeviationCard(model: StatsModel) {
+    val deviation = model.tmdbDeviation ?: return
     val options = buildList {
         if (deviation.clubRatedHigher.isNotEmpty()) add(DeviationMode.HIGHER to "We Liked More")
         if (deviation.clubRatedLower.isNotEmpty()) add(DeviationMode.LOWER to "We Liked Less")

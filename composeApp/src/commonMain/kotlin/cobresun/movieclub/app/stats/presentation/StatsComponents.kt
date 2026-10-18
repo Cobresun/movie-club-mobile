@@ -207,7 +207,7 @@ fun RankedBar(
     /** Row position, for the staggered grow-in. */
     index: Int = 0,
 ) {
-    val animated by animateFloatAsState(fraction.coerceIn(0.02f, 1f))
+    val animated = animateFloatAsState(fraction.coerceIn(0.02f, 1f))
     val growth = rememberBarGrowth(index)
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         leading?.invoke()
@@ -228,10 +228,9 @@ fun RankedBar(
                     .fillMaxWidth()
                     .height(barHeight)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-            ) {
-                Box(Modifier.fillMaxWidth(animated * growth).fillMaxHeight().clip(CircleShape).background(color))
-            }
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .growingFill(color, { animated.value }, growth),
+            )
             if (supporting != null) {
                 Text(
                     supporting,

@@ -1,5 +1,7 @@
 package cobresun.movieclub.app.stats.presentation
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -79,7 +81,10 @@ class WrappedViewModel(
             is AsyncResult.Error -> WrappedState(clubSlug, content = data)
             is AsyncResult.Success -> buildState(data.data, requested)
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WrappedState(clubSlug))
+    }
+        // Building a year's deck scans every review (and members³ pairings): off the main thread.
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), WrappedState(clubSlug))
 
     init {
         load()
