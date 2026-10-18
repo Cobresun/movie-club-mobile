@@ -35,14 +35,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import cobresun.movieclub.app.club.domain.ClubRepository
 import cobresun.movieclub.app.core.domain.AsyncResult
-import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.Work
 import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.core.presentation.components.EmptyState
 import cobresun.movieclub.app.core.presentation.components.ErrorState
 import cobresun.movieclub.app.core.presentation.components.GridSkeleton
-import cobresun.movieclub.app.core.presentation.toUserMessage
+import cobresun.movieclub.app.core.presentation.userMessage
 import cobresun.movieclub.app.lists.domain.ListsRepository
 import cobresun.movieclub.app.member.domain.Member
 import kotlinx.coroutines.async
@@ -148,7 +147,7 @@ fun SharedListScreen(state: SharedListState, onBack: () -> Unit, onRetry: () -> 
             when (val items = state.items) {
                 is AsyncResult.Loading -> GridSkeleton(Modifier.padding(horizontal = 16.dp))
                 is AsyncResult.Error -> ErrorState(
-                    message = (items.dataError as? DataError.Remote)?.toUserMessage("load this list") ?: "Couldn't load this list.",
+                    message = items.userMessage("load this list"),
                     onRetry = onRetry,
                 )
                 is AsyncResult.Success -> if (items.data.isEmpty()) {

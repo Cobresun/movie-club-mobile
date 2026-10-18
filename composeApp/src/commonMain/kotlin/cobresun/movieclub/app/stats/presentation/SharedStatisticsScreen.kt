@@ -26,9 +26,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cobresun.movieclub.app.core.domain.AsyncResult
-import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.presentation.components.ErrorState
-import cobresun.movieclub.app.core.presentation.toUserMessage
+import cobresun.movieclub.app.core.presentation.userMessage
 import org.koin.compose.viewmodel.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -80,7 +79,7 @@ fun SharedStatisticsScreen(state: StatsState, onBack: () -> Unit, onRetry: () ->
             when (val data = state.data) {
                 is AsyncResult.Loading -> StatsSkeleton()
                 is AsyncResult.Error -> ErrorState(
-                    message = (data.dataError as? DataError.Remote)?.toUserMessage("load statistics") ?: "Couldn't load statistics.",
+                    message = data.userMessage("load statistics"),
                     onRetry = onRetry,
                 )
                 is AsyncResult.Success -> StatsContent(

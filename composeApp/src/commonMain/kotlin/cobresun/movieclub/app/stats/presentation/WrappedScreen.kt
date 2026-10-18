@@ -47,13 +47,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.ClubType
-import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.platform.HapticFeedback
 import cobresun.movieclub.app.core.presentation.components.EmptyState
 import cobresun.movieclub.app.core.presentation.components.ErrorState
 import cobresun.movieclub.app.core.presentation.components.ShimmerBox
 import cobresun.movieclub.app.core.presentation.rememberReducedMotion
-import cobresun.movieclub.app.core.presentation.toUserMessage
+import cobresun.movieclub.app.core.presentation.userMessage
 import cobresun.movieclub.app.theme.WrappedColors
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.pager.rememberPagerState
@@ -141,7 +140,7 @@ fun WrappedScreen(
                         RoundedCornerShape(16.dp),
                     )
                     is AsyncResult.Error -> ErrorState(
-                        message = (content.dataError as? DataError.Remote)?.toUserMessage("load Wrapped") ?: "Couldn't load Wrapped.",
+                        message = content.userMessage("load Wrapped"),
                         onRetry = { onAction(WrappedAction.Retry) },
                         modifier = Modifier.align(Alignment.Center),
                     )

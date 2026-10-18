@@ -58,7 +58,6 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cobresun.movieclub.app.core.domain.AsyncResult
-import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Work
 import cobresun.movieclub.app.core.domain.workType
 import cobresun.movieclub.app.core.platform.HapticFeedback
@@ -68,7 +67,7 @@ import cobresun.movieclub.app.core.presentation.components.ErrorState
 import cobresun.movieclub.app.core.presentation.components.LocalTabBarInset
 import cobresun.movieclub.app.core.presentation.components.ShimmerBox
 import cobresun.movieclub.app.core.presentation.noun
-import cobresun.movieclub.app.core.presentation.toUserMessage
+import cobresun.movieclub.app.core.presentation.userMessage
 import cobresun.movieclub.app.lists.domain.WorkList
 import cobresun.movieclub.app.filters.presentation.SearchFilterBar
 import cobresun.movieclub.app.core.presentation.AppMotion
@@ -113,8 +112,7 @@ fun ListsScreen(
             when (val lists = state.lists) {
                 is AsyncResult.Loading -> ListsSkeleton()
                 is AsyncResult.Error -> ErrorState(
-                    message = (lists.dataError as? DataError.Remote)?.toUserMessage("load your lists")
-                        ?: "Couldn't load your lists.",
+                    message = lists.userMessage("load your lists"),
                     onRetry = { onAction(ListsAction.Refresh) },
                 )
 

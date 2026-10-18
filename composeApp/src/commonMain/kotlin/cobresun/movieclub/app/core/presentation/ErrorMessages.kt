@@ -1,6 +1,7 @@
 package cobresun.movieclub.app.core.presentation
 
 import cobresun.movieclub.app.core.domain.ApiError
+import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.DataError
 
 /**
@@ -19,6 +20,10 @@ fun DataError.Remote.toUserMessage(action: String): String {
     }
     return "Couldn't $action. $hint"
 }
+
+/** The error screen text for a failed load of [action]. */
+fun AsyncResult.Error.userMessage(action: String): String =
+    (dataError as? DataError.Remote)?.toUserMessage(action) ?: "Couldn't $action."
 
 /** Prefer the server's own message (e.g. "This url is already in use"), else [DataError.Remote.toUserMessage]. */
 fun ApiError.toUserMessage(action: String): String =

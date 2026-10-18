@@ -37,7 +37,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cobresun.movieclub.app.core.domain.AsyncResult
-import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.WorkDetails
 import cobresun.movieclub.app.core.presentation.components.Avatar
 import cobresun.movieclub.app.core.presentation.components.ErrorState
@@ -45,7 +44,7 @@ import cobresun.movieclub.app.core.presentation.components.SectionLabel
 import cobresun.movieclub.app.core.presentation.components.ShimmerBox
 import cobresun.movieclub.app.core.presentation.components.WorkHero
 import cobresun.movieclub.app.core.presentation.formatShort
-import cobresun.movieclub.app.core.presentation.toUserMessage
+import cobresun.movieclub.app.core.presentation.userMessage
 import cobresun.movieclub.app.reviews.domain.ReviewFact
 import cobresun.movieclub.app.reviews.domain.ScoreScale
 import cobresun.movieclub.app.reviews.domain.SharedReview
@@ -94,7 +93,7 @@ fun SharedReviewScreen(state: SharedReviewState, onBack: () -> Unit, onRetry: ()
                     repeat(3) { ShimmerBox(Modifier.fillMaxWidth().height(64.dp)) }
                 }
                 is AsyncResult.Error -> ErrorState(
-                    message = (r.dataError as? DataError.Remote)?.toUserMessage("load this review") ?: "Failed to load review",
+                    message = r.userMessage("load this review"),
                     onRetry = onRetry,
                 )
                 is AsyncResult.Success -> SharedReviewContent(r.data, state.fact)

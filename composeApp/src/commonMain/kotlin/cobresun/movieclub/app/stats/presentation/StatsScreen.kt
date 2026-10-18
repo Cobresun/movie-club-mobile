@@ -36,12 +36,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.ClubType
-import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.presentation.components.ClubNameLabel
 import cobresun.movieclub.app.core.presentation.components.EmptyState
 import cobresun.movieclub.app.core.presentation.components.ErrorState
 import cobresun.movieclub.app.core.presentation.components.ShimmerBox
-import cobresun.movieclub.app.core.presentation.toUserMessage
+import cobresun.movieclub.app.core.presentation.userMessage
 import cobresun.movieclub.app.stats.domain.computeSummary
 import cobresun.movieclub.app.stats.domain.wrappedYears
 
@@ -72,7 +71,7 @@ fun StatsScreen(
         when (val data = state.data) {
             is AsyncResult.Loading -> StatsSkeleton()
             is AsyncResult.Error -> ErrorState(
-                message = (data.dataError as? DataError.Remote)?.toUserMessage("load statistics") ?: "Couldn't load statistics.",
+                message = data.userMessage("load statistics"),
                 onRetry = { onAction(StatsAction.Refresh) },
             )
             is AsyncResult.Success -> PullToRefreshBox(

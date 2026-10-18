@@ -44,9 +44,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cobresun.movieclub.app.core.domain.AsyncResult
-import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.platform.HapticFeedback
-import cobresun.movieclub.app.core.presentation.toUserMessage
+import cobresun.movieclub.app.core.presentation.userMessage
 import org.koin.compose.koinInject
 
 /** The categories the web suggests, in its order (web `SUGGESTED_CATEGORIES`). */
@@ -121,7 +120,7 @@ fun NewAwardsSheet(
                 }
                 is AsyncResult.Error -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        (years.dataError as? DataError.Remote)?.toUserMessage("load the years") ?: "Couldn't load the years.",
+                        years.userMessage("load the years"),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     TextButton(onClick = onRetry) { Text("Retry") }

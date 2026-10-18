@@ -60,13 +60,12 @@ import cobresun.movieclub.app.awards.domain.AwardsSeason
 import cobresun.movieclub.app.awards.domain.AwardsStep
 import cobresun.movieclub.app.awards.presentation.components.StepIndicator
 import cobresun.movieclub.app.core.domain.AsyncResult
-import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.presentation.components.ClubNameLabel
 import cobresun.movieclub.app.core.presentation.components.ConfirmSheet
 import cobresun.movieclub.app.core.presentation.components.EmptyState
 import cobresun.movieclub.app.core.presentation.components.ErrorState
 import cobresun.movieclub.app.core.presentation.components.ShimmerBox
-import cobresun.movieclub.app.core.presentation.toUserMessage
+import cobresun.movieclub.app.core.presentation.userMessage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,7 +81,7 @@ fun AwardsScreen(
             when (val years = state.years) {
                 is AsyncResult.Loading -> LoadingSkeleton()
                 is AsyncResult.Error -> ErrorState(
-                    message = (years.dataError as? DataError.Remote)?.toUserMessage("load awards") ?: "Couldn't load awards.",
+                    message = years.userMessage("load awards"),
                     onRetry = { onAction(AwardsAction.Refresh) },
                 )
                 is AsyncResult.Success -> if (years.data.isEmpty()) {
@@ -99,8 +98,7 @@ fun AwardsScreen(
                     when (val season = state.season) {
                         null, is AsyncResult.Loading -> LoadingSkeleton()
                         is AsyncResult.Error -> ErrorState(
-                            message = (season.dataError as? DataError.Remote)?.toUserMessage("load the ${state.selectedYear} awards")
-                                ?: "Couldn't load these awards.",
+                            message = season.userMessage("load the ${state.selectedYear} awards"),
                             onRetry = { onAction(AwardsAction.Refresh) },
                         )
                         is AsyncResult.Success -> SeasonContent(state, season.data, onAction, onPick = { picking = it.title })

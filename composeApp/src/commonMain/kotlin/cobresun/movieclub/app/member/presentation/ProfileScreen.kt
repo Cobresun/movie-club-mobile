@@ -81,8 +81,7 @@ import cobresun.movieclub.app.core.presentation.platform.rememberImagePicker
 import cobresun.movieclub.app.member.domain.Member
 import org.jetbrains.compose.resources.decodeToImageBitmap
 import org.koin.compose.viewmodel.koinViewModel
-import cobresun.movieclub.app.core.domain.DataError
-import cobresun.movieclub.app.core.presentation.toUserMessage
+import cobresun.movieclub.app.core.presentation.userMessage
 
 @Composable
 fun ProfileScreenRoot(
@@ -120,8 +119,7 @@ fun ProfileScreenRoot(
             when (val member = state.member) {
                 is AsyncResult.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 is AsyncResult.Error -> ErrorMessage(
-                    message = (member.dataError as? DataError.Remote)?.toUserMessage("load your profile")
-                        ?: "Couldn't load your profile.",
+                    message = member.userMessage("load your profile"),
                     onRetry = { viewModel.onAction(ProfileAction.Retry) },
                     modifier = Modifier.align(Alignment.Center),
                 )

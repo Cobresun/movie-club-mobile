@@ -74,7 +74,6 @@ import cobresun.movieclub.app.core.domain.WorkType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cobresun.movieclub.app.core.domain.AsyncResult
-import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.workType
 import cobresun.movieclub.app.core.presentation.components.Avatar
 import cobresun.movieclub.app.core.presentation.components.ClubNameLabel
@@ -84,7 +83,7 @@ import cobresun.movieclub.app.core.presentation.components.GridSkeleton
 import cobresun.movieclub.app.core.presentation.components.Poster
 import cobresun.movieclub.app.core.presentation.formatShort
 import cobresun.movieclub.app.core.presentation.noun
-import cobresun.movieclub.app.core.presentation.toUserMessage
+import cobresun.movieclub.app.core.presentation.userMessage
 import cobresun.movieclub.app.member.domain.Member
 import cobresun.movieclub.app.reviews.domain.Review
 import cobresun.movieclub.app.reviews.domain.ReviewSortOption
@@ -113,8 +112,7 @@ fun ReviewsScreen(
             when (val reviews = state.reviews) {
                 is AsyncResult.Loading -> GridSkeleton(minCellWidth = 150.dp)
                 is AsyncResult.Error -> ErrorState(
-                    message = (reviews.dataError as? DataError.Remote)?.toUserMessage("load reviews")
-                        ?: "Couldn't load reviews.",
+                    message = reviews.userMessage("load reviews"),
                     onRetry = { onAction(ReviewsAction.Refresh) },
                 )
 
