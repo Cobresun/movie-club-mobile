@@ -20,6 +20,7 @@ import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.ClubType
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
+import cobresun.movieclub.app.core.domain.toAsyncResult
 import cobresun.movieclub.app.core.domain.onError
 import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.core.presentation.UiMessage
@@ -336,10 +337,7 @@ class AwardsViewModel(
             val result = awardsRepository.getAvailableYears(clubSlug)
             _state.update { s ->
                 s.copy(newAwards = s.newAwards?.copy(
-                    availableYears = when (result) {
-                        is Result.Success -> AsyncResult.Success(result.data)
-                        is Result.Error -> AsyncResult.Error(dataError = result.error)
-                    }
+                    availableYears = result.toAsyncResult()
                 ))
             }
         }

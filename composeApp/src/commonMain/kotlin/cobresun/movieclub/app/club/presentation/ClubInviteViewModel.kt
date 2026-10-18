@@ -6,7 +6,8 @@ import cobresun.movieclub.app.club.domain.ClubRepository
 import cobresun.movieclub.app.club.domain.ClubValidation
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.ClubType
-import cobresun.movieclub.app.core.domain.Result
+import cobresun.movieclub.app.core.domain.map
+import cobresun.movieclub.app.core.domain.toAsyncResult
 import cobresun.movieclub.app.core.platform.ClipboardManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,10 +46,7 @@ class ClubInviteViewModel(
     fun loadLink() {
         _state.update { it.copy(inviteLink = AsyncResult.Loading) }
         viewModelScope.launch {
-            val link = when (val r = clubRepository.generateInviteToken(_state.value.clubSlug)) {
-                is Result.Success -> AsyncResult.Success(ClubValidation.inviteLink(r.data))
-                is Result.Error -> AsyncResult.Error(dataError = r.error)
-            }
+            val link = clubRepository.generateInviteToken(_state.value.clubSlug).map { ClubValidation.inviteLink(it) }.toAsyncResult()
             _state.update { it.copy(inviteLink = link) }
         }
     }

@@ -16,3 +16,8 @@ fun <T, R> AsyncResult<T>.mapSuccess(transform: (T) -> R): AsyncResult<R> {
         is AsyncResult.Error -> AsyncResult.Error(exception, dataError)
     }
 }
+
+fun <T> Result<T, DataError>.toAsyncResult(): AsyncResult<T> = when (this) {
+    is Result.Success -> AsyncResult.Success(data)
+    is Result.Error -> AsyncResult.Error(dataError = error)
+}

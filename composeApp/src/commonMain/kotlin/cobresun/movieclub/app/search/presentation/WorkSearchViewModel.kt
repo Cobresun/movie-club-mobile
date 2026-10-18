@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import cobresun.movieclub.app.core.domain.AsyncResult
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
+import cobresun.movieclub.app.core.domain.map
+import cobresun.movieclub.app.core.domain.toAsyncResult
 import cobresun.movieclub.app.core.domain.WorkType
 import cobresun.movieclub.app.core.presentation.toUserMessage
 import cobresun.movieclub.app.search.domain.BrowseTab
@@ -128,10 +130,7 @@ class WorkSearchViewModel(
             val result = repository.recommendations(slug)
             _state.update {
                 it.copy(
-                    recommendations = when (result) {
-                        is Result.Success -> AsyncResult.Success(result.data.map { r -> r.work })
-                        is Result.Error -> AsyncResult.Error(dataError = result.error)
-                    }
+                    recommendations = result.map { it.map { r -> r.work } }.toAsyncResult()
                 )
             }
         }

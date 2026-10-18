@@ -9,6 +9,7 @@ import cobresun.movieclub.app.core.domain.ClubType
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.NewWork
 import cobresun.movieclub.app.core.domain.Result
+import cobresun.movieclub.app.core.domain.toAsyncResult
 import cobresun.movieclub.app.core.domain.Work
 import cobresun.movieclub.app.core.domain.WorkDetails
 import cobresun.movieclub.app.core.domain.WorkDetailsRepository
@@ -391,10 +392,7 @@ class ReviewsViewModel(
             val result = workDetailsRepository.getWorkDetails(clubSlug, workId)
             updateDetail(workId) {
                 it.copy(
-                    details = when (result) {
-                        is Result.Success -> AsyncResult.Success(result.data)
-                        is Result.Error -> AsyncResult.Error(dataError = result.error)
-                    }
+                    details = result.toAsyncResult()
                 )
             }
         }

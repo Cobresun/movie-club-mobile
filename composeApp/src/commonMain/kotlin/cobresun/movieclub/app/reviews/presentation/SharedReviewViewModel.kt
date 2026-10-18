@@ -3,7 +3,7 @@ package cobresun.movieclub.app.reviews.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cobresun.movieclub.app.core.domain.AsyncResult
-import cobresun.movieclub.app.core.domain.Result
+import cobresun.movieclub.app.core.domain.toAsyncResult
 import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.reviews.domain.ReviewFact
 import cobresun.movieclub.app.reviews.domain.ReviewFacts
@@ -39,10 +39,7 @@ class SharedReviewViewModel(
             val result = reviewsRepository.getSharedReview(clubSlug, workId)
             _state.update {
                 it.copy(
-                    review = when (result) {
-                        is Result.Success -> AsyncResult.Success(result.data)
-                        is Result.Error -> AsyncResult.Error(dataError = result.error)
-                    }
+                    review = result.toAsyncResult()
                 )
             }
         }
