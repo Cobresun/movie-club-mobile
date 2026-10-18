@@ -5,6 +5,11 @@ import cobresun.movieclub.app.core.data.SessionCaches
 import cobresun.movieclub.app.core.data.readThrough
 import cobresun.movieclub.app.core.data.saved
 import cobresun.movieclub.app.reviews.data.dto.CommentDto
+import cobresun.movieclub.app.reviews.data.PendingScore
+import cobresun.movieclub.app.reviews.data.ScoreOutbox
+import cobresun.movieclub.app.reviews.data.applyPendingScores
+import cobresun.movieclub.app.reviews.domain.MemberScore
+import cobresun.movieclub.app.reviews.domain.ScoreSave
 import cobresun.movieclub.app.reviews.data.dto.MemberScoredWorkDto
 import cobresun.movieclub.app.reviews.data.dto.ReviewItemDto
 import kotlinx.serialization.builtins.ListSerializer
@@ -44,6 +49,7 @@ import kotlinx.coroutines.withContext
 class ReviewsRepositoryImpl(
     private val dataSource: ReviewsDataSource,
     private val caches: SessionCaches,
+    private val outbox: ScoreOutbox,
 ) : ReviewsRepository, ReviewCommentsRepository {
     private suspend fun reviewsListId(clubSlug: String): Result<String, DataError.Remote> =
         caches.reviewsListId.get(clubSlug) { dataSource.getReviewsListId(clubSlug).map { it.id } }
@@ -63,11 +69,11 @@ class ReviewsRepositoryImpl(
         caches.reviews.get(clubSlug, refresh) {
             caches.offline.readThrough(OfflineKeys.reviews(clubSlug), reviewItemsSerializer) { dataSource.getReviews(clubSlug) }
                 .map { it.toReviews() }
-        }
+        }.map { it.withQueuedScores(clubSlug) }
 
     override suspend fun savedReviews(clubSlug: String): List<Review>? = caches.reviews.saved(clubSlug) {
         caches.offline.load(OfflineKeys.reviews(clubSlug), reviewItemsSerializer)?.toReviews()
-    }
+    }?.withQueuedScores(clubSlug)
 
     private val reviewItemsSerializer = ListSerializer(ReviewItemDto.serializer())
 
@@ -104,17 +110,56 @@ class ReviewsRepositoryImpl(
     override suspend fun saveScore(
         clubSlug: String,
         workId: String,
+        userId: String,
         existingScoreId: String?,
         score: Double,
-    ): Result<Unit, DataError.Remote> {
+    ): Result<ScoreSave, DataError.Remote> {
         val clamped = ScoreScale.clamp(score)
-        val result = if (existingScoreId == null) {
+        val result = if (existingScoreId == null || existingScoreId == MemberScore.PENDING_ID) {
             dataSource.createScore(clubSlug, ScoreCreateDto(score = clamped, workId = workId))
         } else {
             dataSource.updateScore(clubSlug, existingScoreId, ScoreUpdateDto(score = clamped))
         }
-        return result.onSuccess { caches.reviews.invalidate(clubSlug) }
+        return when {
+            result is Result.Success -> {
+                // This save supersedes one queued earlier for the work.
+                outbox.remove(clubSlug, workId)
+                caches.reviews.invalidate(clubSlug)
+                Result.Success(ScoreSave.SAVED)
+            }
+            // No connection (or no answer: sending again is safe, it's a set): keep it and
+            // send it on reconnect. Server errors aren't queued; the member can retry.
+            result is Result.Error &&
+                (result.error == DataError.Remote.NO_INTERNET || result.error == DataError.Remote.REQUEST_TIMEOUT) -> {
+                outbox.put(PendingScore(clubSlug, workId, userId, clamped))
+                Result.Success(ScoreSave.QUEUED)
+            }
+            else -> result.map { ScoreSave.SAVED }
+        }
     }
+
+    /**
+     * Sends the scores queued offline (on reconnect and launch). Each checks the member's
+     * current score first, so a score that already landed isn't created twice.
+     * @return whether any reached the server.
+     */
+    suspend fun sendQueuedScores(): Boolean {
+        val sent = outbox.sendAll { pending ->
+            dataSource.getWorkScores(pending.clubSlug, pending.workId).flatMap { scores ->
+                val mine = scores[pending.userId]
+                when {
+                    mine == null -> dataSource.createScore(pending.clubSlug, ScoreCreateDto(pending.score, pending.workId))
+                    mine.score == pending.score -> Result.Success(Unit)
+                    else -> dataSource.updateScore(pending.clubSlug, mine.id, ScoreUpdateDto(pending.score))
+                }
+            }
+        }
+        sent.map { it.clubSlug }.distinct().forEach { caches.reviews.invalidate(it) }
+        return sent.isNotEmpty()
+    }
+
+    private suspend fun List<Review>.withQueuedScores(clubSlug: String): List<Review> =
+        applyPendingScores(this, outbox.pending().filter { it.clubSlug == clubSlug })
 
     override suspend fun getSharedReview(clubSlug: String, workId: String): Result<SharedReview, DataError.Remote> =
         dataSource.getSharedReview(clubSlug, workId).map { it.toSharedReview() }
@@ -124,6 +169,8 @@ class ReviewsRepositoryImpl(
 
     override suspend fun deleteScore(clubSlug: String, scoreId: String): Result<Unit, DataError.Remote> =
         dataSource.deleteScore(clubSlug, scoreId).onSuccess { caches.reviews.invalidate(clubSlug) }
+
+    override suspend fun discardQueuedScore(clubSlug: String, workId: String) = outbox.remove(clubSlug, workId)
 
     override suspend fun generateDiscussionQuestions(
         clubSlug: String,

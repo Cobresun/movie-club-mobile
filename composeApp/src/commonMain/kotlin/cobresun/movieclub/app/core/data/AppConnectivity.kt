@@ -12,11 +12,14 @@ import kotlinx.coroutines.launch
 
 /**
  * [Connectivity] from the platform [NetworkMonitor]. When the network returns it first runs
- * [onReconnect] (mark in-memory answers stale, replay queued writes), then tells screens.
+ * [onReconnect] (mark in-memory answers stale) and [sendQueued] (writes kept while offline),
+ * then tells screens. Writes queued in an earlier session are sent at launch when online.
  */
 class AppConnectivity(
     private val monitor: NetworkMonitor,
     private val onReconnect: suspend () -> Unit,
+    /** Sends writes queued offline; true when any reached the server. */
+    private val sendQueued: suspend () -> Boolean = { false },
     scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
 ) : Connectivity {
     override val isOnline: StateFlow<Boolean> = monitor.isOnline
@@ -26,11 +29,15 @@ class AppConnectivity(
 
     init {
         scope.launch {
-            var wasOnline = monitor.isOnline.value
+            var wasOnline: Boolean? = null
             monitor.isOnline.collect { online ->
-                if (online && !wasOnline) {
+                if (online && wasOnline == false) {
                     runCatching { onReconnect() }
+                    runCatching { sendQueued() }
                     _reconnected.tryEmit(Unit)
+                } else if (online && wasOnline == null) {
+                    // Launch: only screens showing a queued write need to reload.
+                    if (runCatching { sendQueued() }.getOrDefault(false)) _reconnected.tryEmit(Unit)
                 }
                 wasOnline = online
             }

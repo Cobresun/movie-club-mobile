@@ -32,13 +32,18 @@ interface ReviewsRepository {
     /** Changes the date a work was reviewed (its added date on the reviews list). */
     suspend fun updateReviewedDate(clubSlug: String, workId: String, date: LocalDate): Result<Unit, DataError.Remote>
 
-    /** Creates (when [existingScoreId] is null) or updates the signed-in member's score (0–10). */
+    /**
+     * Creates (when [existingScoreId] is null) or updates the signed-in member's ([userId])
+     * score (0–10). Offline, the score is kept on this device and sent when the connection
+     * returns ([ScoreSave.QUEUED]); until then [getReviews] shows it.
+     */
     suspend fun saveScore(
         clubSlug: String,
         workId: String,
+        userId: String,
         existingScoreId: String?,
         score: Double,
-    ): Result<Unit, DataError.Remote>
+    ): Result<ScoreSave, DataError.Remote>
 
     /** A review as its public share link shows it; works for clubs you're not in. */
     suspend fun getSharedReview(clubSlug: String, workId: String): Result<SharedReview, DataError.Remote>
@@ -48,6 +53,9 @@ interface ReviewsRepository {
 
     /** Deletes one of the signed-in member's own scores. */
     suspend fun deleteScore(clubSlug: String, scoreId: String): Result<Unit, DataError.Remote>
+
+    /** Forgets a score queued offline for [workId] (the member removed it before it was sent). */
+    suspend fun discardQueuedScore(clubSlug: String, workId: String) {}
 
     /** Every work the signed-in member has scored, across all their clubs (for Score Assist). */
     suspend fun getMyScoredWorks(): Result<List<ScoredWork>, DataError.Remote>
@@ -69,4 +77,12 @@ interface ReviewCommentsRepository {
     ): Result<Unit, DataError.Remote>
 
     suspend fun deleteComment(clubSlug: String, workId: String, commentId: String): Result<Unit, DataError.Remote>
+}
+
+enum class ScoreSave {
+    /** The server has it. */
+    SAVED,
+
+    /** Offline: kept on this device and sent when the connection returns. */
+    QUEUED,
 }

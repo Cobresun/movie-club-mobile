@@ -47,6 +47,7 @@ import cobresun.movieclub.app.lists.presentation.ListsViewModel
 import cobresun.movieclub.app.reviews.data.network.KtorReviewsDataSource
 import cobresun.movieclub.app.reviews.data.network.ReviewsDataSource
 import cobresun.movieclub.app.reviews.data.repository.ReviewsRepositoryImpl
+import cobresun.movieclub.app.reviews.data.ScoreOutbox
 import cobresun.movieclub.app.reviews.domain.ReviewCommentsRepository
 import cobresun.movieclub.app.reviews.domain.ReviewsRepository
 import cobresun.movieclub.app.reviews.presentation.ReviewsViewModel
@@ -80,7 +81,8 @@ val sharedModule = module {
     // Connectivity: the platform monitor, plus what to do when the network returns
     single<Connectivity> {
         val caches = get<SessionCaches>()
-        AppConnectivity(get(), onReconnect = { caches.invalidateAll() })
+        val reviews = get<ReviewsRepositoryImpl>()
+        AppConnectivity(get(), onReconnect = { caches.invalidateAll() }, sendQueued = { reviews.sendQueuedScores() })
     }
     viewModelOf(::ConnectivityViewModel)
 
@@ -113,7 +115,8 @@ val sharedModule = module {
 
     // Reviews (one implementation serves scores and comments)
     single { KtorReviewsDataSource(get()) }.bind<ReviewsDataSource>()
-    single { ReviewsRepositoryImpl(get(), get()) }.binds(arrayOf(ReviewsRepository::class, ReviewCommentsRepository::class))
+    single { ScoreOutbox(get()) }
+    single { ReviewsRepositoryImpl(get(), get(), get()) }.binds(arrayOf(ReviewsRepository::class, ReviewCommentsRepository::class))
     viewModelOf(::ReviewsViewModel)
     viewModelOf(::SharedReviewViewModel)
     viewModelOf(::SharedListViewModel)

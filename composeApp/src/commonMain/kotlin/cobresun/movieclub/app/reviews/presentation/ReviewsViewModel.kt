@@ -37,6 +37,7 @@ import cobresun.movieclub.app.reviews.domain.ReviewCommentsRepository
 import cobresun.movieclub.app.reviews.domain.ReviewSortOption
 import cobresun.movieclub.app.reviews.domain.ReviewSortState
 import cobresun.movieclub.app.reviews.domain.ReviewsRepository
+import cobresun.movieclub.app.reviews.domain.ScoreSave
 import cobresun.movieclub.app.reviews.domain.ScoreReveal
 import cobresun.movieclub.app.reviews.domain.ScoreScale
 import cobresun.movieclub.app.reviews.domain.sortReviews
@@ -503,11 +504,15 @@ class ReviewsViewModel(
         }
         val review = _state.value.review(workId) ?: return
         val existing = review.scoreOf(userId)
-        updateReview(workId) { it.withScore(userId, MemberScore(existing?.id ?: PENDING_SCORE_ID, userId, score)) }
+        updateReview(workId) { it.withScore(userId, MemberScore(existing?.id ?: MemberScore.PENDING_ID, userId, score)) }
         updateDetail(workId) { it.copy(isSavingScore = true) }
         viewModelScope.launch {
-            reviewsRepository.saveScore(clubSlug, workId, existing?.id, score)
-                .onSuccess {
+            reviewsRepository.saveScore(clubSlug, workId, userId, existing?.id, score)
+                .onSuccess { saved ->
+                    if (saved == ScoreSave.QUEUED) {
+                        message("You're offline. Your ${ScoreScale.format(score)} will be saved when you reconnect.")
+                        return@onSuccess
+                    }
                     message("Score saved: ${ScoreScale.format(score)}")
                     loadMyScoredWorks()
                     // The poll's first tick brings back the server's score id and average,
@@ -565,9 +570,18 @@ class ReviewsViewModel(
         val userId = _state.value.currentUserId ?: return
         val review = _state.value.review(workId) ?: return
         val existing = review.scoreOf(userId) ?: return
-        if (existing.id == PENDING_SCORE_ID) {
-            // Optimistic score from a save still in flight; there's no server id to delete yet.
-            message("Still saving your score. Try again in a moment.")
+        if (existing.id == MemberScore.PENDING_ID) {
+            if (_state.value.detail?.takeIf { it.workId == workId }?.isSavingScore == true) {
+                // Optimistic score from a save still in flight; there's no server id to delete yet.
+                message("Still saving your score. Try again in a moment.")
+                return
+            }
+            // A score queued offline that never reached the server: just forget it.
+            updateReview(workId) { it.withScore(userId, null) }
+            viewModelScope.launch {
+                reviewsRepository.discardQueuedScore(clubSlug, workId)
+                message("Your score was removed")
+            }
             return
         }
         // A poll left over from an earlier save would write server snapshots over the removal.
@@ -678,7 +692,6 @@ class ReviewsViewModel(
     }
 }
 
-private const val PENDING_SCORE_ID = "pending"
 private const val PENDING_WORK_PREFIX = "pending-work:"
 private const val PENDING_EXPIRY_MS = 15_000L
 private const val SCORE_POLL_ATTEMPTS = 10

@@ -99,7 +99,7 @@ Uses **Koin** for DI:
 - It sits beneath the in-memory `SessionCaches`: repositories wrap fetches in `offline.readThrough(key, serializer) { network }` (network first; on NO_INTERNET/timeout/429/5xx the stored answer is returned as Success). `forgetClub` / `clear` (sign-in, sign-out) remove disk entries too
 - Stale-while-revalidate: `savedClubs`/`savedMember`/`savedMembers`/`savedReviews`/`savedLists`/`savedItems` return the kept answer without a request; `MemberViewModel`, `ReviewsViewModel` and `ListsViewModel` paint it on first load, then revalidate
 - `NetworkMonitor` (Android ConnectivityManager, iOS NWPathMonitor) feeds `HttpClientFactory`'s offline gate (requests fail at once with `OfflineException` → NO_INTERNET, no retries) and `AppConnectivity` (domain `Connectivity`): on reconnect it invalidates `SessionCaches`, then emits `reconnected`; `OnReconnect { }` reloads the club shell's tabs quietly. `OfflineBanner` shows in the club shell while offline
-- Writes offline fail fast; view models roll back optimistic changes and offer Retry
+- Writes offline fail fast; view models roll back optimistic changes and offer Retry. The one exception is setting a score: `reviews/data/ScoreOutbox` keeps it on disk (`saveScore` returns `ScoreSave.QUEUED`, `getReviews` shows it) and `AppConnectivity` sends it on reconnect or launch, checking the member's current score first so it's never created twice. Deletes, moves, reorders and other destructive or order-dependent writes are never queued
 - Images: `ConfigureImageLoader` (in `App`) gives Coil a persistent 300 MB disk cache (iOS Caches dir instead of tmp), so seen posters show offline
 
 ### Authentication Implementation

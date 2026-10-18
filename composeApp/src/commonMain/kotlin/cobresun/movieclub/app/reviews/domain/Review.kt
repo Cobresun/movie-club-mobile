@@ -34,7 +34,12 @@ data class MemberScore(
     val value: Double,
     /** ISO-8601 instant the score was first entered, when known. */
     val createdAt: String? = null,
-)
+) {
+    companion object {
+        /** Id of a new score the server hasn't assigned one to yet (saving, or queued offline). */
+        const val PENDING_ID = "pending"
+    }
+}
 
 data class ReviewComment(
     val id: String,
