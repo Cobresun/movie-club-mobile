@@ -55,6 +55,10 @@ sealed interface Route {
         val listId: String,
     ) : Route
 
+    /** A club link the user can't open (web `ClubNotFoundView`). */
+    @Serializable
+    data object ClubNotFound : Route
+
     /** Shared statistics of a club the user isn't in (web `SharedStatisticsView`). */
     @Serializable
     data class SharedStatistics(val clubSlug: String) : Route

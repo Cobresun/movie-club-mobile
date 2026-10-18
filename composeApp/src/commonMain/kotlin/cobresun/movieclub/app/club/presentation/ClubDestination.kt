@@ -295,6 +295,7 @@ private fun ClubNavHost(
                             link.reviewWorkId != null -> navController.navigate(Route.SharedReview(link.slug, link.reviewWorkId))
                             link.listId != null -> navController.navigate(Route.SharedList(link.slug, link.listId))
                             link.section == ClubSection.STATISTICS -> navController.navigate(Route.SharedStatistics(link.slug))
+                            else -> navController.navigate(Route.ClubNotFound)
                         }
                     }
                     link.section == ClubSection.SETTINGS -> {
@@ -373,6 +374,9 @@ private fun ClubNavHost(
             )
         }
 
+        composable<Route.ClubNotFound> {
+            ClubNotFoundScreen(onBrowseClubs = { navController.popBackStack() })
+        }
         composable<Route.SharedList> {
             SharedListScreenRoot(onBack = { navController.popBackStack() })
         }
