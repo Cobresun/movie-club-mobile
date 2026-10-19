@@ -14,7 +14,9 @@ import cobresun.movieclub.app.awards.domain.remainingNominationsFor
 import cobresun.movieclub.app.awards.domain.stepChangeError
 import cobresun.movieclub.app.awards.domain.work
 import cobresun.movieclub.app.club.domain.ClubRepository
+import cobresun.movieclub.app.club.domain.ClubFeatures
 import cobresun.movieclub.app.core.domain.AsyncResult
+import cobresun.movieclub.app.core.domain.Club
 import cobresun.movieclub.app.core.domain.ClubType
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
@@ -49,8 +51,13 @@ class AwardsViewModel(
     val events = _events.asSharedFlow()
 
     private var contextLoaded = false
+    private var club: Club? = null
 
     init {
+        // Club settings' toggles land here as soon as they're saved.
+        viewModelScope.launch {
+            clubRepository.observeFeatures(clubSlug).collect { features -> club?.let { applyAvailability(it, features) } }
+        }
         refreshAvailability()
     }
 
@@ -65,13 +72,18 @@ class AwardsViewModel(
             val club = (clubs.await() as? Result.Success)?.data?.firstOrNull { it.slug == clubSlug }
             val features = featuresCall.await()
             if (club == null || features !is Result.Success) return@launch
-            val available = club.type == ClubType.MOVIE && features.data.awards
-            _state.update { it.copy(clubName = club.name, isAvailable = available) }
-            if (available && !contextLoaded) {
-                contextLoaded = true
-                loadContext()
-                loadYears()
-            }
+            this@AwardsViewModel.club = club
+            applyAvailability(club, features.data)
+        }
+    }
+
+    private fun applyAvailability(club: Club, features: ClubFeatures) {
+        val available = club.type == ClubType.MOVIE && features.awards
+        _state.update { it.copy(clubName = club.name, isAvailable = available) }
+        if (available && !contextLoaded) {
+            contextLoaded = true
+            loadContext()
+            loadYears()
         }
     }
 

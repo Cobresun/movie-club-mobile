@@ -5,6 +5,8 @@ import cobresun.movieclub.app.core.domain.Club
 import cobresun.movieclub.app.core.domain.DataError
 import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.member.domain.Member
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 interface ClubRepository {
     /**
@@ -33,6 +35,12 @@ interface ClubRepository {
     suspend fun updateSlug(clubSlug: String, newSlug: String): Result<String, ApiError>
 
     suspend fun getFeatures(clubSlug: String, refresh: Boolean = false): Result<ClubFeatures, DataError.Remote>
+
+    /**
+     * Every answer [getFeatures] or [updateFeatures] stores for the club, starting with the
+     * current one if any, so screens open behind Club settings follow its toggles.
+     */
+    fun observeFeatures(clubSlug: String): Flow<ClubFeatures> = emptyFlow()
 
     suspend fun updateFeatures(
         clubSlug: String,

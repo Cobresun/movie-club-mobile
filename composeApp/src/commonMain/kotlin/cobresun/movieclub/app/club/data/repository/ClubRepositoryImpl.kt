@@ -23,6 +23,10 @@ import cobresun.movieclub.app.core.domain.Result
 import cobresun.movieclub.app.core.domain.map
 import cobresun.movieclub.app.core.domain.onSuccess
 import cobresun.movieclub.app.member.domain.Member
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flow
 
 class ClubRepositoryImpl(
     private val clubDataSource: ClubDataSource,
@@ -68,6 +72,9 @@ class ClubRepositoryImpl(
                 clubDataSource.getSettings(clubSlug).toRemote()
             }.map { it.features.toDomain() }
         }
+
+    override fun observeFeatures(clubSlug: String): Flow<ClubFeatures> =
+        flow { emitAll(caches.features.latest(clubSlug)) }.filterNotNull()
 
     override suspend fun updateFeatures(
         clubSlug: String,

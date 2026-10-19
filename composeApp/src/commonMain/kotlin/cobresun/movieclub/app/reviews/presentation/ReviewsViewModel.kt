@@ -75,6 +75,10 @@ class ReviewsViewModel(
     val events = _events.asSharedFlow()
 
     init {
+        viewModelScope.launch {
+            clubRepository.observeFeatures(clubSlug)
+                .collect { features -> _state.update { it.copy(discussionQuestionsEnabled = features.discussionQuestions) } }
+        }
         loadContext()
         loadReviews(initial = true)
         _state.value.detail?.let { loadDetail(it.workId) }
@@ -198,10 +202,8 @@ class ReviewsViewModel(
             clubRepository.getMembers(clubSlug).onSuccess { members -> _state.update { it.copy(members = members) } }
         }
         loadMyScoredWorks()
-        viewModelScope.launch {
-            clubRepository.getFeatures(clubSlug)
-                .onSuccess { features -> _state.update { it.copy(discussionQuestionsEnabled = features.discussionQuestions) } }
-        }
+        // Lands in observeFeatures (init), which also follows Club settings' toggles.
+        viewModelScope.launch { clubRepository.getFeatures(clubSlug) }
     }
 
     private fun loadMyScoredWorks() {
